@@ -18,32 +18,57 @@ public interface IConfigService
 
 public class ConfigService : IConfigService
 {
+    private readonly string _basePath;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
+    /// <summary>
+    /// Creates a ConfigService using the default config path (~/.config/timepro-cli/).
+    /// </summary>
+    public ConfigService() : this(ConfigPaths.Root) { }
+
+    /// <summary>
+    /// Creates a ConfigService using a custom base path (for testing).
+    /// </summary>
+    public ConfigService(string basePath)
+    {
+        _basePath = basePath;
+    }
+
+    private string GlobalConfigFile => Path.Combine(_basePath, "config.json");
+    private string TenantsDir => Path.Combine(_basePath, "tenants");
+    private string TenantConfigFile(string tenantId) =>
+        Path.Combine(TenantsDir, $"{tenantId.ToLowerInvariant()}.json");
+
+    private void EnsureDirectories()
+    {
+        Directory.CreateDirectory(_basePath);
+        Directory.CreateDirectory(TenantsDir);
+    }
+
     public GlobalConfig LoadGlobalConfig()
     {
-        var path = ConfigPaths.GlobalConfigFile;
-        if (!File.Exists(path))
+        if (!File.Exists(GlobalConfigFile))
             return new GlobalConfig();
 
-        var json = File.ReadAllText(path);
+        var json = File.ReadAllText(GlobalConfigFile);
         return JsonSerializer.Deserialize<GlobalConfig>(json, JsonOptions) ?? new GlobalConfig();
     }
 
     public void SaveGlobalConfig(GlobalConfig config)
     {
-        ConfigPaths.EnsureDirectories();
+        EnsureDirectories();
         var json = JsonSerializer.Serialize(config, JsonOptions);
-        File.WriteAllText(ConfigPaths.GlobalConfigFile, json);
+        File.WriteAllText(GlobalConfigFile, json);
     }
 
     public TenantConfig? LoadTenantConfig(string tenantId)
     {
-        var path = ConfigPaths.TenantConfigFile(tenantId);
+        var path = TenantConfigFile(tenantId);
         if (!File.Exists(path))
             return null;
 
@@ -53,14 +78,14 @@ public class ConfigService : IConfigService
 
     public void SaveTenantConfig(TenantConfig config)
     {
-        ConfigPaths.EnsureDirectories();
+        EnsureDirectories();
         var json = JsonSerializer.Serialize(config, JsonOptions);
-        File.WriteAllText(ConfigPaths.TenantConfigFile(config.TenantId), json);
+        File.WriteAllText(TenantConfigFile(config.TenantId), json);
     }
 
     public void DeleteTenantConfig(string tenantId)
     {
-        var path = ConfigPaths.TenantConfigFile(tenantId);
+        var path = TenantConfigFile(tenantId);
         if (File.Exists(path))
             File.Delete(path);
     }
@@ -76,12 +101,11 @@ public class ConfigService : IConfigService
 
     public List<TenantConfig> ListTenants()
     {
-        var dir = ConfigPaths.TenantsDir;
-        if (!Directory.Exists(dir))
+        if (!Directory.Exists(TenantsDir))
             return [];
 
         var tenants = new List<TenantConfig>();
-        foreach (var file in Directory.GetFiles(dir, "*.json"))
+        foreach (var file in Directory.GetFiles(TenantsDir, "*.json"))
         {
             try
             {

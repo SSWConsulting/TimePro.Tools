@@ -13,9 +13,7 @@ public class ConfigServiceTests : IDisposable
     {
         _tempDir = Path.Combine(Path.GetTempPath(), $"timepro-cli-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
-        // We test the service by directly using config paths
-        // In real tests, we'd want to make ConfigPaths injectable
-        _service = new ConfigService();
+        _service = new ConfigService(_tempDir);
     }
 
     [Fact]

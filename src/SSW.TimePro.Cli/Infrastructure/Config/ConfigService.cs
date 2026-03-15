@@ -20,7 +20,17 @@ public interface IConfigService
 
 public class RepoMappingEntry
 {
+    /// <summary>
+    /// File system path pattern (supports ~ and trailing /*).
+    /// </summary>
     public string PathPattern { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Git remote URL pattern (e.g., "github.com/asfaudits/chat-bot" or "github.com/asfaudits/*").
+    /// Matched against the origin remote URL. Supports trailing /* for org-wide matching.
+    /// </summary>
+    public string? RemotePattern { get; set; }
+
     public string ClientId { get; set; } = string.Empty;
     public string ProjectId { get; set; } = string.Empty;
     public string? ProjectName { get; set; }

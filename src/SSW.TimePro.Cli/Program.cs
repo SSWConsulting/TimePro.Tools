@@ -20,6 +20,7 @@ using LocationSet = SSW.TimePro.Cli.Features.Location.SetCommand;
 using MapSet = SSW.TimePro.Cli.Features.RepoMap.SetCommand;
 using MapList = SSW.TimePro.Cli.Features.RepoMap.ListCommand;
 using MapRemove = SSW.TimePro.Cli.Features.RepoMap.RemoveCommand;
+using MapDetect = SSW.TimePro.Cli.Features.RepoMap.DetectCommand;
 using SkillsCreate = SSW.TimePro.Cli.Features.Skills.CreateCommand;
 using McpHost = SSW.TimePro.Cli.Features.Mcp.McpHostCommand;
 
@@ -194,6 +195,8 @@ app.Configure(config =>
             .WithDescription("List repo mappings");
         map.AddCommand<MapRemove>("remove")
             .WithDescription("Remove a repo mapping");
+        map.AddCommand<MapDetect>("detect")
+            .WithDescription("Detect mapping for current directory");
     });
 
     // Skills

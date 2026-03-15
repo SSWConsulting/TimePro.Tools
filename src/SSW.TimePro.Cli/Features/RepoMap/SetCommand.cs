@@ -28,6 +28,10 @@ public class SetCommand : Command<SetCommand.Settings>
         [Description("Project display name")]
         public string? ProjectName { get; set; }
 
+        [CommandOption("--remote <PATTERN>")]
+        [Description("Git remote URL pattern (e.g., github.com/org/repo or github.com/org/*)")]
+        public string? Remote { get; set; }
+
         [CommandOption("--category <CAT>")]
         [Description("Category ID")]
         public string? Category { get; set; }
@@ -57,12 +61,15 @@ public class SetCommand : Command<SetCommand.Settings>
             existing.ProjectId = settings.ProjectId;
             existing.ProjectName = settings.ProjectName;
             existing.CategoryId = settings.Category;
+            if (settings.Remote is not null)
+                existing.RemotePattern = settings.Remote;
         }
         else
         {
             mappings.Add(new RepoMappingEntry
             {
                 PathPattern = settings.Path,
+                RemotePattern = settings.Remote,
                 ClientId = settings.ClientId,
                 ProjectId = settings.ProjectId,
                 ProjectName = settings.ProjectName,

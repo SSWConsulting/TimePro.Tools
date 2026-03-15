@@ -43,16 +43,8 @@ public class CreateCommand : Command<CreateCommand.Settings>
         Directory.CreateDirectory(outputDir);
         var outputFile = Path.Combine(outputDir, "timepro-timesheets.md");
 
-        // Detect repo mapping for current directory
-        var cwd = Environment.CurrentDirectory;
-        var repoMapping = mappings.FirstOrDefault(m =>
-        {
-            var normalized = m.PathPattern.Replace("~",
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
-            if (normalized.EndsWith("/*"))
-                return cwd.StartsWith(normalized[..^2], StringComparison.OrdinalIgnoreCase);
-            return cwd.StartsWith(normalized, StringComparison.OrdinalIgnoreCase);
-        });
+        // Detect repo mapping for current directory (with worktree support)
+        var repoMapping = RepoDetector.Detect(Environment.CurrentDirectory, mappings);
 
         var content = GenerateSkillContent(tenant, global, repoMapping);
         File.WriteAllText(outputFile, content);

@@ -33,17 +33,22 @@ public class ListCommand : Command<ListCommand.Settings>
         OutputHelper.Render(mappings, settings.Json, list =>
         {
             var table = new Table()
-                .AddColumn("Path")
+                .AddColumn("Path / Remote")
                 .AddColumn("Client")
                 .AddColumn("Project")
                 .AddColumn("Name");
 
             foreach (var m in list)
+            {
+                var pattern = m.PathPattern;
+                if (!string.IsNullOrEmpty(m.RemotePattern))
+                    pattern += $"\n[dim]remote: {Markup.Escape(m.RemotePattern)}[/]";
                 table.AddRow(
-                    Markup.Escape(m.PathPattern),
+                    pattern,
                     Markup.Escape(m.ClientId),
                     Markup.Escape(m.ProjectId),
                     Markup.Escape(m.ProjectName ?? ""));
+            }
 
             AnsiConsole.Write(table);
         });

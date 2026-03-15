@@ -102,14 +102,7 @@ public class LookupMcpTools
         {
             var normalized = repoPath.Replace("~",
                 Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
-            match = mappings.FirstOrDefault(m =>
-            {
-                var pattern = m.PathPattern.Replace("~",
-                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
-                if (pattern.EndsWith("/*"))
-                    return normalized.StartsWith(pattern[..^2], StringComparison.OrdinalIgnoreCase);
-                return normalized.StartsWith(pattern, StringComparison.OrdinalIgnoreCase);
-            });
+            match = RepoDetector.Detect(normalized, mappings);
         }
 
         var result = new

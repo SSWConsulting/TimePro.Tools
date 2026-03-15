@@ -21,6 +21,7 @@ using MapSet = SSW.TimePro.Cli.Features.RepoMap.SetCommand;
 using MapList = SSW.TimePro.Cli.Features.RepoMap.ListCommand;
 using MapRemove = SSW.TimePro.Cli.Features.RepoMap.RemoveCommand;
 using SkillsCreate = SSW.TimePro.Cli.Features.Skills.CreateCommand;
+using McpHost = SSW.TimePro.Cli.Features.Mcp.McpHostCommand;
 
 // Configure DI
 var services = new ServiceCollection();
@@ -210,6 +211,10 @@ app.Configure(config =>
         user.AddCommand<MeCommand>("me")
             .WithDescription("Show current user info");
     });
+
+    // MCP
+    config.AddCommand<McpHost>("mcp")
+        .WithDescription("Start MCP server (stdio transport)");
 });
 
 return await app.RunAsync(args);

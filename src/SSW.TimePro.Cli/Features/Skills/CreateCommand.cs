@@ -46,7 +46,17 @@ public class CreateCommand : Command<CreateCommand.Settings>
         // Detect repo mapping for current directory (with worktree support)
         var repoMapping = RepoDetector.Detect(Environment.CurrentDirectory, mappings);
 
-        var content = GenerateSkillContent(tenant, global, repoMapping);
+        // Detect git remote for GH integration
+        var remoteUrl = RepoDetector.GetRemoteUrl(Environment.CurrentDirectory);
+        string? ghRepoSlug = null;
+        if (remoteUrl is not null && remoteUrl.Contains("github.com/"))
+        {
+            // Extract org/repo from github.com/org/repo
+            var ghPath = remoteUrl[(remoteUrl.IndexOf("github.com/") + "github.com/".Length)..];
+            ghRepoSlug = ghPath.TrimEnd('/');
+        }
+
+        var content = GenerateSkillContent(tenant, global, repoMapping, ghRepoSlug);
         File.WriteAllText(outputFile, content);
 
         OutputHelper.WriteSuccess($"Skill file written to {outputFile}");
@@ -54,7 +64,8 @@ public class CreateCommand : Command<CreateCommand.Settings>
     }
 
     private static string GenerateSkillContent(
-        TenantConfig? tenant, GlobalConfig global, RepoMappingEntry? repoMapping)
+        TenantConfig? tenant, GlobalConfig global, RepoMappingEntry? repoMapping,
+        string? ghRepoSlug)
     {
         var sb = new System.Text.StringBuilder();
 
@@ -101,8 +112,62 @@ public class CreateCommand : Command<CreateCommand.Settings>
         sb.AppendLine("2. Check CRM bookings: `tp bk list --week --json`");
         sb.AppendLine("3. Check suggested timesheets: `tp ts suggest --week --json`");
         sb.AppendLine("4. Accept suggested timesheets that match work done");
-        sb.AppendLine("5. For remaining days, create timesheets using git history for context");
-        sb.AppendLine("6. Verify: `tp ts get --week` to confirm all days are covered");
+        sb.AppendLine("5. Gather context for remaining days:");
+        sb.AppendLine("   - `git log --since=Monday --until=Friday --oneline` for commit history");
+        if (ghRepoSlug is not null)
+        {
+            sb.AppendLine($"   - `gh issue list --repo {ghRepoSlug} --assignee @me --state open --json number,title`");
+            sb.AppendLine($"   - `gh pr list --repo {ghRepoSlug} --author @me --state merged --json number,title,mergedAt`");
+        }
+        else
+        {
+            sb.AppendLine("   - `gh issue list --assignee @me --state open --json number,title`");
+            sb.AppendLine("   - `gh pr list --author @me --state merged --json number,title,mergedAt`");
+        }
+        sb.AppendLine("6. Create timesheets with GH issue/PR references in the description");
+        sb.AppendLine("7. Verify: `tp ts get --week` to confirm all days are covered");
+        sb.AppendLine();
+
+        sb.AppendLine("## Description Format");
+        sb.AppendLine("Timesheet descriptions should reference PRs and issues. Format each line as:");
+        sb.AppendLine("```");
+        sb.AppendLine("<Action>: <Short summary> — PR #<N> · #<IssueN>");
+        sb.AppendLine("```");
+        sb.AppendLine("Examples:");
+        sb.AppendLine("```");
+        sb.AppendLine("Fix: Token expiry not handled on refresh — PR #1545 · #1522");
+        sb.AppendLine("Improved kiosk leaderboard layout and QR code display — PR #1540 · #1442");
+        sb.AppendLine("Code review and standup");
+        sb.AppendLine("```");
+        sb.AppendLine("Multiple lines are fine (one per PR or activity). Keep each line concise.");
+        sb.AppendLine();
+
+        sb.AppendLine("## Gathering Work Context");
+        sb.AppendLine("Before creating timesheets, gather what was done:");
+        sb.AppendLine("```bash");
+        sb.AppendLine("# Git commits for a specific day");
+        sb.AppendLine("git log --oneline --after=\"2026-03-16T00:00:00\" --before=\"2026-03-16T23:59:59\"");
+        sb.AppendLine();
+        if (ghRepoSlug is not null)
+        {
+            sb.AppendLine("# Open issues assigned to me");
+            sb.AppendLine($"gh issue list --repo {ghRepoSlug} --assignee @me --state open --json number,title");
+            sb.AppendLine();
+            sb.AppendLine("# My recently merged PRs (check dates to match to days)");
+            sb.AppendLine($"gh pr list --repo {ghRepoSlug} --author @me --state merged --limit 10 --json number,title,mergedAt");
+            sb.AppendLine();
+            sb.AppendLine("# My open PRs (in-progress work)");
+            sb.AppendLine($"gh pr list --repo {ghRepoSlug} --author @me --state open --json number,title,headRefName");
+        }
+        else
+        {
+            sb.AppendLine("# Open issues assigned to me (run from repo root)");
+            sb.AppendLine("gh issue list --assignee @me --state open --json number,title");
+            sb.AppendLine();
+            sb.AppendLine("# My recently merged PRs");
+            sb.AppendLine("gh pr list --author @me --state merged --limit 10 --json number,title,mergedAt");
+        }
+        sb.AppendLine("```");
         sb.AppendLine();
 
         sb.AppendLine("## Important Notes");
@@ -110,15 +175,21 @@ public class CreateCommand : Command<CreateCommand.Settings>
         sb.AppendLine("- Check rate expiry with `tp rate get --client <ID>` before creating");
         sb.AppendLine("- Locked timesheets (invoiced) only allow location and description changes");
         sb.AppendLine("- Use `--yes` flag to skip confirmation prompts for batch operations");
+        sb.AppendLine("- Always include GH issue/PR numbers in descriptions when available");
         sb.AppendLine();
 
-        if (repoMapping is not null)
+        if (repoMapping is not null || ghRepoSlug is not null)
         {
-            sb.AppendLine("## Project Context (from repo mapping)");
-            sb.AppendLine($"- Client: `{repoMapping.ClientId}`");
-            sb.AppendLine($"- Project: `{repoMapping.ProjectId}`");
-            if (!string.IsNullOrEmpty(repoMapping.ProjectName))
-                sb.AppendLine($"- Project Name: {repoMapping.ProjectName}");
+            sb.AppendLine("## Project Context");
+            if (repoMapping is not null)
+            {
+                sb.AppendLine($"- Client: `{repoMapping.ClientId}`");
+                sb.AppendLine($"- Project: `{repoMapping.ProjectId}`");
+                if (!string.IsNullOrEmpty(repoMapping.ProjectName))
+                    sb.AppendLine($"- Project Name: {repoMapping.ProjectName}");
+            }
+            if (ghRepoSlug is not null)
+                sb.AppendLine($"- GitHub: `{ghRepoSlug}`");
             sb.AppendLine();
         }
 

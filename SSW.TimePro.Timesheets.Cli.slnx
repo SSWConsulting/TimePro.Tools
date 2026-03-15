@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SSW.TimePro.Cli/SSW.TimePro.Cli.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SSW.TimePro.Cli.Tests/SSW.TimePro.Cli.Tests.csproj" />
+    <Project Path="tests/SSW.TimePro.Cli.Integration/SSW.TimePro.Cli.Integration.csproj" />
+  </Folder>
+</Solution>

@@ -116,7 +116,7 @@ public class TimeProApiClient : ITimeProApiClient
     public async Task<List<ProjectForSelect>> GetProjectsForClientAsync(
         string employeeId, string clientId, CancellationToken ct = default)
     {
-        var url = $"/api/Timesheets/GetProjectsForClient?empID={Uri.EscapeDataString(employeeId)}&clientID={Uri.EscapeDataString(clientId)}";
+        var url = $"/api/Projects/GetSelectListUsageDataProject?clientId={Uri.EscapeDataString(clientId)}";
         return await GetAsync<List<ProjectForSelect>>(url, ct) ?? [];
     }
 

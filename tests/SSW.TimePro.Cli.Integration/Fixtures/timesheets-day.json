@@ -22,7 +22,7 @@
     "hasNotes": true,
     "isSuggested": false,
     "isLeave": false,
-    "inputSource": "TimePro",
+    "inputSource": 1,
     "invoiceId": null,
     "invoiceType": null,
     "isLocked": false
@@ -50,7 +50,7 @@
     "hasNotes": true,
     "isSuggested": false,
     "isLeave": false,
-    "inputSource": "TimePro",
+    "inputSource": 1,
     "invoiceId": 5678,
     "invoiceType": "Both",
     "isLocked": true

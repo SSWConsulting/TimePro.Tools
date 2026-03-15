@@ -2,7 +2,7 @@ namespace SSW.TimePro.Cli.Shared.Models;
 
 public class AppointmentItem
 {
-    public int Id { get; set; }
+    public string Id { get; set; } = string.Empty;
     public string? Title { get; set; }
     public string? Start { get; set; }
     public string? End { get; set; }

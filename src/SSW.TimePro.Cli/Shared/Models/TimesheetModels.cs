@@ -27,7 +27,7 @@ public class TimesheetItem
     public bool HasNotes { get; set; }
     public bool IsSuggested { get; set; }
     public bool IsLeave { get; set; }
-    public string? InputSource { get; set; }
+    public int? InputSource { get; set; }
 
     // Invoice info (may be null)
     public int? InvoiceId { get; set; }

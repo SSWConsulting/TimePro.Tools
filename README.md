@@ -115,6 +115,8 @@ tp ts get 2026-03-12       # Specific date
 | `tp ts suggest [DATE]` | View suggested timesheets |
 | `tp ts accept ID` | Accept a suggested timesheet |
 | `tp ts export` | Export timesheets to CSV |
+| `tp ts check` | Validate week for gaps, overlaps, missing descriptions |
+| `tp ts copy` | Copy timesheets from one day to another |
 | `tp bk list` | List CRM bookings/appointments |
 | `tp leave list` | List leave entries |
 | `tp leave create` | Create a leave request |
@@ -122,6 +124,9 @@ tp ts get 2026-03-12       # Specific date
 | `tp cl search QUERY` | Search for clients |
 | `tp proj list --client ID` | List projects for a client |
 | `tp rate get --client ID` | Get billing rate (with expiry warnings) |
+| `tp iter list --project ID` | List iterations/sprints for a project |
+| `tp summary` | Project hours breakdown (`--week`, `--month`, `--from/--to`) |
+| `tp report` | Monthly summary with billable %, WFH breakdown |
 | `tp loc info [--date D]` | Show location defaults / check a specific date |
 | `tp loc set LOC --day D` | Set WFH day defaults |
 | `tp map set PATH` | Map a repo path to a client/project |
@@ -130,6 +135,7 @@ tp ts get 2026-03-12       # Specific date
 | `tp map remove PATH` | Remove a repo mapping |
 | `tp skills create TARGET` | Generate agent skill files |
 | `tp user me` | Show current user info |
+| `tp blog list` | Latest blog posts (`--mine`, `--limit N`, `--all`) |
 | `tp mcp` | Start MCP server (stdio) |
 
 All read commands support `--json` for machine-readable output. All write commands support `--yes` to skip confirmation prompts.
@@ -146,6 +152,7 @@ Every command group has a short alias:
 | `tp client` | `tp cl` |
 | `tp project` | `tp proj` |
 | `tp location` | `tp loc` |
+| `tp iteration` | `tp iter` |
 
 ### Creating Timesheets
 
@@ -238,6 +245,49 @@ The generated file includes:
 - Description format guide with PR and issue number examples
 - Project context (client, project, GitHub repo) auto-detected from repo mapping
 
+### Summary & Report
+
+Quick overview of where your time goes:
+
+```bash
+tp summary --week -1           # Last week's hours by project
+tp summary --month             # This month to date
+tp summary --from 2026-01-01 --to 2026-03-31  # Custom range
+
+tp report                      # This month: billable %, WFH breakdown, projects
+tp report --month -1           # Last month
+```
+
+### Week Validation
+
+Check for gaps before submitting timesheets:
+
+```bash
+tp ts check                    # This week
+tp ts check --week -1          # Last week
+```
+
+Checks for: missing days, under/over hours, overlapping entries, missing descriptions, unaccepted suggestions. Returns exit code 1 when errors are found (CI-friendly).
+
+### Copy Timesheets
+
+Duplicate a day's timesheets to another day (e.g., "Tuesday was the same client as Monday"):
+
+```bash
+tp ts copy --from 2026-03-10 --to 2026-03-11 --yes
+tp ts copy --from 2026-03-10 --to 2026-03-11 --keep-description --yes
+```
+
+### Blog Posts
+
+See what your colleagues have been writing:
+
+```bash
+tp blog list                   # Latest 10 posts
+tp blog list --mine            # Your own posts only
+tp blog list --limit 5 --all   # Include former employees
+```
+
 ## MCP Server
 
 The MCP server exposes TimePro data to AI agents via stdio transport.
@@ -323,14 +373,18 @@ timepro-cli/
 │   ├── Features/
 │   │   ├── Auth/                     # login, logout
 │   │   ├── Tenants/                  # set, info, list
-│   │   ├── Timesheets/              # get, create, update, delete, suggest, accept, export
+│   │   ├── Timesheets/              # get, create, update, delete, suggest, accept, export, check, copy
 │   │   ├── Bookings/                # list
 │   │   ├── Leave/                   # list, create, cancel
 │   │   ├── Clients/                 # search
 │   │   ├── Projects/                # list
+│   │   ├── Iterations/              # list
 │   │   ├── Rates/                   # get
 │   │   ├── Location/                # info, set
 │   │   ├── RepoMap/                 # set, list, remove, detect
+│   │   ├── Summary/                 # project hours breakdown
+│   │   ├── Report/                  # monthly report
+│   │   ├── Blogs/                   # latest employee blog posts
 │   │   ├── Skills/                  # create
 │   │   ├── Users/                   # me
 │   │   └── Mcp/                     # MCP server + 11 tools

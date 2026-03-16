@@ -151,13 +151,13 @@ Every command group has a short alias:
 
 ```bash
 tp ts create \
-  --client SSW \
-  --project 4BPT0L \
+  --client NWIND \
+  --project 1I776Q \
   --date 2026-03-16 \
   --start 09:00 \
   --end 18:00 \
   --less 60 \
-  --description "Improved kiosk leaderboard layout — PR #1545 · #1442" \
+  --description "Added product search API endpoint — PR #42 · #108" \
   --location Home \
   --billable B \
   --yes
@@ -175,13 +175,14 @@ Compact view shows one line per timesheet with totals:
 ```
  Week of Mar 10 - Mar 14, 2026
 ─────────────────────────────────────────────────────────────────────
- Mon 10 │ 8.0h │ ASF Audits  AI PoC        8.0h  Office  B
- Tue 11 │ 8.0h │ ASF Audits  AI PoC        8.0h  Office  B
- Wed 12 │ 8.0h │ ASF Audits  AI PoC        8.0h  Office  B
- Thu 13 │ 8.0h │ ASF Audits  AI PoC        8.0h  Home    B
- Fri 14 │ 8.0h │ SSW         Brainstorming 8.0h  Office  W
+ Mon 10 │ 8.0h │ Northwind  Northwind Traders  4.0h  Home    B
+         │      │ SSW        Internal           4.0h  Home    W
+ Tue 11 │ 8.0h │ Northwind  Northwind Traders  8.0h  Home    B
+ Wed 12 │ 0.0h │ No timesheets
+ Thu 13 │ 8.0h │ Northwind  Northwind Traders  8.0h  Office  B
+ Fri 14 │ 8.0h │ SSW        Brainstorming      8.0h  Office  W
 ─────────────────────────────────────────────────────────────────────
- Total: 40.0h / 40.0h  │  Billable: 32.0h
+ Total: 32.0h / 40.0h  │  Billable: 20.0h  │  Missing: Wed
 ```
 
 Detailed view (`--detailed`) shows full descriptions, invoice info, and suggested timesheets.
@@ -191,9 +192,9 @@ Detailed view (`--detailed`) shows full descriptions, invoice info, and suggeste
 Map repositories to clients/projects so AI agents know what to bill:
 
 ```bash
-tp map set ~/Developer/git/ASF/chat-bot \
-  --remote github.com/asfaudits/chat-bot \
-  --client LR8R0L --project V24063 --project-name "AI PoC"
+tp map set ~/Developer/git/Northwind/traders-app \
+  --remote github.com/Northwind/traders-app \
+  --client NWIND --project 1I776Q --project-name "Northwind Traders"
 
 tp map set ~/Developer/git/SSW.Rewards.Mobile \
   --client SSW --project 4BPT0L --project-name "Rewards (Mobile app)"
@@ -201,8 +202,8 @@ tp map set ~/Developer/git/SSW.Rewards.Mobile \
 
 Detection supports:
 - **Exact path** — `~/Developer/git/SSW.TimePRO`
-- **Glob patterns** — `~/Developer/git/ASF/*`
-- **Git remote URL** — `github.com/asfaudits/chat-bot`
+- **Glob patterns** — `~/Developer/git/Northwind/*`
+- **Git remote URL** — `github.com/Northwind/traders-app`
 - **Git worktrees** — Codex/Claude worktrees at `~/.codex/worktrees/` or `~/.claude-worktrees/` resolve to the main repo automatically
 
 ```bash
@@ -272,9 +273,9 @@ Add to `~/.claude/settings.json`:
 
 Then ask Claude things like:
 - "What are my timesheets for this week?"
-- "Create a timesheet for today — I worked on the chat-bot AI PoC"
+- "Create a timesheet for today — I worked on the Northwind Traders app"
 - "Accept the suggested timesheet for Monday"
-- "What's my billing rate for ASF Audits?"
+- "What's my billing rate for Northwind?"
 
 ### VS Code (Copilot / Continue)
 

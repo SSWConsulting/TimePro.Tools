@@ -43,30 +43,28 @@ public class ListCommand : AsyncCommand<ListCommand.Settings>
                     return;
                 }
 
-                var table = new Table()
-                    .AddColumn("Date")
-                    .AddColumn("Author")
-                    .AddColumn("Title")
-                    .AddColumn("Pts")
-                    .AddColumn("URL");
+                AnsiConsole.WriteLine();
+                AnsiConsole.Write(new Rule("[bold]Latest Blog Posts[/]").LeftJustified().RuleStyle("dim"));
+                AnsiConsole.WriteLine();
 
                 foreach (var b in list)
                 {
                     var date = b.BlogData?.Published?.Split('T')[0] ?? "?";
-                    var isMe = b.IsMe ? $"[bold]{Markup.Escape(b.Author ?? "?")}[/]" : Markup.Escape(b.Author ?? "?");
+                    var author = b.IsMe
+                        ? $"[bold green]{Markup.Escape(b.Author ?? "?")}[/] [dim](you)[/]"
+                        : $"[bold]{Markup.Escape(b.Author ?? "?")}[/]";
+                    var title = Markup.Escape(b.BlogData?.Title ?? "?");
+                    var url = b.BlogData?.Url ?? "";
+                    var shortUrl = ShortDomain(url);
 
-                    table.AddRow(
-                        date,
-                        isMe,
-                        Markup.Escape(b.BlogData?.Title ?? "?"),
-                        $"{b.Points}",
-                        $"[link={Markup.Escape(b.BlogData?.Url ?? "")}][dim]{TruncateUrl(b.BlogData?.Url)}[/][/]");
+                    AnsiConsole.MarkupLine($"  [dim]{date}[/]  {author}");
+                    AnsiConsole.MarkupLine($"  {title}");
+                    AnsiConsole.MarkupLine($"  [link={Markup.Escape(url)}][blue]{Markup.Escape(shortUrl)}[/][/]");
+                    AnsiConsole.WriteLine();
                 }
 
-                AnsiConsole.Write(table);
-
                 if (blogs.Count > settings.Limit)
-                    AnsiConsole.MarkupLine($"\n[dim]Showing {settings.Limit} of {blogs.Count}. Use --limit {blogs.Count} to see all.[/]");
+                    AnsiConsole.MarkupLine($"[dim]Showing {settings.Limit} of {blogs.Count}. Use --limit {blogs.Count} to see all.[/]");
             });
 
             return 0;
@@ -78,11 +76,9 @@ public class ListCommand : AsyncCommand<ListCommand.Settings>
         }
     }
 
-    private static string TruncateUrl(string? url)
+    private static string ShortDomain(string url)
     {
-        if (url is null) return "?";
-        // Strip protocol for display
-        var display = url.Replace("https://", "").Replace("http://", "");
-        return display.Length > 50 ? display[..47] + "..." : display;
+        var display = url.Replace("https://", "").Replace("http://", "").TrimEnd('/');
+        return display;
     }
 }

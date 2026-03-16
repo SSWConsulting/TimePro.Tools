@@ -21,6 +21,10 @@ public class ListCommand : AsyncCommand<ListCommand.Settings>
         [Description("Include blog posts from former employees")]
         public bool All { get; set; }
 
+        [CommandOption("--mine")]
+        [Description("Show only your own blog posts")]
+        public bool Mine { get; set; }
+
         [CommandOption("--json")]
         [Description("Output as JSON")]
         public bool Json { get; set; }
@@ -33,6 +37,10 @@ public class ListCommand : AsyncCommand<ListCommand.Settings>
         try
         {
             var blogs = await _api.GetBlogsAsync(settings.All, CancellationToken.None);
+
+            if (settings.Mine)
+                blogs = blogs.Where(b => b.IsMe).ToList();
+
             var limited = blogs.Take(settings.Limit).ToList();
 
             OutputHelper.Render(limited, settings.Json, list =>

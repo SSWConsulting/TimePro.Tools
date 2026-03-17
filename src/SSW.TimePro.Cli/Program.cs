@@ -26,6 +26,7 @@ using BlogList = SSW.TimePro.Cli.Features.Blogs.ListCommand;
 using IterationList = SSW.TimePro.Cli.Features.Iterations.ListCommand;
 using SummaryCmd = SSW.TimePro.Cli.Features.Summary.SummaryCommand;
 using ReportCmd = SSW.TimePro.Cli.Features.Report.ReportCommand;
+using QueryCmd = SSW.TimePro.Cli.Features.Query.QueryCommand;
 using McpHost = SSW.TimePro.Cli.Features.Mcp.McpHostCommand;
 
 // Configure DI
@@ -251,6 +252,8 @@ app.Configure(config =>
         .WithDescription("Project hours breakdown for a period");
     config.AddCommand<ReportCmd>("report")
         .WithDescription("Monthly summary with billable % and WFH breakdown");
+    config.AddCommand<QueryCmd>("query")
+        .WithDescription("Query timesheets across employees, clients, projects");
 
     // MCP
     config.AddCommand<McpHost>("mcp")

@@ -44,6 +44,7 @@ public interface ITimeProApiClient
     Task<List<BlogEntry>> GetBlogsAsync(bool includeFormerEmployees = false, CancellationToken ct = default);
     Task<List<ProjectSummaryItem>> GetProjectsSummaryAsync(string employeeId, DateOnly startDate, DateOnly endDate, CancellationToken ct = default);
     Task<List<IterationItem>> GetIterationsAsync(string projectId, CancellationToken ct = default);
+    Task<List<TimesheetSummaryEntry>> QueryTimesheetsAsync(TimesheetSummaryFilter filter, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -273,6 +274,15 @@ public class TimeProApiClient : ITimeProApiClient
     {
         var url = $"/api/ProjectIteration/GetIterationsForAddTimesheet?projectId={Uri.EscapeDataString(projectId)}";
         return await GetAsync<List<IterationItem>>(url, ct) ?? [];
+    }
+
+    // ───────────────────────── Query / Reporting ─────────────────────────
+
+    public async Task<List<TimesheetSummaryEntry>> QueryTimesheetsAsync(
+        TimesheetSummaryFilter filter, CancellationToken ct = default)
+    {
+        return await PostAsync<List<TimesheetSummaryEntry>>(
+            "/api/timesheetSummary/GetTableSummarydata", filter, ct) ?? [];
     }
 
     // ───────────────────────── HTTP Helpers ─────────────────────────

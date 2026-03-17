@@ -31,7 +31,7 @@ public class QueryCommand : AsyncCommand<QueryCommand.Settings>
         [Description("Project ID(s), comma-separated")]
         public string? ProjectIds { get; set; }
 
-        [CommandOption("--employee <IDS>")]
+        [CommandOption("--employee|--emp <IDS>")]
         [Description("Employee ID(s), comma-separated")]
         public string? EmployeeIds { get; set; }
 

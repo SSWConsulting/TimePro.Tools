@@ -28,6 +28,7 @@ using SummaryCmd = SSW.TimePro.Cli.Features.Summary.SummaryCommand;
 using ReportCmd = SSW.TimePro.Cli.Features.Report.ReportCommand;
 using QueryCmd = SSW.TimePro.Cli.Features.Query.QueryCommand;
 using McpHost = SSW.TimePro.Cli.Features.Mcp.McpHostCommand;
+using ScrumCmd = SSW.TimePro.Cli.Features.Scrum.ScrumCommand;
 
 // Configure DI
 var services = new ServiceCollection();
@@ -254,6 +255,10 @@ app.Configure(config =>
         .WithDescription("Monthly summary with billable % and WFH breakdown");
     config.AddCommand<QueryCmd>("query")
         .WithDescription("Query timesheets across employees, clients, projects");
+
+    // Daily scrum
+    config.AddCommand<ScrumCmd>("scrum")
+        .WithDescription("Generate a daily scrum email from timesheets + GitHub activity");
 
     // MCP
     config.AddCommand<McpHost>("mcp")

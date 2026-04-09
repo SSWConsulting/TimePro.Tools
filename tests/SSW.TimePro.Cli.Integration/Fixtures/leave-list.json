@@ -1,0 +1,63 @@
+{
+  "leaves": {
+    "pageNumber": 1,
+    "pageSize": 10,
+    "totalItems": 2,
+    "totalPages": 1,
+    "items": [
+      {
+        "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "startDate": "2026-03-30T00:00:00+10:00",
+        "endDate": "2026-03-30T23:59:00+10:00",
+        "createdAt": "2026-03-19T12:00:00.0000000+00:00",
+        "updatedAt": null,
+        "note": "Annual leave for personal matters",
+        "approvedBy": "admin@test.com",
+        "optionalEmp": ["colleague@test.com"],
+        "requestedEmpId": "TST",
+        "leaveType": {
+          "id": 1,
+          "name": "Annual Leave",
+          "order": 1,
+          "isActive": true,
+          "leaveTimesheetSettings": null
+        },
+        "status": 2,
+        "daysAway": 11,
+        "length": 8.0,
+        "allDay": true,
+        "timeLessOverride": null,
+        "cancellationReason": null,
+        "startDateWithoutOffset": "2026-03-30T00:00:00",
+        "endDateWithoutOffset": "2026-03-30T23:59:00"
+      },
+      {
+        "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+        "startDate": "2026-04-14T00:00:00+10:00",
+        "endDate": "2026-04-18T23:59:00+10:00",
+        "createdAt": "2026-03-10T08:30:00.0000000+00:00",
+        "updatedAt": null,
+        "note": "Family holiday",
+        "approvedBy": null,
+        "optionalEmp": [],
+        "requestedEmpId": "TST",
+        "leaveType": {
+          "id": 1,
+          "name": "Annual Leave",
+          "order": 1,
+          "isActive": true,
+          "leaveTimesheetSettings": null
+        },
+        "status": 1,
+        "daysAway": 26,
+        "length": 40.0,
+        "allDay": true,
+        "timeLessOverride": null,
+        "cancellationReason": null,
+        "startDateWithoutOffset": "2026-04-14T00:00:00",
+        "endDateWithoutOffset": "2026-04-18T23:59:00"
+      }
+    ]
+  },
+  "cancelledCount": 0
+}

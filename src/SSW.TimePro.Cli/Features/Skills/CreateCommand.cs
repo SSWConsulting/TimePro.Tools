@@ -113,8 +113,11 @@ public class CreateCommand : Command<CreateCommand.Settings>
         sb.AppendLine("tp bk list --week --json          # CRM bookings");
         sb.AppendLine();
         sb.AppendLine("# Leave");
-        sb.AppendLine("tp leave list --json");
-        sb.AppendLine("tp leave create --start 2026-03-20 --end 2026-03-20 --type 1 --yes");
+        sb.AppendLine("tp leave list --filter UPCOMING --json");
+        sb.AppendLine("tp leave create --start 2026-03-30 --end 2026-03-30 --type 1 \\");
+        sb.AppendLine("  --note \"Reason\" --approved-by \"approver@ssw.com.au\" \\");
+        sb.AppendLine("  --cc \"notify1@ssw.com.au,notify2@ssw.com.au\" --yes");
+        sb.AppendLine("tp leave cancel <ID> --reason \"Plans changed\" --yes");
         sb.AppendLine("```");
         sb.AppendLine();
 

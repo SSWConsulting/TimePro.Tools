@@ -45,7 +45,11 @@ public class CancelCommand : AsyncCommand<CancelCommand.Settings>
         {
             await _api.CancelLeaveAsync(
                 settings.LeaveId,
-                new CancelLeaveRequest { CancellationReason = settings.Reason },
+                new CancelLeaveRequest
+                {
+                    LeaveId = settings.LeaveId,
+                    CancellationReason = settings.Reason ?? string.Empty
+                },
                 CancellationToken.None);
 
             if (settings.Json)

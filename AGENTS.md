@@ -35,9 +35,25 @@ Each command is a class inheriting `AsyncCommand<TSettings>` from Spectre.Consol
 
 Run `tp --help` for full command list. Key commands:
 - `tp login --tenant ssw` - Authenticate
+- `tp tenant set ssw-staging` - Switch active tenant (uses filename, not tenantId inside the file)
 - `tp ts get --week` - View week's timesheets
 - `tp ts create ...` - Create timesheet
+- `tp leave create --start 2026-03-30 --end 2026-03-30 --type 1 --note "..." --approved-by "email" --cc "e1,e2" --yes` - Create leave
+- `tp leave cancel ID --reason "..." --yes` - Cancel leave
+- `tp leave list --filter UPCOMING --json` - List leave
 - `tp mcp` - Start MCP server
+
+## Tenants
+
+The `activeTenant` in `config.json` is the **filename** (without `.json`) of the tenant config file, not the `tenantId` property inside it. This allows multiple configs for the same tenant (e.g., `ssw` for prod, `ssw-staging` for staging) where both have `"tenantId": "ssw"` but different `apiUrl` and `apiKey`.
+
+## Leave API
+
+The leave create endpoint (`POST /api/leave/`) requires these fields in the request body:
+- **Required**: `RequestedEmpId`, `StartDate` (DateTimeOffset), `EndDate` (DateTimeOffset), `LeaveTypeId`, `UserStartTime`, `UserEndTime`, `AllDay`
+- **Optional**: `Note`, `OptionalEmp` (CC emails), `ApprovedBy` (email), `TimeLessOverride`
+
+The cancel endpoint (`PUT /api/leave/{id}/cancel`) requires `LeaveId` (Guid) and `CancellationReason` in the request body.
 
 ## Testing
 

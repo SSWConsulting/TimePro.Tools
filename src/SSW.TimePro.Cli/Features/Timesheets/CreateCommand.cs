@@ -154,6 +154,7 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
                 LocationId = location,
                 CategoryId = categoryId,
                 BillableId = settings.Billable ?? "B",
+                IsBillingTypeOverridden = settings.Billable is not null,
                 SellPrice = rate?.Rate,
             };
 

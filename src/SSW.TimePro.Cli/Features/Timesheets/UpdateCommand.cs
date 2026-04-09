@@ -124,6 +124,7 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
                     : existing.LocationId,
                 CategoryId = categoryId,
                 BillableId = settings.Billable ?? existing.BillableId ?? "B",
+                IsBillingTypeOverridden = settings.Billable is not null,
             };
 
             // Re-fetch the rate for the client

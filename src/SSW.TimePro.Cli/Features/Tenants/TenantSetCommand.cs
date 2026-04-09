@@ -32,10 +32,10 @@ public class TenantSetCommand : Command<TenantSetCommand.Settings>
         }
 
         var global = _config.LoadGlobalConfig();
-        global.ActiveTenant = tenant.TenantId;
+        global.ActiveTenant = settings.TenantId;
         _config.SaveGlobalConfig(global);
 
-        OutputHelper.WriteSuccess($"Active tenant set to '{tenant.TenantId}' ({tenant.EmployeeName ?? tenant.EmployeeId ?? "unknown"})");
+        OutputHelper.WriteSuccess($"Active tenant set to '{settings.TenantId}' ({tenant.EmployeeName ?? tenant.EmployeeId ?? "unknown"})");
         return 0;
     }
 }

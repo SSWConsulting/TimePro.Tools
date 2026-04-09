@@ -51,23 +51,37 @@ public class LeaveTypeInfo
 
 public class CreateLeaveRequest
 {
+    public string RequestedEmpId { get; set; } = string.Empty;
     public string StartDate { get; set; } = string.Empty;
     public string EndDate { get; set; } = string.Empty;
     public int LeaveTypeId { get; set; }
     public string? Note { get; set; }
+    public string UserStartTime { get; set; } = "09:00:00";
+    public string UserEndTime { get; set; } = "18:00:00";
     public bool AllDay { get; set; } = true;
+    public List<string> OptionalEmp { get; set; } = [];
+    public string? ApprovedBy { get; set; }
+    public decimal? TimeLessOverride { get; set; }
 }
 
 public class UpdateLeaveRequest
 {
     public string Id { get; set; } = string.Empty;
-    public string? StartDate { get; set; }
-    public string? EndDate { get; set; }
-    public int? LeaveTypeId { get; set; }
+    public string RequestedEmpId { get; set; } = string.Empty;
+    public string StartDate { get; set; } = string.Empty;
+    public string EndDate { get; set; } = string.Empty;
+    public int LeaveTypeId { get; set; }
     public string? Note { get; set; }
+    public string UserStartTime { get; set; } = "09:00:00";
+    public string UserEndTime { get; set; } = "18:00:00";
+    public bool AllDay { get; set; } = true;
+    public List<string> OptionalEmp { get; set; } = [];
+    public string? ApprovedBy { get; set; }
+    public decimal? TimeLessOverride { get; set; }
 }
 
 public class CancelLeaveRequest
 {
-    public string? CancellationReason { get; set; }
+    public string LeaveId { get; set; } = string.Empty;
+    public string CancellationReason { get; set; } = string.Empty;
 }

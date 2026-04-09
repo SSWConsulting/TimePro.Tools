@@ -1,0 +1,7 @@
+[
+  { "id": 1, "name": "Annual Leave", "order": 1, "isActive": true, "leaveTimesheetSettings": null },
+  { "id": 2, "name": "Sick Leave", "order": 2, "isActive": true, "leaveTimesheetSettings": null },
+  { "id": 3, "name": "Unpaid Leave", "order": 3, "isActive": true, "leaveTimesheetSettings": null },
+  { "id": 5, "name": "Yolo Day", "order": 5, "isActive": true, "leaveTimesheetSettings": null },
+  { "id": 6, "name": "Public Holiday", "order": 6, "isActive": true, "leaveTimesheetSettings": null }
+]

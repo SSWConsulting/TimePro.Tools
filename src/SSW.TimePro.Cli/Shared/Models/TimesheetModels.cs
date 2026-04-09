@@ -81,8 +81,8 @@ public class TimesheetRequest
     [System.Text.Json.Serialization.JsonPropertyName("sellPrice")]
     public decimal? SellPrice { get; set; }
 
-    [System.Text.Json.Serialization.JsonPropertyName("isOverridden")]
-    public bool IsOverridden { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("IsBillingTypeOverridden")]
+    public bool IsBillingTypeOverridden { get; set; }
 
     [System.Text.Json.Serialization.JsonPropertyName("isOverwriteRate")]
     public bool IsOverwriteRate { get; set; }

@@ -119,9 +119,9 @@ tp ts get 2026-03-12       # Specific date
 | `tp ts check` | Validate week for gaps, overlaps, missing descriptions |
 | `tp ts copy` | Copy timesheets from one day to another |
 | `tp bk list` | List CRM bookings/appointments |
-| `tp leave list` | List leave entries |
-| `tp leave create` | Create a leave request |
-| `tp leave cancel ID` | Cancel a leave request |
+| `tp leave list` | List leave entries (`--filter UPCOMING\|PAST`) |
+| `tp leave create` | Create a leave request (see options below) |
+| `tp leave cancel ID` | Cancel a leave request (`--reason`) |
 | `tp cl search QUERY` | Search for clients |
 | `tp proj list --client ID` | List projects for a client |
 | `tp rate get --client ID` | Get billing rate (with expiry warnings) |
@@ -180,6 +180,33 @@ When creating timesheets:
 - **Locked timesheets** (invoiced) only allow location and description changes
 - **Duplicate detection** — if a timesheet already exists for the time slot, you'll get a clear error suggesting `tp ts update` instead
 - **API error details** — validation errors now show the specific field and message from the API
+
+### Leave Management
+
+```bash
+# List upcoming leave
+tp leave list --filter UPCOMING --json
+
+# Create a full-day leave request
+tp leave create --start 2026-03-30 --end 2026-03-30 --type 1 \
+  --note "Returning from MVP Summit" --yes
+
+# Create with approver and CC
+tp leave create --start 2026-03-30 --end 2026-03-30 --type "Annual Leave" \
+  --note "Returning from MVP Summit" \
+  --approved-by "PennyWalker@ssw.com.au" \
+  --cc "colleague1@ssw.com.au,colleague2@ssw.com.au" --yes
+
+# Cancel a leave request
+tp leave cancel <ID> --reason "Plans changed" --yes
+```
+
+Leave create options:
+- `--type` accepts a numeric ID (e.g., `1`) or name (e.g., `"Annual Leave"`)
+- `--approved-by` sets the approver's email
+- `--cc` comma-separated list of emails to notify
+- `--half-day` for partial day requests (start and end date must be the same)
+- `--start-time` / `--end-time` override defaults (09:00/18:00)
 
 ### Week View
 

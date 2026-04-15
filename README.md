@@ -136,10 +136,20 @@ tp ts get 2026-03-12       # Specific date
 | `tp map remove PATH` | Remove a repo mapping |
 | `tp query` | Query timesheets across employees/projects (`--group-by`, `--json`) |
 | `tp scrum` | Generate a daily scrum email from timesheets + GitHub (`-i`, `--copy --format rich\|markdown\|plain`, `--json`) |
-| `tp skills create TARGET` | Generate agent skill files |
+| `tp skills create TARGET` | Generate agent skill files (`--accounting` for the accountant CLI skill) |
 | `tp user me` | Show current user info |
 | `tp blog list` | Latest blog posts (`--mine`, `--limit N`, `--all`) |
 | `tp mcp` | Start MCP server (stdio) |
+| **Accountant (read-only)** | See [`docs/accounting.md`](docs/accounting.md) |
+| `tp invoice list / get / lines / timesheets / receipts` | Invoices |
+| `tp receipt list / get / outstanding` | Receipts + aged debtors |
+| `tp creditnote list --client ID` | Credit notes |
+| `tp product list / get / discounts` | Sale products / SKUs |
+| `tp rate list --client ID` | Configured rates across all employees |
+| `tp client outstanding` | Clients with unbilled time |
+| `tp unbilled list --client ID` | Unbilled timesheets for a client |
+| `tp recurring list / get` | Recurring invoice templates |
+| `tp prepaid status INVOICE_ID` | Prepaid drawdown status PDF |
 
 All read commands support `--json` for machine-readable output. All write commands support `--yes` to skip confirmation prompts.
 
@@ -156,6 +166,10 @@ Every command group has a short alias:
 | `tp project` | `tp proj` |
 | `tp location` | `tp loc` |
 | `tp iteration` | `tp iter` |
+| `tp invoice` | `tp inv` |
+| `tp receipt` | `tp rcpt` |
+| `tp creditnote` | `tp cn` |
+| `tp product` | `tp prod` |
 
 ### Creating Timesheets
 

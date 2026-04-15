@@ -10,11 +10,29 @@ using SSW.TimePro.Cli.Infrastructure.DependencyInjection;
 using Spectre.Console.Cli;
 
 using ClientSearch = SSW.TimePro.Cli.Features.Clients.SearchCommand;
+using ClientOutstanding = SSW.TimePro.Cli.Features.Clients.OutstandingCommand;
 using ProjectList = SSW.TimePro.Cli.Features.Projects.ListCommand;
 using RateGet = SSW.TimePro.Cli.Features.Rates.GetCommand;
+using RateList = SSW.TimePro.Cli.Features.Rates.ListCommand;
 using LeaveList = SSW.TimePro.Cli.Features.Leave.ListCommand;
 using LeaveCreate = SSW.TimePro.Cli.Features.Leave.CreateCommand;
 using LeaveCancel = SSW.TimePro.Cli.Features.Leave.CancelCommand;
+using InvList = SSW.TimePro.Cli.Features.Invoices.ListCommand;
+using InvGet = SSW.TimePro.Cli.Features.Invoices.GetCommand;
+using InvLines = SSW.TimePro.Cli.Features.Invoices.LinesCommand;
+using InvTimesheets = SSW.TimePro.Cli.Features.Invoices.TimesheetsCommand;
+using InvReceipts = SSW.TimePro.Cli.Features.Invoices.ReceiptsCommand;
+using ReceiptList = SSW.TimePro.Cli.Features.Receipts.ListCommand;
+using ReceiptGet = SSW.TimePro.Cli.Features.Receipts.GetCommand;
+using ReceiptOutstanding = SSW.TimePro.Cli.Features.Receipts.OutstandingCommand;
+using CreditNoteList = SSW.TimePro.Cli.Features.CreditNotes.ListCommand;
+using ProductList = SSW.TimePro.Cli.Features.Products.ListCommand;
+using ProductGet = SSW.TimePro.Cli.Features.Products.GetCommand;
+using ProductDiscounts = SSW.TimePro.Cli.Features.Products.DiscountsCommand;
+using RecurringList = SSW.TimePro.Cli.Features.Recurring.ListCommand;
+using RecurringGet = SSW.TimePro.Cli.Features.Recurring.GetCommand;
+using PrepaidStatus = SSW.TimePro.Cli.Features.Prepaid.StatusCommand;
+using UnbilledList = SSW.TimePro.Cli.Features.Unbilled.ListCommand;
 using LocationInfo = SSW.TimePro.Cli.Features.Location.InfoCommand;
 using LocationSet = SSW.TimePro.Cli.Features.Location.SetCommand;
 using MapSet = SSW.TimePro.Cli.Features.RepoMap.SetCommand;
@@ -139,18 +157,24 @@ app.Configure(config =>
     });
 
     // Client (with alias)
+    void RegisterClientCommands(IConfigurator<CommandSettings> branch)
+    {
+        branch.AddCommand<ClientSearch>("search")
+            .WithDescription("Search for clients by name");
+        branch.AddCommand<ClientOutstanding>("outstanding")
+            .WithDescription("List clients with unbilled time");
+    }
+
     config.AddBranch("client", cl =>
     {
         cl.SetDescription("Client operations");
-        cl.AddCommand<ClientSearch>("search")
-            .WithDescription("Search for clients by name");
+        RegisterClientCommands(cl);
     });
 
     config.AddBranch("cl", cl =>
     {
         cl.SetDescription("Client operations (alias)");
-        cl.AddCommand<ClientSearch>("search")
-            .WithDescription("Search for clients by name");
+        RegisterClientCommands(cl);
     });
 
     // Project (with alias)
@@ -174,6 +198,8 @@ app.Configure(config =>
         rate.SetDescription("Rate information");
         rate.AddCommand<RateGet>("get")
             .WithDescription("Get client rate for current employee");
+        rate.AddCommand<RateList>("list")
+            .WithDescription("List all configured rates for a client (paged)");
     });
 
     // Iteration (with alias)
@@ -230,6 +256,126 @@ app.Configure(config =>
         skills.SetDescription("Agent skill file management");
         skills.AddCommand<SkillsCreate>("create")
             .WithDescription("Generate agent skill files");
+    });
+
+    // ───── Accounting (read-only) ─────
+
+    // Invoice (with alias `inv`)
+    void RegisterInvoiceCommands(IConfigurator<CommandSettings> branch)
+    {
+        branch.AddCommand<InvList>("list")
+            .WithDescription("List invoices (paged, filtered)");
+        branch.AddCommand<InvGet>("get")
+            .WithDescription("Get invoice header details");
+        branch.AddCommand<InvLines>("lines")
+            .WithDescription("List line items (products) on an invoice");
+        branch.AddCommand<InvTimesheets>("timesheets")
+            .WithDescription("List timesheets allocated to (or written off against) an invoice");
+        branch.AddCommand<InvReceipts>("receipts")
+            .WithDescription("List receipts against an invoice");
+    }
+
+    config.AddBranch("invoice", inv =>
+    {
+        inv.SetDescription("Invoices (read-only)");
+        RegisterInvoiceCommands(inv);
+    });
+
+    config.AddBranch("inv", inv =>
+    {
+        inv.SetDescription("Invoices (alias)");
+        RegisterInvoiceCommands(inv);
+    });
+
+    // Receipt (with alias `rcpt`)
+    void RegisterReceiptCommands(IConfigurator<CommandSettings> branch)
+    {
+        branch.AddCommand<ReceiptList>("list")
+            .WithDescription("List paid receipts (paged)");
+        branch.AddCommand<ReceiptGet>("get")
+            .WithDescription("Get a receipt with its invoice allocations");
+        branch.AddCommand<ReceiptOutstanding>("outstanding")
+            .WithDescription("Aged-debtor view for a client");
+    }
+
+    config.AddBranch("receipt", rcpt =>
+    {
+        rcpt.SetDescription("Receipts (read-only)");
+        RegisterReceiptCommands(rcpt);
+    });
+
+    config.AddBranch("rcpt", rcpt =>
+    {
+        rcpt.SetDescription("Receipts (alias)");
+        RegisterReceiptCommands(rcpt);
+    });
+
+    // Credit notes (alias `cn`)
+    void RegisterCreditNoteCommands(IConfigurator<CommandSettings> branch)
+    {
+        branch.AddCommand<CreditNoteList>("list")
+            .WithDescription("List credit notes for a client");
+    }
+
+    config.AddBranch("creditnote", cn =>
+    {
+        cn.SetDescription("Credit notes (read-only)");
+        RegisterCreditNoteCommands(cn);
+    });
+
+    config.AddBranch("cn", cn =>
+    {
+        cn.SetDescription("Credit notes (alias)");
+        RegisterCreditNoteCommands(cn);
+    });
+
+    // Products (alias `prod`)
+    void RegisterProductCommands(IConfigurator<CommandSettings> branch)
+    {
+        branch.AddCommand<ProductList>("list")
+            .WithDescription("List products (or all prepaid SKUs with --prepaid)");
+        branch.AddCommand<ProductGet>("get")
+            .WithDescription("Get a single product by ID");
+        branch.AddCommand<ProductDiscounts>("discounts")
+            .WithDescription("Show product discounts for a client");
+    }
+
+    config.AddBranch("product", prod =>
+    {
+        prod.SetDescription("Sale products / SKUs (read-only)");
+        RegisterProductCommands(prod);
+    });
+
+    config.AddBranch("prod", prod =>
+    {
+        prod.SetDescription("Products (alias)");
+        RegisterProductCommands(prod);
+    });
+
+    // Recurring invoices
+    config.AddBranch("recurring", rec =>
+    {
+        rec.SetDescription("Recurring invoice templates (read-only)");
+        rec.AddCommand<RecurringList>("list")
+            .WithDescription("List recurring invoice templates");
+        rec.AddCommand<RecurringGet>("get")
+            .WithDescription("Get a recurring invoice template by ID");
+    });
+
+    // Prepaid drawdown
+    config.AddBranch("prepaid", pp =>
+    {
+        pp.SetDescription("Prepaid drawdown reports");
+        pp.AddCommand<PrepaidStatus>("status")
+            .WithDescription("Download the prepaid drawdown status PDF for an invoice");
+    });
+
+    // Unbilled time
+    config.AddBranch("unbilled", ub =>
+    {
+        ub.SetDescription("Unbilled (unallocated) time");
+        ub.AddCommand<UnbilledList>("list")
+            .WithDescription("List unbilled timesheets for a client");
     });
 
     // User

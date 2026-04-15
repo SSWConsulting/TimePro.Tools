@@ -85,7 +85,8 @@ SSW.TimePro.Timesheets.Cli/
 │       │   │   ├── UpdateCommand.cs            # tp leave update <ID>
 │       │   │   └── CancelCommand.cs            # tp leave cancel <ID>
 │       │   ├── Clients/
-│       │   │   └── SearchCommand.cs            # tp client search <QUERY>
+│       │   │   ├── SearchCommand.cs            # tp client search <QUERY>
+│       │   │   └── OutstandingCommand.cs       # tp client outstanding (unbilled time)
 │       │   ├── Projects/
 │       │   │   └── ListCommand.cs              # tp project list --client <ID>
 │       │   ├── Iterations/
@@ -94,7 +95,31 @@ SSW.TimePro.Timesheets.Cli/
 │       │   │   ├── MeCommand.cs                # tp user me
 │       │   │   └── SearchCommand.cs            # tp user search <QUERY>
 │       │   ├── Rates/
-│       │   │   └── GetCommand.cs               # tp rate get --client <ID>
+│       │   │   ├── GetCommand.cs               # tp rate get --client <ID>
+│       │   │   └── ListCommand.cs              # tp rate list --client <ID>
+│       │   ├── Invoices/                       # accountant (read-only)
+│       │   │   ├── ListCommand.cs              # tp invoice list
+│       │   │   ├── GetCommand.cs               # tp invoice get <ID>
+│       │   │   ├── LinesCommand.cs             # tp invoice lines <ID>
+│       │   │   ├── TimesheetsCommand.cs        # tp invoice timesheets <ID> [--writeoff]
+│       │   │   └── ReceiptsCommand.cs          # tp invoice receipts <ID>
+│       │   ├── Receipts/                       # accountant
+│       │   │   ├── ListCommand.cs              # tp receipt list
+│       │   │   ├── GetCommand.cs               # tp receipt get <ID>
+│       │   │   └── OutstandingCommand.cs       # tp receipt outstanding <CLIENT>
+│       │   ├── CreditNotes/
+│       │   │   └── ListCommand.cs              # tp creditnote list --client <ID>
+│       │   ├── Products/
+│       │   │   ├── ListCommand.cs              # tp product list [--prepaid]
+│       │   │   ├── GetCommand.cs               # tp product get <ID>
+│       │   │   └── DiscountsCommand.cs         # tp product discounts --client <ID>
+│       │   ├── Recurring/
+│       │   │   ├── ListCommand.cs              # tp recurring list
+│       │   │   └── GetCommand.cs               # tp recurring get <ID>
+│       │   ├── Prepaid/
+│       │   │   └── StatusCommand.cs            # tp prepaid status <INV> (PDF)
+│       │   ├── Unbilled/
+│       │   │   └── ListCommand.cs              # tp unbilled list --client <ID>
 │       │   ├── Location/
 │       │   │   ├── InfoCommand.cs              # tp location info [--date]
 │       │   │   └── SetCommand.cs               # tp location set Home --day Mon,Tue
@@ -111,7 +136,8 @@ SSW.TimePro.Timesheets.Cli/
 │       │           ├── BookingMcpTools.cs
 │       │           ├── LeaveMcpTools.cs
 │       │           ├── LookupMcpTools.cs
-│       │           └── LocationMcpTools.cs
+│       │           ├── LocationMcpTools.cs
+│       │           └── AccountingMcpTools.cs    # invoices, receipts, credit notes, products, rates, prepaid, recurring + cross-domain reads
 │       │
 │       └── Shared/
 │           └── Models/                         # API DTOs shared across features
@@ -120,7 +146,14 @@ SSW.TimePro.Timesheets.Cli/
 │               ├── LeaveModels.cs
 │               ├── ClientModels.cs
 │               ├── ProjectModels.cs
-│               ├── RateModels.cs
+│               ├── RateModels.cs                 # rate lookup DTO (tp rate get)
+│               ├── AccountingRateModels.cs      # paged rate table (tp rate list)
+│               ├── InvoiceModels.cs
+│               ├── ReceiptModels.cs
+│               ├── CreditNoteModels.cs
+│               ├── ProductModels.cs
+│               ├── RecurringModels.cs
+│               ├── PagedResponse.cs             # generic { total, data[] } envelope
 │               ├── UserModels.cs
 │               └── CommonModels.cs
 │

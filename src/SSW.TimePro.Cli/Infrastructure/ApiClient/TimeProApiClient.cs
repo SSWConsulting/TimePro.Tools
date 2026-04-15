@@ -45,6 +45,35 @@ public interface ITimeProApiClient
     Task<List<ProjectSummaryItem>> GetProjectsSummaryAsync(string employeeId, DateOnly startDate, DateOnly endDate, CancellationToken ct = default);
     Task<List<IterationItem>> GetIterationsAsync(string projectId, CancellationToken ct = default);
     Task<List<TimesheetSummaryEntry>> QueryTimesheetsAsync(TimesheetSummaryFilter filter, CancellationToken ct = default);
+
+    // ─── Accounting (read-only) ───
+    Task<PagedResponse<InvoiceSearchRow>?> ListInvoicesAsync(string? query, int skip, int limit, string field, string dir, bool onlyRecurring, CancellationToken ct = default);
+    Task<InvoiceHeader?> GetInvoiceAsync(int invoiceId, CancellationToken ct = default);
+    Task<List<InvoiceLine>> GetInvoiceProductsAsync(int invoiceId, CancellationToken ct = default);
+    Task<List<InvoiceTimesheet>> GetInvoiceTimesheetsAsync(int invoiceId, string type, CancellationToken ct = default);
+    Task<List<ReceiptRow>> GetInvoiceReceiptsAsync(int invoiceId, CancellationToken ct = default);
+    Task<List<InvoiceHeader>> GetInvoicesByClientAsync(string clientId, CancellationToken ct = default);
+    Task<List<InvoiceHeader>> GetUnpaidInvoicesByClientAsync(string clientId, CancellationToken ct = default);
+
+    Task<PagedResponse<ReceiptRow>?> ListPaidReceiptsAsync(string? searchText, int skip, int limit, string field, string dir, CancellationToken ct = default);
+    Task<ReceiptDetail?> GetReceiptDetailAsync(int receiptId, CancellationToken ct = default);
+    Task<ClientOutstandingSummary?> GetClientOutstandingAsync(string clientId, CancellationToken ct = default);
+
+    Task<List<CreditNoteRow>> GetCreditNotesByClientAsync(string clientId, CancellationToken ct = default);
+
+    Task<List<ProductRow>> ListProductsAsync(bool isExpand, CancellationToken ct = default);
+    Task<ProductRow?> GetProductAsync(string productId, CancellationToken ct = default);
+    Task<List<ProductSkuRow>> ListAllSkusAsync(bool isPrepaid, CancellationToken ct = default);
+    Task<List<ProductDiscountRow>> GetProductDiscountsForClientAsync(string clientId, CancellationToken ct = default);
+
+    Task<ClientRateTable?> ListClientRatesAsync(string clientId, string? empId, bool showExpired, int? pageSize, int? skip, string? sortField, string? direction, bool selectAll, CancellationToken ct = default);
+    Task<List<ClientOutstandingTimeRow>> GetClientsWithOutstandingTimeAsync(CancellationToken ct = default);
+    Task<List<InvoiceTimesheet>> GetUnallocatedTimesheetsByClientAsync(string clientId, int? pageSize, int? skip, string? sortField, string? direction, CancellationToken ct = default);
+
+    Task<PagedResponse<RecurringInvoiceRow>?> ListRecurringInvoicesAsync(string? query, string? clientId, bool showOutdated, int skip, int limit, string field, string dir, CancellationToken ct = default);
+    Task<RecurringInvoiceDetail?> GetRecurringInvoiceAsync(int invoiceId, CancellationToken ct = default);
+
+    Task<byte[]> GetPrepaidStatusReportPdfAsync(int invoiceId, int templateId, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -285,6 +314,180 @@ public class TimeProApiClient : ITimeProApiClient
             "/api/timesheetSummary/GetTableSummarydata", filter, ct) ?? [];
     }
 
+    // ───────────────────────── Accounting: Invoices ─────────────────────────
+
+    public async Task<PagedResponse<InvoiceSearchRow>?> ListInvoicesAsync(
+        string? query, int skip, int limit, string field, string dir, bool onlyRecurring, CancellationToken ct = default)
+    {
+        var url = $"/api/ClientInvoice/rangepaged?query={Uri.EscapeDataString(query ?? string.Empty)}&skip={skip}&limit={limit}&field={Uri.EscapeDataString(field)}&dir={Uri.EscapeDataString(dir)}&onlyRecurring={onlyRecurring.ToString().ToLower()}";
+        return await GetAsync<PagedResponse<InvoiceSearchRow>>(url, ct);
+    }
+
+    public async Task<InvoiceHeader?> GetInvoiceAsync(int invoiceId, CancellationToken ct = default)
+    {
+        return await GetAsync<InvoiceHeader>($"/api/v2/ClientInvoice/{invoiceId}", ct);
+    }
+
+    public async Task<List<InvoiceLine>> GetInvoiceProductsAsync(int invoiceId, CancellationToken ct = default)
+    {
+        return await GetAsync<List<InvoiceLine>>($"/api/v2/ClientInvoice/{invoiceId}/products", ct) ?? [];
+    }
+
+    public async Task<List<InvoiceTimesheet>> GetInvoiceTimesheetsAsync(int invoiceId, string type, CancellationToken ct = default)
+    {
+        var endpoint = type.Equals("writeoff", StringComparison.OrdinalIgnoreCase)
+            ? "WriteOff"
+            : "Allocated";
+        var url = $"/api/v2/Timesheets/WithNames/{endpoint}?invoiceID={invoiceId}";
+        return await GetAsync<List<InvoiceTimesheet>>(url, ct) ?? [];
+    }
+
+    public async Task<List<ReceiptRow>> GetInvoiceReceiptsAsync(int invoiceId, CancellationToken ct = default)
+    {
+        return await GetAsync<List<ReceiptRow>>($"/api/v2/ClientInvoice/{invoiceId}/receipts", ct) ?? [];
+    }
+
+    public async Task<List<InvoiceHeader>> GetInvoicesByClientAsync(string clientId, CancellationToken ct = default)
+    {
+        var url = $"/api/ClientInvoice/ClientID/{Uri.EscapeDataString(clientId)}";
+        return await GetAsync<List<InvoiceHeader>>(url, ct) ?? [];
+    }
+
+    public async Task<List<InvoiceHeader>> GetUnpaidInvoicesByClientAsync(string clientId, CancellationToken ct = default)
+    {
+        var url = $"/api/ClientInvoice/UnpaidByClientID/{Uri.EscapeDataString(clientId)}";
+        return await GetAsync<List<InvoiceHeader>>(url, ct) ?? [];
+    }
+
+    // ───────────────────────── Accounting: Receipts ─────────────────────────
+
+    public async Task<PagedResponse<ReceiptRow>?> ListPaidReceiptsAsync(
+        string? searchText, int skip, int limit, string field, string dir, CancellationToken ct = default)
+    {
+        var url = $"/api/receipting/PaidReceiptsPaged?searchText={Uri.EscapeDataString(searchText ?? string.Empty)}&skip={skip}&limit={limit}&field={Uri.EscapeDataString(field)}&dir={Uri.EscapeDataString(dir)}";
+        return await GetAsync<PagedResponse<ReceiptRow>>(url, ct);
+    }
+
+    public async Task<ReceiptDetail?> GetReceiptDetailAsync(int receiptId, CancellationToken ct = default)
+    {
+        return await GetAsync<ReceiptDetail>($"/api/Receipting/details/{receiptId}", ct);
+    }
+
+    public async Task<ClientOutstandingSummary?> GetClientOutstandingAsync(string clientId, CancellationToken ct = default)
+    {
+        return await GetAsync<ClientOutstandingSummary>(
+            $"/api/Receipting/ClientOutstanding/{Uri.EscapeDataString(clientId)}", ct);
+    }
+
+    // ───────────────────────── Accounting: Credit Notes ─────────────────────────
+
+    public async Task<List<CreditNoteRow>> GetCreditNotesByClientAsync(string clientId, CancellationToken ct = default)
+    {
+        return await GetAsync<List<CreditNoteRow>>(
+            $"/api/creditnote/by-client/{Uri.EscapeDataString(clientId)}", ct) ?? [];
+    }
+
+    // ───────────────────────── Accounting: Products / SKUs ─────────────────────────
+
+    public async Task<List<ProductRow>> ListProductsAsync(bool isExpand, CancellationToken ct = default)
+    {
+        return await GetAsync<List<ProductRow>>(
+            $"/api/Product?isExpand={isExpand.ToString().ToLower()}", ct) ?? [];
+    }
+
+    public async Task<ProductRow?> GetProductAsync(string productId, CancellationToken ct = default)
+    {
+        return await GetAsync<ProductRow>($"/api/Product/{Uri.EscapeDataString(productId)}", ct);
+    }
+
+    public async Task<List<ProductSkuRow>> ListAllSkusAsync(bool isPrepaid, CancellationToken ct = default)
+    {
+        return await GetAsync<List<ProductSkuRow>>(
+            $"/api/Product/All?IsPrepaid={isPrepaid.ToString().ToLower()}", ct) ?? [];
+    }
+
+    public async Task<List<ProductDiscountRow>> GetProductDiscountsForClientAsync(string clientId, CancellationToken ct = default)
+    {
+        return await GetAsync<List<ProductDiscountRow>>(
+            $"/api/Product/GetDiscountsForClient/{Uri.EscapeDataString(clientId)}", ct) ?? [];
+    }
+
+    // ───────────────────────── Accounting: Rates / Outstanding / Unbilled ─────────────────────────
+
+    public async Task<ClientRateTable?> ListClientRatesAsync(
+        string clientId, string? empId, bool showExpired,
+        int? pageSize, int? skip, string? sortField, string? direction, bool selectAll,
+        CancellationToken ct = default)
+    {
+        var qs = new List<string>
+        {
+            $"clientId={Uri.EscapeDataString(clientId)}",
+            $"showExpiredRates={showExpired.ToString().ToLower()}",
+            $"selectAll={selectAll.ToString().ToLower()}"
+        };
+        if (!string.IsNullOrEmpty(empId)) qs.Add($"empId={Uri.EscapeDataString(empId)}");
+        if (pageSize.HasValue) qs.Add($"pageSize={pageSize.Value}");
+        if (skip.HasValue) qs.Add($"skip={skip.Value}");
+        if (!string.IsNullOrEmpty(sortField)) qs.Add($"sortField={Uri.EscapeDataString(sortField)}");
+        if (!string.IsNullOrEmpty(direction)) qs.Add($"direction={Uri.EscapeDataString(direction)}");
+
+        return await GetAsync<ClientRateTable>($"/api/clients/GetClientRates?{string.Join("&", qs)}", ct);
+    }
+
+    public async Task<List<ClientOutstandingTimeRow>> GetClientsWithOutstandingTimeAsync(CancellationToken ct = default)
+    {
+        return await GetAsync<List<ClientOutstandingTimeRow>>("/api/clients/OutstandingTime", ct) ?? [];
+    }
+
+    public async Task<List<InvoiceTimesheet>> GetUnallocatedTimesheetsByClientAsync(
+        string clientId, int? pageSize, int? skip, string? sortField, string? direction, CancellationToken ct = default)
+    {
+        // Prefer the v2 named endpoint (returns shaped data the same as Allocated).
+        var qs = new List<string> { $"clientId={Uri.EscapeDataString(clientId)}" };
+        if (pageSize.HasValue) qs.Add($"pageSize={pageSize.Value}");
+        if (skip.HasValue) qs.Add($"skip={skip.Value}");
+        if (!string.IsNullOrEmpty(sortField)) qs.Add($"sortField={Uri.EscapeDataString(sortField)}");
+        if (!string.IsNullOrEmpty(direction)) qs.Add($"direction={Uri.EscapeDataString(direction)}");
+
+        return await GetAsync<List<InvoiceTimesheet>>(
+            $"/api/v2/Timesheets/WithNames/Unallocated?{string.Join("&", qs)}", ct) ?? [];
+    }
+
+    // ───────────────────────── Accounting: Recurring ─────────────────────────
+
+    public async Task<PagedResponse<RecurringInvoiceRow>?> ListRecurringInvoicesAsync(
+        string? query, string? clientId, bool showOutdated, int skip, int limit, string field, string dir,
+        CancellationToken ct = default)
+    {
+        var qs = new List<string>
+        {
+            $"query={Uri.EscapeDataString(query ?? string.Empty)}",
+            $"showOutdated={showOutdated.ToString().ToLower()}",
+            $"skip={skip}",
+            $"pageSize={limit}",
+            $"field={Uri.EscapeDataString(field)}",
+            $"dir={Uri.EscapeDataString(dir)}"
+        };
+        if (!string.IsNullOrEmpty(clientId)) qs.Add($"clientId={Uri.EscapeDataString(clientId)}");
+
+        // /api/recurring/invoices/ returns the list shape { Total, Data[] }.
+        return await GetAsync<PagedResponse<RecurringInvoiceRow>>(
+            $"/api/recurring/invoices/?{string.Join("&", qs)}", ct);
+    }
+
+    public async Task<RecurringInvoiceDetail?> GetRecurringInvoiceAsync(int invoiceId, CancellationToken ct = default)
+    {
+        return await GetAsync<RecurringInvoiceDetail>($"/api/recurring/invoices/{invoiceId}", ct);
+    }
+
+    // ───────────────────────── Accounting: Prepaid ─────────────────────────
+
+    public async Task<byte[]> GetPrepaidStatusReportPdfAsync(int invoiceId, int templateId, CancellationToken ct = default)
+    {
+        return await GetBytesAsync(
+            $"/Reporting/GetPrepaidStatusReport?invoiceId={invoiceId}&templateId={templateId}", ct);
+    }
+
     // ───────────────────────── HTTP Helpers ─────────────────────────
 
     private void ConfigureRequest(HttpRequestMessage request)
@@ -309,6 +512,17 @@ public class TimeProApiClient : ITimeProApiClient
         await EnsureSuccessAsync(response, ct);
 
         return await response.Content.ReadFromJsonAsync<T>(ReadJsonOptions, ct);
+    }
+
+    private async Task<byte[]> GetBytesAsync(string relativeUrl, CancellationToken ct)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, relativeUrl);
+        ConfigureRequest(request);
+
+        using var response = await _http.SendAsync(request, ct);
+        await EnsureSuccessAsync(response, ct);
+
+        return await response.Content.ReadAsByteArrayAsync(ct);
     }
 
     private async Task<T?> PostAsync<T>(string relativeUrl, object body, CancellationToken ct)

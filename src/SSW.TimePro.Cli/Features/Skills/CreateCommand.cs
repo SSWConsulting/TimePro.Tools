@@ -19,6 +19,10 @@ public class CreateCommand : Command<CreateCommand.Settings>
         [CommandOption("--global")]
         [Description("Write to global config instead of local project")]
         public bool Global { get; set; }
+
+        [CommandOption("--accounting")]
+        [Description("Also write the accountant CLI skill (timepro-accounting-cli.md) alongside the timesheets skill. Opt-in; does not touch any existing HTTP-based timepro-accounting skill.")]
+        public bool Accounting { get; set; }
     }
 
     public CreateCommand(IConfigService config) => _config = config;
@@ -60,6 +64,14 @@ public class CreateCommand : Command<CreateCommand.Settings>
         File.WriteAllText(outputFile, content);
 
         OutputHelper.WriteSuccess($"Skill file written to {outputFile}");
+
+        if (settings.Accounting)
+        {
+            var accountingFile = Path.Combine(outputDir, "timepro-accounting-cli.md");
+            File.WriteAllText(accountingFile, GenerateAccountingSkillContent(tenant));
+            OutputHelper.WriteSuccess($"Skill file written to {accountingFile}");
+        }
+
         return 0;
     }
 
@@ -400,6 +412,197 @@ public class CreateCommand : Command<CreateCommand.Settings>
             sb.AppendLine("- No WFH days configured — use `tp loc set Home --day Mon,Tue` to set");
         }
         sb.AppendLine();
+
+        return sb.ToString();
+    }
+
+    private static string GenerateAccountingSkillContent(TenantConfig? tenant)
+    {
+        var sb = new System.Text.StringBuilder();
+
+        sb.AppendLine("---");
+        sb.AppendLine("name: timepro-accounting-cli");
+        sb.AppendLine("description: Explore SSW TimePro financial data via the `tp` CLI (read-only) — invoices with line items, timesheets billed on invoices, credit notes, receipts, sale products, client rates, aged debtors, unbilled time, recurring invoices, prepaid drawdown PDFs. Use when the user asks accountant-style questions. For raw HTTP/curl access (when `tp` isn't installed), use the `timepro-accounting` skill instead.");
+        sb.AppendLine("user_invocable: true");
+        sb.AppendLine("---");
+        sb.AppendLine();
+        sb.AppendLine("# TimePro Accounting (CLI)");
+        sb.AppendLine();
+        sb.AppendLine("Accountant-facing read-only access to SSW TimePro via the `tp` CLI.");
+        sb.AppendLine("Optimised for exploration and reconciliation — pipe `--json` output into `jq`");
+        sb.AppendLine("or Python to calculate totals, compare against Xero, or audit historical data.");
+        sb.AppendLine();
+        sb.AppendLine("## Setup");
+        sb.AppendLine();
+        sb.AppendLine("This skill reuses the tenant config already configured for `tp`. If `tp login`");
+        sb.AppendLine("has been run (check `~/.config/timepro-cli/tenants/`), nothing else is needed.");
+        sb.AppendLine("Otherwise run `tp login --tenant <id>` first.");
+        sb.AppendLine();
+        sb.AppendLine("> **Note**: The sibling skill `timepro-accounting` (without the `-cli` suffix)");
+        sb.AppendLine("> hits the same API via raw `curl`. Keep it for environments where `tp` isn't");
+        sb.AppendLine("> installed, or when demonstrating the raw HTTP shape. This CLI skill is the");
+        sb.AppendLine("> preferred day-to-day option.");
+        sb.AppendLine();
+        sb.AppendLine("## Quick reference");
+        sb.AppendLine();
+        sb.AppendLine("All commands accept `--json` for machine output.");
+        sb.AppendLine();
+        sb.AppendLine("```bash");
+        sb.AppendLine("# Invoices");
+        sb.AppendLine("tp invoice list --limit 50 --json");
+        sb.AppendLine("tp invoice list --query acme --field DateCreated --dir desc --json");
+        sb.AppendLine("tp invoice get <INV>");
+        sb.AppendLine("tp invoice lines <INV>         # line items (products billed)");
+        sb.AppendLine("tp invoice timesheets <INV>    # timesheets allocated to the invoice");
+        sb.AppendLine("tp invoice timesheets <INV> --writeoff   # written-off timesheets");
+        sb.AppendLine("tp invoice receipts <INV>      # payments against the invoice");
+        sb.AppendLine();
+        sb.AppendLine("# Receipts (money in)");
+        sb.AppendLine("tp receipt list --limit 500 --field PaymentDate --dir desc --json");
+        sb.AppendLine("tp receipt get <RCPT>");
+        sb.AppendLine("tp receipt outstanding <CLIENT_ID>   # aged debtors");
+        sb.AppendLine();
+        sb.AppendLine("# Credit notes, products, discounts");
+        sb.AppendLine("tp creditnote list --client <CLIENT_ID> --json");
+        sb.AppendLine("tp product list --json                  # products");
+        sb.AppendLine("tp product list --prepaid --json        # prepaid SKUs only");
+        sb.AppendLine("tp product get <PROD_ID>");
+        sb.AppendLine("tp product discounts --client <CLIENT_ID>");
+        sb.AppendLine();
+        sb.AppendLine("# Rates, unbilled, outstanding");
+        sb.AppendLine("tp rate list --client <CLIENT_ID> --show-expired --json");
+        sb.AppendLine("tp client outstanding --json            # clients with unbilled time");
+        sb.AppendLine("tp unbilled list --client <CLIENT_ID> --json");
+        sb.AppendLine();
+        sb.AppendLine("# Recurring invoice templates");
+        sb.AppendLine("tp recurring list --client <CLIENT_ID> --json");
+        sb.AppendLine("tp recurring get <ID>");
+        sb.AppendLine();
+        sb.AppendLine("# Prepaid drawdown (PDF only — row-level data not exposed via JSON API today)");
+        sb.AppendLine("tp prepaid status <INVOICE_ID> --output /tmp/prepaid.pdf");
+        sb.AppendLine();
+        sb.AppendLine("# Cross-employee/client/project timesheet query (powerful for audits)");
+        sb.AppendLine("tp query --from 2026-03-01 --to 2026-03-31 --json");
+        sb.AppendLine("tp query --from 2026-03-01 --to 2026-03-31 --client <CID> --json");
+        sb.AppendLine("```");
+        sb.AppendLine();
+        sb.AppendLine("## Common workflows");
+        sb.AppendLine();
+        sb.AppendLine("### 1. Drill into an invoice (header + lines + timesheets + receipts)");
+        sb.AppendLine();
+        sb.AppendLine("```bash");
+        sb.AppendLine("INV=19145");
+        sb.AppendLine("tp invoice get $INV --json          > /tmp/inv_header.json");
+        sb.AppendLine("tp invoice lines $INV --json        > /tmp/inv_lines.json");
+        sb.AppendLine("tp invoice timesheets $INV --json   > /tmp/inv_ts.json");
+        sb.AppendLine("tp invoice receipts $INV --json     > /tmp/inv_receipts.json");
+        sb.AppendLine("```");
+        sb.AppendLine();
+        sb.AppendLine("Reconcile: sum of line `sellTotal` = invoice header `sellTotal`; sum of");
+        sb.AppendLine("`abs(paidTotal)` on receipts = header `paidAmt`; header `osAmt` = total − paid.");
+        sb.AppendLine();
+        sb.AppendLine("### 2. Monthly invoiced sales");
+        sb.AppendLine();
+        sb.AppendLine("```bash");
+        sb.AppendLine("tp invoice list --limit 500 --field DateCreated --dir desc --json \\");
+        sb.AppendLine("  | jq '[.data[] | select(.dateCreated | startswith(\"2026-03\"))] | {count: length, total: map(.sellTotal) | add}'");
+        sb.AppendLine("```");
+        sb.AppendLine();
+        sb.AppendLine("### 3. Monthly receipts (money in)");
+        sb.AppendLine();
+        sb.AppendLine("```bash");
+        sb.AppendLine("tp receipt list --limit 500 --field PaymentDate --dir desc --json \\");
+        sb.AppendLine("  | jq '[.data[] | select(.paymentDate | startswith(\"2026-03\"))]");
+        sb.AppendLine("        | {count: length, total: (map(.paidTotal // .paid) | add | fabs)}'");
+        sb.AppendLine("```");
+        sb.AppendLine();
+        sb.AppendLine("### 4. Aged debtors for one client");
+        sb.AppendLine();
+        sb.AppendLine("```bash");
+        sb.AppendLine("tp receipt outstanding LR8R0L        # human table");
+        sb.AppendLine("tp receipt outstanding LR8R0L --json # for further processing");
+        sb.AppendLine("```");
+        sb.AppendLine();
+        sb.AppendLine("### 5. Unbilled revenue in the pipeline");
+        sb.AppendLine();
+        sb.AppendLine("```bash");
+        sb.AppendLine("tp client outstanding --json          # list all clients with unbilled time");
+        sb.AppendLine("tp unbilled list --client LR8R0L --json");
+        sb.AppendLine("```");
+        sb.AppendLine();
+        sb.AppendLine("### 6. Credit-note audit");
+        sb.AppendLine();
+        sb.AppendLine("```bash");
+        sb.AppendLine("tp creditnote list --client LR8R0L --json \\");
+        sb.AppendLine("  | jq 'sort_by(.creditNoteDate) | map({id, date: .creditNoteDate, amount, note})'");
+        sb.AppendLine("```");
+        sb.AppendLine();
+        sb.AppendLine("## Xero cross-check (via MCP composition)");
+        sb.AppendLine();
+        sb.AppendLine("With both `tp mcp` and a Xero MCP server connected in Claude Code, an agent can");
+        sb.AppendLine("call tools from both servers in a single session. No bespoke feature is needed —");
+        sb.AppendLine("this falls out of MCP composition.");
+        sb.AppendLine();
+        sb.AppendLine("Example prompts:");
+        sb.AppendLine();
+        sb.AppendLine("- *\"Reconcile TimePro paid receipts for March 2026 against Xero bank receipts.");
+        sb.AppendLine("  Call `ListPaidReceipts` in TimePro for March; fetch the equivalent Xero");
+        sb.AppendLine("  bank rec period; flag any receipts in one system but not the other, or amount");
+        sb.AppendLine("  mismatches (>$0.01) by invoice reference.\"*");
+        sb.AppendLine();
+        sb.AppendLine("- *\"For prepaid invoice 19145, compare the TimePro prepaid status PDF");
+        sb.AppendLine("  (`GetPrepaidStatusPdf`) against Xero manual journals tagged with that invoice.");
+        sb.AppendLine("  Sanity-check that drawdown entries in TimePro net to the Xero journal totals.\"*");
+        sb.AppendLine();
+        sb.AppendLine("- *\"List TimePro invoices where `externalSyncStatus != 1`; for each, check whether");
+        sb.AppendLine("  a matching invoice exists in Xero. Report what's missing or mismatched.\"*");
+        sb.AppendLine();
+        sb.AppendLine("Start `tp mcp` from Claude Code's MCP config (stdio transport) the same way the");
+        sb.AppendLine("timesheets tools are already wired up — the accounting tools live in the same");
+        sb.AppendLine("server and will appear in the tool list automatically.");
+        sb.AppendLine();
+        sb.AppendLine("## Data gotchas");
+        sb.AppendLine();
+        sb.AppendLine("- **Receipt sign convention**: `paidTotal` is **negative** for incoming payments");
+        sb.AppendLine("  (the receipt type's `typeSign` encodes direction). Report positive sales with");
+        sb.AppendLine("  `abs()`. `tp receipt list` and `tp invoice receipts` already show absolute");
+        sb.AppendLine("  values in the default table view; JSON output preserves the raw sign.");
+        sb.AppendLine("- **Date field choice matters**:");
+        sb.AppendLine("  - Receipts: `paymentDate` (money in) vs `dateCreated` (entered).");
+        sb.AppendLine("  - Invoices: `dateCreated` (raised) vs `dateStart`/`dateEnd` (period covered).");
+        sb.AppendLine("  - SQL reports sometimes join receipts to invoices and filter on the invoice");
+        sb.AppendLine("    date, which excludes March payments against pre-March invoices. If a SQL");
+        sb.AppendLine("    total disagrees, check which convention it uses.");
+        sb.AppendLine("- **Paged list endpoints ignore `dateFrom` / `dateTo`** (historical quirk). Always");
+        sb.AppendLine("  fetch by sort + page and filter client-side with `jq`.");
+        sb.AppendLine("- **Paging**: `tp invoice list` and `tp receipt list` default to limit 50/100 —");
+        sb.AppendLine("  raise to 500 or walk `--skip` when covering full months.");
+        sb.AppendLine("- **GST**: Invoice header totals are GST-**inclusive**; line `sellAmt × qty` is");
+        sb.AppendLine("  GST-**exclusive**. Check `salesTaxPct` on the header when reconciling against");
+        sb.AppendLine("  an ex-GST SQL figure.");
+        sb.AppendLine("- **Credit notes** appear as negative-signed adjustments. Decide whether to net");
+        sb.AppendLine("  them off sales or report separately before presenting a number.");
+        sb.AppendLine("- **Write-offs**: Timesheets allocated to an invoice may be written off. Pass");
+        sb.AppendLine("  `--writeoff` to `tp invoice timesheets` to see them; include both allocated");
+        sb.AppendLine("  and writeoff when auditing total hours worked on a job.");
+        sb.AppendLine();
+        sb.AppendLine("## Output etiquette");
+        sb.AppendLine();
+        sb.AppendLine("When presenting numbers to the user:");
+        sb.AppendLine("- State the **date field** used (`paymentDate` / `dateCreated`).");
+        sb.AppendLine("- State whether **GST** is included or excluded.");
+        sb.AppendLine("- State whether **credit notes** are netted off or shown separately.");
+        sb.AppendLine("- Always show **record count** alongside totals — single-number answers hide");
+        sb.AppendLine("  filter mistakes.");
+        sb.AppendLine();
+
+        if (tenant is not null)
+        {
+            sb.AppendLine("## Current configuration");
+            sb.AppendLine($"- Tenant: `{tenant.TenantId}`");
+            sb.AppendLine($"- API: `{tenant.ApiUrl}`");
+            sb.AppendLine();
+        }
 
         return sb.ToString();
     }

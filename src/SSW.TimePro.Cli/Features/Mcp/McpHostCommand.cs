@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
@@ -16,6 +17,11 @@ public class McpHostCommand : AsyncCommand<McpHostCommand.Settings>
     public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
     {
         var builder = Host.CreateApplicationBuilder();
+
+        // stdio MCP transport: stdout must carry only JSON-RPC frames.
+        // Route all console logging to stderr so host/logger output doesn't corrupt the stream.
+        builder.Logging.ClearProviders();
+        builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
 
         builder.Services.AddSingleton<IConfigService, ConfigService>();
         builder.Services.AddSingleton<ITenantProvider, DefaultTenantProvider>();

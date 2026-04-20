@@ -87,6 +87,12 @@ public class TimesheetRequest
     [System.Text.Json.Serialization.JsonPropertyName("isOverwriteRate")]
     public bool IsOverwriteRate { get; set; }
 
+    // Server defaults a missing salesTaxPct to 0, producing $0 tax regardless of
+    // billable type. The web UI sends this; the CLI must too. Leave null to let
+    // the API client fill it from the client's configured tax rate.
+    [System.Text.Json.Serialization.JsonPropertyName("salesTaxPct")]
+    public decimal? SalesTaxPct { get; set; }
+
     /// <summary>
     /// Only set for update operations.
     /// </summary>

@@ -25,6 +25,7 @@ public interface ITimeProApiClient
     Task<List<ClientSearchResult>> SearchClientsAsync(string employeeId, string searchText, CancellationToken ct = default);
     Task<List<ProjectForSelect>> GetProjectsForClientAsync(string employeeId, string clientId, CancellationToken ct = default);
     Task<ClientRateResponse?> GetClientRateAsync(string employeeId, string clientId, DateOnly date, CancellationToken ct = default);
+    Task<decimal?> GetClientTaxRateAsync(string clientId, CancellationToken ct = default);
     Task<List<AppointmentItem>> GetAppointmentsAsync(string employeeId, DateOnly start, DateOnly end, CancellationToken ct = default);
     Task<TimesheetResponse?> CreateTimesheetAsync(TimesheetRequest request, CancellationToken ct = default);
     Task<TimesheetResponse?> UpdateTimesheetAsync(TimesheetRequest request, CancellationToken ct = default);
@@ -123,6 +124,7 @@ public class TimeProApiClient : ITimeProApiClient
     public async Task<TimesheetResponse?> CreateTimesheetAsync(
         TimesheetRequest request, CancellationToken ct = default)
     {
+        await EnsureSalesTaxPctAsync(request, ct);
         return await PostAsync<TimesheetResponse>(
             "/api/Timesheets/SaveTimesheet?isEdit=false&isSuggested=false", request, ct);
     }
@@ -130,8 +132,19 @@ public class TimeProApiClient : ITimeProApiClient
     public async Task<TimesheetResponse?> UpdateTimesheetAsync(
         TimesheetRequest request, CancellationToken ct = default)
     {
+        await EnsureSalesTaxPctAsync(request, ct);
         return await PostAsync<TimesheetResponse>(
             "/api/Timesheets/SaveTimesheet?isEdit=true&isSuggested=false", request, ct);
+    }
+
+    // TimePro's SaveTimesheet server-side defaults a missing salesTaxPct to 0,
+    // which zeroes tax on all CLI-created/updated rows regardless of billable
+    // type. Look up the client's tax rate and attach it before POST.
+    private async Task EnsureSalesTaxPctAsync(TimesheetRequest request, CancellationToken ct)
+    {
+        if (request.SalesTaxPct is not null) return;
+        if (string.IsNullOrEmpty(request.ClientId)) return;
+        request.SalesTaxPct = await GetClientTaxRateAsync(request.ClientId, ct);
     }
 
     public async Task DeleteTimesheetAsync(int timesheetId, CancellationToken ct = default)
@@ -177,6 +190,12 @@ public class TimeProApiClient : ITimeProApiClient
     {
         var url = $"/api/Timesheets/GetClientRate?empID={Uri.EscapeDataString(employeeId)}&clientID={Uri.EscapeDataString(clientId)}&timesheetDateCreated={date:yyyy-MM-dd}";
         return await GetAsync<ClientRateResponse>(url, ct);
+    }
+
+    public async Task<decimal?> GetClientTaxRateAsync(string clientId, CancellationToken ct = default)
+    {
+        var url = $"/api/v2/clients/{Uri.EscapeDataString(clientId)}/taxrates";
+        return await GetAsync<decimal?>(url, ct);
     }
 
     // ───────────────────────── Appointments ─────────────────────────

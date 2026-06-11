@@ -19,8 +19,8 @@ public class ListCommand : AsyncCommand<ListCommand.Settings>
         [Description("Client ID")]
         public string ClientId { get; set; } = string.Empty;
 
-        [CommandOption("--employee <EMP_ID>")]
-        [Description("Filter to one employee")]
+        [CommandOption("--emp-id|--employee-id|--employee <EMP_ID>")]
+        [Description("Filter to one empId")]
         public string? EmpId { get; set; }
 
         [CommandOption("--show-expired")]

@@ -21,6 +21,10 @@ public class ListCommand : AsyncCommand<ListCommand.Settings>
         [Description("Number of results (default: 10)")]
         public int Limit { get; set; } = 10;
 
+        [CommandOption("--emp-id|--employee-id|--employee <EMP_ID>")]
+        [Description("empId. Defaults to all visible leave")]
+        public string? EmpId { get; set; }
+
         [CommandOption("--json")]
         [Description("Output as JSON")]
         public bool Json { get; set; }
@@ -33,7 +37,7 @@ public class ListCommand : AsyncCommand<ListCommand.Settings>
         try
         {
             var response = await _api.GetLeaveAsync(
-                settings.Filter.ToUpperInvariant(), 1, settings.Limit, CancellationToken.None);
+                settings.Filter.ToUpperInvariant(), 1, settings.Limit, settings.EmpId, CancellationToken.None);
 
             var items = response?.Leaves?.Items ?? [];
 

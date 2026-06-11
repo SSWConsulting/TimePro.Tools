@@ -69,7 +69,7 @@ tp product discounts --client <CLIENT_ID>
 tp rate get --client <CLIENT_ID>             # current employee, as-of date
 tp rate list --client <CLIENT_ID>            # all configured rates
 tp rate list --client <CLIENT_ID> --show-expired
-tp rate list --client <CLIENT_ID> --employee <EMP_ID>
+tp rate list --client <CLIENT_ID> --emp-id <EMP_ID>
 ```
 
 ### Outstanding / unbilled

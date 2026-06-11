@@ -27,15 +27,19 @@ public class TimesheetMcpTools
     }
 
     [McpServerTool]
-    [Description("Get timesheets for a date or date range. Returns JSON array of timesheet items.")]
+    [Description("Get timesheets for a date or date range. Use empId to read another employee's timesheets; employeeId is accepted as an alias.")]
     public async Task<string> GetTimesheets(
         [Description("Single date or start date (yyyy-MM-dd)")] string date,
         [Description("End date for range (yyyy-MM-dd). If omitted, returns single day.")] string? endDate = null,
+        [Description("empId to read. Defaults to the current user's empId.")] string? empId = null,
+        [Description("Alias for empId.")] string? employeeId = null,
         CancellationToken ct = default)
     {
         var tenant = _config.LoadActiveTenantConfig();
         if (tenant?.EmployeeId is null)
             return """{"error": "Not logged in. Run 'tp login --tenant <id>' first."}""";
+
+        var targetEmpId = ResolveEmpId(empId, employeeId, tenant.EmployeeId);
 
         var start = DateOnly.ParseExact(date, "yyyy-MM-dd");
         var end = endDate is not null
@@ -48,10 +52,10 @@ public class TimesheetMcpTools
             if (d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
                 continue;
 
-            var dayTimesheets = await _api.GetTimesheetsAsync(tenant.EmployeeId, d, ct);
+            var dayTimesheets = await _api.GetTimesheetsAsync(targetEmpId, d, ct);
             allTimesheets.AddRange(dayTimesheets.Select(t => new
             {
-                t.TimeId, t.Client, t.ClientId, t.Project, t.ProjectId,
+                t.TimeId, t.EmpId, t.EmpName, t.Client, t.ClientId, t.Project, t.ProjectId,
                 date = d.ToString("yyyy-MM-dd"),
                 t.StartTime, t.EndTime, t.TotalTime,
                 t.Location, t.BillableId, t.IsSuggested,
@@ -190,5 +194,11 @@ public class TimesheetMcpTools
         var response = await _api.AcceptSuggestedTimesheetAsync(
             suggestedId, location, notes, null, ct);
         return JsonSerializer.Serialize(response, JsonOpts);
+    }
+
+    private static string ResolveEmpId(string? empId, string? employeeId, string defaultEmpId)
+    {
+        var requestedEmpId = !string.IsNullOrWhiteSpace(empId) ? empId : employeeId;
+        return string.IsNullOrWhiteSpace(requestedEmpId) ? defaultEmpId : requestedEmpId.Trim();
     }
 }

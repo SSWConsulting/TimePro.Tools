@@ -83,6 +83,33 @@ public class LeaveListTests : TestBase
     }
 
     [Fact]
+    public async Task GetLeave_WithEmployeeId_AddsEmployeeQueryParameter()
+    {
+        // Arrange
+        WireMock.Given(
+            Request.Create()
+                .WithPath("/api/leave/")
+                .WithParam("leaveFilter", "UPCOMING")
+                .WithParam("pageNumber", "1")
+                .WithParam("pageSize", "10")
+                .WithParam("employeeId", "OTH")
+                .UsingGet()
+        ).RespondWith(
+            Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBodyFromFile("Fixtures/leave-list.json")
+        );
+
+        // Act
+        var result = await ApiClient.GetLeaveAsync("UPCOMING", 1, 10, "OTH", CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        WireMock.LogEntries.Should().ContainSingle();
+    }
+
+    [Fact]
     public async Task GetLeave_With401_ThrowsApiException()
     {
         // Arrange

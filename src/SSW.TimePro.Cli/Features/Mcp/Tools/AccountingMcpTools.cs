@@ -45,6 +45,21 @@ public class AccountingMcpTools
         return false;
     }
 
+    private static string? ResolveEmpId(string? empId, string? employeeId)
+    {
+        var requestedEmpId = !string.IsNullOrWhiteSpace(empId) ? empId : employeeId;
+        return string.IsNullOrWhiteSpace(requestedEmpId) ? null : requestedEmpId.Trim();
+    }
+
+    private static List<string> ResolveEmpIds(string[]? empIds, string[]? employeeIds)
+    {
+        var requestedEmpIds = empIds is { Length: > 0 } ? empIds : employeeIds;
+        return requestedEmpIds?
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id.Trim())
+            .ToList() ?? [];
+    }
+
     // ─── Invoices ───────────────────────────────────────────────────────────
 
     [McpServerTool]
@@ -231,10 +246,11 @@ public class AccountingMcpTools
     // ─── Rates / outstanding / unbilled ─────────────────────────────────────
 
     [McpServerTool]
-    [Description("List all configured client rates (all employees by default). For just the current employee's rate for a client, prefer GetClientRate.")]
+    [Description("List all configured client rates (all empIds by default). For just the current user's rate for a client, prefer GetClientRate. employeeId is accepted as an alias for empId.")]
     public async Task<string> ListClientRates(
         [Description("Client ID")] string clientId,
-        [Description("Filter to one employee ID")] string? empId = null,
+        [Description("Filter to one empId")] string? empId = null,
+        [Description("Alias for empId")] string? employeeId = null,
         [Description("Include expired rates")] bool showExpired = false,
         [Description("Page size (default 100)")] int? pageSize = 100,
         [Description("Rows to skip")] int? skip = 0,
@@ -243,7 +259,7 @@ public class AccountingMcpTools
         CancellationToken ct = default)
     {
         if (NotAuthed(out var err)) return err;
-        var d = await _api.ListClientRatesAsync(clientId, empId, showExpired, pageSize, skip, sortField, direction, selectAll: false, ct);
+        var d = await _api.ListClientRatesAsync(clientId, ResolveEmpId(empId, employeeId), showExpired, pageSize, skip, sortField, direction, selectAll: false, ct);
         return JsonSerializer.Serialize(d, JsonOpts);
     }
 
@@ -304,11 +320,12 @@ public class AccountingMcpTools
     // ─── Cross-domain reads (useful alongside accounting queries) ───────────
 
     [McpServerTool]
-    [Description("Query timesheets across employees, clients, projects and a date range. Returns detailed rows including hours and sell price — use for audits, billable-hour reconciliation, month-to-month comparisons.")]
+    [Description("Query timesheets across empIds, clients, projects and a date range. Returns detailed rows including hours and sell price — use for audits, billable-hour reconciliation, month-to-month comparisons. employeeIds is accepted as an alias for empIds.")]
     public async Task<string> QueryTimesheets(
         [Description("Start date (yyyy-MM-dd)")] string startDate,
         [Description("End date (yyyy-MM-dd)")] string endDate,
-        [Description("Filter to specific employee IDs (omit for all)")] string[]? employeeIds = null,
+        [Description("Filter to specific empIds (omit for all)")] string[]? empIds = null,
+        [Description("Alias for empIds")] string[]? employeeIds = null,
         [Description("Filter to specific client IDs")] string[]? clientIds = null,
         [Description("Filter to specific project IDs")] string[]? projectIds = null,
         [Description("Filter to specific category IDs")] string[]? categoryIds = null,
@@ -320,7 +337,7 @@ public class AccountingMcpTools
         {
             StartDate = startDate,
             EndDate = endDate,
-            EmployeeIds = employeeIds?.ToList() ?? [],
+            EmployeeIds = ResolveEmpIds(empIds, employeeIds),
             ClientIds = clientIds?.ToList() ?? [],
             ProjectIds = projectIds?.ToList() ?? [],
             CategoryIds = categoryIds?.ToList() ?? [],
@@ -366,10 +383,12 @@ public class AccountingMcpTools
     }
 
     [McpServerTool]
-    [Description("Project-hours summary for the current employee over a period (billable vs non-billable across projects).")]
+    [Description("Project-hours summary for one empId over a period (billable vs non-billable across projects). Defaults to the current user; employeeId is accepted as an alias.")]
     public async Task<string> GetProjectsSummary(
         [Description("Start date (yyyy-MM-dd)")] string startDate,
         [Description("End date (yyyy-MM-dd)")] string endDate,
+        [Description("empId to summarize. Defaults to the current user's empId.")] string? empId = null,
+        [Description("Alias for empId")] string? employeeId = null,
         CancellationToken ct = default)
     {
         var tenant = _config.LoadActiveTenantConfig();
@@ -378,7 +397,7 @@ public class AccountingMcpTools
 
         var start = DateOnly.ParseExact(startDate, "yyyy-MM-dd");
         var end = DateOnly.ParseExact(endDate, "yyyy-MM-dd");
-        var rows = await _api.GetProjectsSummaryAsync(tenant.EmployeeId, start, end, ct);
+        var rows = await _api.GetProjectsSummaryAsync(ResolveEmpId(empId, employeeId) ?? tenant.EmployeeId, start, end, ct);
         return JsonSerializer.Serialize(rows, JsonOpts);
     }
 

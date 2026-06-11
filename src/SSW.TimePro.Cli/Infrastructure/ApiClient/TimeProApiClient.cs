@@ -37,6 +37,7 @@ public interface ITimeProApiClient
     Task<TimesheetResponse?> AcceptSuggestedTimesheetAsync(int suggestedId, string? location, string? notes, decimal? newSellPrice, CancellationToken ct = default);
     Task DeleteSuggestedTimesheetAsync(int suggestedId, CancellationToken ct = default);
     Task<LeaveListResponse?> GetLeaveAsync(string filter, int pageNumber, int pageSize, CancellationToken ct = default);
+    Task<LeaveListResponse?> GetLeaveAsync(string filter, int pageNumber, int pageSize, string? employeeId, CancellationToken ct = default);
     Task<List<LeaveTypeInfo>> GetLeaveTypesAsync(CancellationToken ct = default);
     Task CreateLeaveAsync(CreateLeaveRequest request, CancellationToken ct = default);
     Task UpdateLeaveAsync(UpdateLeaveRequest request, CancellationToken ct = default);
@@ -252,10 +253,26 @@ public class TimeProApiClient : ITimeProApiClient
 
     // ───────────────────────── Leave ─────────────────────────
 
+    public Task<LeaveListResponse?> GetLeaveAsync(
+        string filter, int pageNumber, int pageSize, CancellationToken ct = default) =>
+        GetLeaveAsync(filter, pageNumber, pageSize, employeeId: null, ct);
+
     public async Task<LeaveListResponse?> GetLeaveAsync(
-        string filter, int pageNumber, int pageSize, CancellationToken ct = default)
+        string filter, int pageNumber, int pageSize, string? employeeId, CancellationToken ct = default)
     {
-        var url = $"/api/leave/?pageNumber={pageNumber}&pageSize={pageSize}&leaveFilter={Uri.EscapeDataString(filter)}";
+        var query = new List<string>
+        {
+            $"pageNumber={pageNumber}",
+            $"pageSize={pageSize}",
+            $"leaveFilter={Uri.EscapeDataString(filter)}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(employeeId))
+        {
+            query.Add($"employeeId={Uri.EscapeDataString(employeeId.Trim())}");
+        }
+
+        var url = $"/api/leave/?{string.Join("&", query)}";
         return await GetAsync<LeaveListResponse>(url, ct);
     }
 

@@ -42,6 +42,10 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
         [Description("Show detailed view with descriptions")]
         public bool Detailed { get; set; }
 
+        [CommandOption("--emp-id|--employee-id|--employee <EMP_ID>")]
+        [Description("empId. Defaults to the current user")]
+        public string? EmpId { get; set; }
+
         [CommandOption("--json")]
         [Description("Output as JSON")]
         public bool Json { get; set; }
@@ -62,7 +66,7 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
             return 1;
         }
 
-        var empId = tenant.EmployeeId;
+        var empId = ResolveEmpId(settings.EmpId, tenant.EmployeeId);
 
         try
         {
@@ -296,4 +300,7 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
             }
         }
     }
+
+    private static string ResolveEmpId(string? requestedEmpId, string defaultEmpId) =>
+        string.IsNullOrWhiteSpace(requestedEmpId) ? defaultEmpId : requestedEmpId.Trim();
 }

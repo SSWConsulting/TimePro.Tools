@@ -23,6 +23,10 @@ public class CheckCommand : AsyncCommand<CheckCommand.Settings>
         [CommandOption("--json")]
         [Description("Output as JSON")]
         public bool Json { get; set; }
+
+        [CommandOption("--emp-id|--employee-id|--employee <EMP_ID>")]
+        [Description("empId. Defaults to the current user")]
+        public string? EmpId { get; set; }
     }
 
     public CheckCommand(ITimeProApiClient api, IConfigService config)
@@ -41,6 +45,7 @@ public class CheckCommand : AsyncCommand<CheckCommand.Settings>
         }
 
         var offset = (settings.Week is not null && settings.Week.IsSet) ? settings.Week.Value : 0;
+        var empId = ResolveEmpId(settings.EmpId, tenant.EmployeeId);
         var today = DateOnly.FromDateTime(DateTime.Today);
         var monday = today.AddDays(-(int)today.DayOfWeek + (int)DayOfWeek.Monday + (offset * 7));
         if (today.DayOfWeek == DayOfWeek.Sunday)
@@ -54,7 +59,7 @@ public class CheckCommand : AsyncCommand<CheckCommand.Settings>
 
             for (var d = monday; d <= friday; d = d.AddDays(1))
             {
-                var timesheets = await _api.GetTimesheetsAsync(tenant.EmployeeId, d, CancellationToken.None);
+                var timesheets = await _api.GetTimesheetsAsync(empId, d, CancellationToken.None);
                 var real = timesheets.Where(t => !t.IsSuggested).ToList();
                 var suggested = timesheets.Where(t => t.IsSuggested).ToList();
                 var totalHours = real.Sum(t => t.TotalTime);
@@ -118,6 +123,7 @@ public class CheckCommand : AsyncCommand<CheckCommand.Settings>
 
             var result = new
             {
+                empId,
                 weekStart = monday.ToString("yyyy-MM-dd"),
                 weekEnd = friday.ToString("yyyy-MM-dd"),
                 errors,
@@ -195,4 +201,7 @@ public class CheckCommand : AsyncCommand<CheckCommand.Settings>
             return false;
         }
     }
+
+    private static string ResolveEmpId(string? requestedEmpId, string defaultEmpId) =>
+        string.IsNullOrWhiteSpace(requestedEmpId) ? defaultEmpId : requestedEmpId.Trim();
 }

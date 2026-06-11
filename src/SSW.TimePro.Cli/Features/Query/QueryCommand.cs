@@ -31,9 +31,9 @@ public class QueryCommand : AsyncCommand<QueryCommand.Settings>
         [Description("Project ID(s), comma-separated")]
         public string? ProjectIds { get; set; }
 
-        [CommandOption("--employee|--emp <IDS>")]
-        [Description("Employee ID(s), comma-separated")]
-        public string? EmployeeIds { get; set; }
+        [CommandOption("--emp-id|--employee-id|--employee|--emp <IDS>")]
+        [Description("empId(s), comma-separated")]
+        public string? EmpIds { get; set; }
 
         [CommandOption("--category <IDS>")]
         [Description("Category ID(s), comma-separated")]
@@ -68,7 +68,7 @@ public class QueryCommand : AsyncCommand<QueryCommand.Settings>
             EndDate = end.ToString("yyyy-MM-dd"),
             ClientIds = ParseCsv(settings.ClientIds),
             ProjectIds = ParseCsv(settings.ProjectIds),
-            EmployeeIds = ParseCsv(settings.EmployeeIds),
+            EmployeeIds = ParseCsv(settings.EmpIds),
             CategoryIds = ParseCsv(settings.CategoryIds)
         };
 

@@ -104,9 +104,9 @@ public class CreateCommand : Command<CreateCommand.Settings>
         sb.AppendLine("  --start 09:00 --end 18:00 --less 60 --description \"Work done\" --yes");
         sb.AppendLine();
         sb.AppendLine("# Create timesheet with explicit category and iteration");
-        sb.AppendLine("tp ts create --client SSW --project SSWTRN --iteration 3402 \\");
-        sb.AppendLine("  --date 2026-03-12 --category TRAIN --billable W \\");
-        sb.AppendLine("  --description \"MVP Summit\" --yes");
+        sb.AppendLine("tp ts create --client NWIND --project 1I776Q --iteration 3402 \\");
+        sb.AppendLine("  --date 2026-03-12 --category WEBDEV --billable B \\");
+        sb.AppendLine("  --description \"Northwind checkout API\" --yes");
         sb.AppendLine();
         sb.AppendLine("# Update timesheet (partial — preserves all other fields)");
         sb.AppendLine("tp ts update <ID> --location Home --yes");
@@ -127,8 +127,8 @@ public class CreateCommand : Command<CreateCommand.Settings>
         sb.AppendLine("# Leave");
         sb.AppendLine("tp leave list --filter UPCOMING --json");
         sb.AppendLine("tp leave create --start 2026-03-30 --end 2026-03-30 --type 1 \\");
-        sb.AppendLine("  --note \"Reason\" --approved-by \"approver@ssw.com.au\" \\");
-        sb.AppendLine("  --cc \"notify1@ssw.com.au,notify2@ssw.com.au\" --yes");
+        sb.AppendLine("  --note \"Reason\" --approved-by \"approver@northwind.example\" \\");
+        sb.AppendLine("  --cc \"notify1@northwind.example,notify2@northwind.example\" --yes");
         sb.AppendLine("tp leave cancel <ID> --reason \"Plans changed\" --yes");
         sb.AppendLine("```");
         sb.AppendLine();
@@ -291,7 +291,7 @@ public class CreateCommand : Command<CreateCommand.Settings>
         sb.AppendLine("3. Pick the matching iteration and pass `--iteration <ID>` on create");
         sb.AppendLine();
         sb.AppendLine("**Known projects requiring iterations:**");
-        sb.AppendLine("- `SSWTRN` (Training & Conferences) — iterations for each event/conference");
+        sb.AppendLine("- `1I776Q` (Northwind Traders) — iterations for each sample milestone");
         sb.AppendLine();
         sb.AppendLine("The copy command (`tp ts copy`) automatically resolves iteration IDs from source timesheets.");
         sb.AppendLine();

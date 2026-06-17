@@ -61,7 +61,7 @@ Realistic JSON response files captured from staging API, committed under `tests/
 _wireMock.Given(
     Request.Create()
         .WithPath("/api/Timesheets/GetTimesheetListViewModel")
-        .WithParam("employeeID", "JEK")
+        .WithParam("employeeID", "TST")
         .WithParam("date", "2026-03-12")
         .WithHeader("x-timepro-tenant-id", "ssw")
         .WithHeader("x-timepro-api-key", "test-key")

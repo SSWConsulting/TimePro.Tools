@@ -194,8 +194,8 @@ SSW.TimePro.Timesheets.Cli/
   "tenantId": "ssw",
   "apiUrl": "https://api.sswtimepro.com",
   "apiKey": "encrypted-or-plaintext-token",
-  "employeeId": "JEK",
-  "employeeName": "Jernej Kavka",
+  "employeeId": "TST",
+  "employeeName": "Test User",
   "appName": "SSW-TimePro-CLI"
 }
 ```
@@ -206,17 +206,17 @@ SSW.TimePro.Timesheets.Cli/
 {
   "mappings": [
     {
-      "pathPattern": "~/Developer/git/SSW.Rewards.Mobile",
-      "clientId": "SSW",
-      "projectId": "rewards-mobile",
-      "projectName": "Rewards (Mobile app)",
+      "pathPattern": "~/Developer/git/Northwind/traders-app",
+      "clientId": "NWIND",
+      "projectId": "1I776Q",
+      "projectName": "Northwind Traders",
       "categoryId": null
     },
     {
-      "pathPattern": "~/Developer/git/ASF/*",
-      "clientId": "ASF",
-      "projectId": "audits",
-      "projectName": "Audits"
+      "pathPattern": "~/Developer/git/Northwind/*",
+      "clientId": "NWIND",
+      "projectId": "1I776Q",
+      "projectName": "Northwind Traders"
     }
   ]
 }
@@ -302,12 +302,12 @@ tp
 ```
  Week of Mar 10 - Mar 14, 2026
 ─────────────────────────────────────────────────────────────────────
- Mon 10 │ 8.0h │ SSW   Rewards (Mobile)      4.0h  Office  B
-         │      │ SSW   Internal              4.0h  Home    W
- Tue 11 │ 8.0h │ ASF   Audits                8.0h  Office  B
+ Mon 10 │ 8.0h │ NWIND Northwind Traders     4.0h  Office  B
+         │      │ NWIND Internal tooling      4.0h  Home    W
+ Tue 11 │ 8.0h │ NWIND Checkout API          8.0h  Office  B
  Wed 12 │ 0.0h │ No timesheets
- Thu 13 │ 8.0h │ SSW   Rewards (Mobile)      8.0h  Home    B
- Fri 14 │ 8.0h │ SSW   Internal              8.0h  Home    W
+ Thu 13 │ 8.0h │ NWIND Northwind Traders     8.0h  Home    B
+ Fri 14 │ 8.0h │ NWIND Planning              8.0h  Home    W
 ─────────────────────────────────────────────────────────────────────
  Total: 32.0h / 40.0h  │  Billable: 20.0h  │  Missing: Wed
 ```
@@ -317,9 +317,9 @@ tp
 ```
 ── Monday, March 10 2026 ────────────────────── 8.0h ──
 
-  #1234  SSW │ Rewards (Mobile app)
+  #1234  NWIND │ Northwind Traders
          09:00 - 13:00 (4.0h) │ Office │ Billable
-         Fix: Intermittent Blazor 404s with sticky sessions - PR #69
+         Added product search filters - PR #69
          Invoice: #5678 (T&M) [locked]
 
   #1235  SSW │ Internal
@@ -374,7 +374,7 @@ $ tp login --tenant ssw
 
 Paste your API token: ********
 
-  Logged in as JEK (Jernej Kavka) on tenant 'ssw'
+  Logged in as TST (Test User) on tenant 'ssw'
   API: https://api.sswtimepro.com
 ```
 

@@ -208,8 +208,8 @@ tp leave create --start 2026-03-30 --end 2026-03-30 --type 1 \
 # Create with approver and CC
 tp leave create --start 2026-03-30 --end 2026-03-30 --type "Annual Leave" \
   --note "Returning from MVP Summit" \
-  --approved-by "PennyWalker@ssw.com.au" \
-  --cc "colleague1@ssw.com.au,colleague2@ssw.com.au" --yes
+  --approved-by "approver@northwind.example" \
+  --cc "notify1@northwind.example,notify2@northwind.example" --yes
 
 # Cancel a leave request
 tp leave cancel <ID> --reason "Plans changed" --yes
@@ -230,11 +230,11 @@ Compact view shows one line per timesheet with totals:
  Week of Mar 10 - Mar 14, 2026
 ─────────────────────────────────────────────────────────────────────
  Mon 10 │ 8.0h │ Northwind  Northwind Traders  4.0h  Home    B
-         │      │ SSW        Internal           4.0h  Home    W
+         │      │ Northwind  Internal tooling   4.0h  Home    W
  Tue 11 │ 8.0h │ Northwind  Northwind Traders  8.0h  Home    B
  Wed 12 │ 0.0h │ No timesheets
  Thu 13 │ 8.0h │ Northwind  Northwind Traders  8.0h  Office  B
- Fri 14 │ 8.0h │ SSW        Brainstorming      8.0h  Office  W
+ Fri 14 │ 8.0h │ Northwind  Planning           8.0h  Office  W
 ─────────────────────────────────────────────────────────────────────
  Total: 32.0h / 40.0h  │  Billable: 20.0h  │  Missing: Wed
 ```
@@ -251,8 +251,8 @@ tp map set ~/Developer/git/Northwind/traders-app \
   --client NWIND --project 1I776Q --project-name "Northwind Traders" \
   --category WEBDEV
 
-tp map set ~/Developer/git/SSW.Rewards.Mobile \
-  --client SSW --project 4BPT0L --project-name "Rewards (Mobile app)" \
+tp map set ~/Developer/git/Northwind/traders-api \
+  --client NWIND --project 1I776Q --project-name "Northwind Traders API" \
   --category WEBDEV
 ```
 
@@ -355,17 +355,17 @@ tp ts copy --from 2026-03-10 --to 2026-03-11 --keep-description --yes
 Search timesheets across employees, clients, and projects with flexible grouping:
 
 ```bash
-# Who worked on Rewards this FY? (grouped by employee)
-tp query --client SSW --project 4BPT0L --from 2024-07-01 --to 2025-06-30
+# Who worked on Northwind this FY? (grouped by employee)
+tp query --client NWIND --project 1I776Q --from 2024-07-01 --to 2025-06-30
 
-# All SSW projects by hours (grouped by project)
-tp query --client SSW --from 2024-07-01 --to 2025-06-30 --group-by project
+# All Northwind projects by hours (grouped by project)
+tp query --client NWIND --from 2024-07-01 --to 2025-06-30 --group-by project
 
 # Flat view with pagination
 tp query --client NWIND --group-by none --limit 20 --page 2
 
 # Export raw JSON for analysis
-tp query --client SSW --project 4BPT0L --from 2024-07-01 --to 2025-06-30 --json > rewards-fy25.json
+tp query --client NWIND --project 1I776Q --from 2024-07-01 --to 2025-06-30 --json > northwind-fy25.json
 ```
 
 Grouping modes: `employee` (default), `project`, `client`, `none` (flat table with pagination).

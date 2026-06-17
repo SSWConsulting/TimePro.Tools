@@ -78,7 +78,7 @@ public class TimesheetMcpTools
         [Description("Location (e.g., Office, Home)")] string? location = null,
         [Description("Billable type: B (billable), BPP (prepaid), W (write-off)")] string billableId = "B",
         [Description("Category ID (e.g., TRAIN, PresDe)")] string? categoryId = null,
-        [Description("Iteration/sprint ID. Required for projects that use iterations (e.g., SSWTRN). Use ListIterations to find the ID.")] int? iterationId = null,
+        [Description("Iteration/sprint ID. Required for projects that use iterations (e.g., 1I776Q). Use ListIterations to find the ID.")] int? iterationId = null,
         CancellationToken ct = default)
     {
         var tenant = _config.LoadActiveTenantConfig();
@@ -121,7 +121,7 @@ public class TimesheetMcpTools
     [McpServerTool]
     [Description("List iterations/sprints for a project. Returns empty list if the project doesn't use iterations. If the list is non-empty, an iteration ID is required when creating timesheets for this project.")]
     public async Task<string> ListIterations(
-        [Description("Project ID (e.g., SSWTRN)")] string projectId,
+        [Description("Project ID (e.g., 1I776Q)")] string projectId,
         CancellationToken ct = default)
     {
         var iterations = await _api.GetIterationsAsync(projectId, ct);

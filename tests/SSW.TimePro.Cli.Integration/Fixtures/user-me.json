@@ -2,6 +2,6 @@
   "employeeId": "TST",
   "firstName": "Test",
   "lastName": "User",
-  "email": "test@ssw.com.au",
+  "email": "test@example.com",
   "defaultRate": "150.00"
 }

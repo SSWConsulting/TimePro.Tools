@@ -22,7 +22,7 @@ public class LogoutCommand : AsyncCommand<LogoutCommand.Settings>
         _config = config;
     }
 
-    public override Task<int> ExecuteAsync(CommandContext context, Settings settings)
+    protected override Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         var global = _config.LoadGlobalConfig();
         var tenantId = settings.Tenant ?? global.ActiveTenant;

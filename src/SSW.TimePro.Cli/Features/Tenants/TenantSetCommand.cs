@@ -22,7 +22,7 @@ public class TenantSetCommand : Command<TenantSetCommand.Settings>
         _config = config;
     }
 
-    public override int Execute(CommandContext context, Settings settings)
+    protected override int Execute(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         var tenant = _config.LoadTenantConfig(settings.TenantId);
         if (tenant is null)

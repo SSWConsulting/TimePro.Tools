@@ -35,7 +35,7 @@ public class TimesheetSaveTaxTests : TestBase
             BillableId = "W"
         };
 
-        await ApiClient.CreateTimesheetAsync(request);
+        await ApiClient.CreateTimesheetAsync(request, TestContext.Current.CancellationToken);
 
         var saveCall = WireMock.LogEntries
             .Single(e => e.RequestMessage.AbsolutePath == "/api/Timesheets/SaveTimesheet");
@@ -71,7 +71,7 @@ public class TimesheetSaveTaxTests : TestBase
             TimeId = 456
         };
 
-        await ApiClient.UpdateTimesheetAsync(request);
+        await ApiClient.UpdateTimesheetAsync(request, TestContext.Current.CancellationToken);
 
         var saveCall = WireMock.LogEntries
             .Single(e => e.RequestMessage.AbsolutePath == "/api/Timesheets/SaveTimesheet");
@@ -97,7 +97,7 @@ public class TimesheetSaveTaxTests : TestBase
             SalesTaxPct = 0.15m
         };
 
-        await ApiClient.CreateTimesheetAsync(request);
+        await ApiClient.CreateTimesheetAsync(request, TestContext.Current.CancellationToken);
 
         WireMock.LogEntries
             .Should().NotContain(e => e.RequestMessage.AbsolutePath.Contains("/taxrates"));
@@ -120,7 +120,7 @@ public class TimesheetSaveTaxTests : TestBase
 
         var request = new TimesheetRequest { EmpId = "TST", ClientId = "" };
 
-        await ApiClient.CreateTimesheetAsync(request);
+        await ApiClient.CreateTimesheetAsync(request, TestContext.Current.CancellationToken);
 
         WireMock.LogEntries
             .Should().NotContain(e => e.RequestMessage.AbsolutePath.Contains("/taxrates"));

@@ -35,7 +35,7 @@ public class CheckCommand : AsyncCommand<CheckCommand.Settings>
         _config = config;
     }
 
-    public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+    protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         var tenant = _config.LoadActiveTenantConfig();
         if (tenant?.EmployeeId is null)

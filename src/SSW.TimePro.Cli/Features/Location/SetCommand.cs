@@ -24,7 +24,7 @@ public class SetCommand : Command<SetCommand.Settings>
 
     public SetCommand(IConfigService config) => _config = config;
 
-    public override int Execute(CommandContext context, Settings settings)
+    protected override int Execute(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         var global = _config.LoadGlobalConfig();
         var resolvedLocation = LocationResolver.Resolve(settings.Location);

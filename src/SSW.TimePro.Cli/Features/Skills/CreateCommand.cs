@@ -27,7 +27,7 @@ public class CreateCommand : Command<CreateCommand.Settings>
 
     public CreateCommand(IConfigService config) => _config = config;
 
-    public override int Execute(CommandContext context, Settings settings)
+    protected override int Execute(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         var tenant = _config.LoadActiveTenantConfig();
         var global = _config.LoadGlobalConfig();

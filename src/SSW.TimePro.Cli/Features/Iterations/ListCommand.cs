@@ -24,7 +24,7 @@ public class ListCommand : AsyncCommand<ListCommand.Settings>
 
     public ListCommand(ITimeProApiClient api) => _api = api;
 
-    public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+    protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(settings.ProjectId))
         {

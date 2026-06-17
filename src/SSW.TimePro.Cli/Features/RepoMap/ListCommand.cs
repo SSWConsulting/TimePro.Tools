@@ -20,7 +20,7 @@ public class ListCommand : Command<ListCommand.Settings>
 
     public ListCommand(IConfigService config) => _config = config;
 
-    public override int Execute(CommandContext context, Settings settings)
+    protected override int Execute(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         var mappings = _config.LoadRepoMappings();
 

@@ -20,7 +20,7 @@ public class DetectCommand : Command<DetectCommand.Settings>
 
     public DetectCommand(IConfigService config) => _config = config;
 
-    public override int Execute(CommandContext context, Settings settings)
+    protected override int Execute(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         var cwd = Environment.CurrentDirectory;
         var mappings = _config.LoadRepoMappings();

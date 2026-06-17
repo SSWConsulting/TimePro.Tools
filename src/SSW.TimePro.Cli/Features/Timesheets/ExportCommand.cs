@@ -28,7 +28,7 @@ public class ExportCommand : AsyncCommand<ExportCommand.Settings>
 
     public ExportCommand(ITimeProApiClient api) => _api = api;
 
-    public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+    protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         var from = settings.From is not null
             ? DateOnly.ParseExact(settings.From, "yyyy-MM-dd", CultureInfo.InvariantCulture)

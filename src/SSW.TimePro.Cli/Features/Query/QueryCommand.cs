@@ -58,7 +58,7 @@ public class QueryCommand : AsyncCommand<QueryCommand.Settings>
 
     public QueryCommand(ITimeProApiClient api) => _api = api;
 
-    public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+    protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         var (start, end) = ResolveDateRange(settings);
 

@@ -19,7 +19,7 @@ public class RemoveCommand : Command<RemoveCommand.Settings>
 
     public RemoveCommand(IConfigService config) => _config = config;
 
-    public override int Execute(CommandContext context, Settings settings)
+    protected override int Execute(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         var mappings = _config.LoadRepoMappings();
         var normalizedPath = settings.Path.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));

@@ -34,7 +34,7 @@ public class StatusCommand : AsyncCommand<StatusCommand.Settings>
         _config = config;
     }
 
-    public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+    protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         if (_config.LoadActiveTenantConfig() is null)
         {

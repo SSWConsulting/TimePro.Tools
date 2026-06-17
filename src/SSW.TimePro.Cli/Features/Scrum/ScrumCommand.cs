@@ -69,7 +69,7 @@ public class ScrumCommand : AsyncCommand<ScrumCommand.Settings>
         _config = config;
     }
 
-    public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+    protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         // One-off config shortcut
         if (!string.IsNullOrEmpty(settings.SetTrelloUrl))

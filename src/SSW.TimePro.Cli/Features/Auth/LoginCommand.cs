@@ -36,7 +36,7 @@ public class LoginCommand : AsyncCommand<LoginCommand.Settings>
         _tenantProvider = (DefaultTenantProvider)tenantProvider;
     }
 
-    public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+    protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(settings.Tenant))
         {

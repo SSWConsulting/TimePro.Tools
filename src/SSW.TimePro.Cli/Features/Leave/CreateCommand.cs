@@ -66,7 +66,7 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
         _tenantProvider = tenantProvider;
     }
 
-    public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+    protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(settings.Start) || string.IsNullOrEmpty(settings.End) || string.IsNullOrEmpty(settings.Type))
         {

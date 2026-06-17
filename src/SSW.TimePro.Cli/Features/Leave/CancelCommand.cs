@@ -33,7 +33,7 @@ public class CancelCommand : AsyncCommand<CancelCommand.Settings>
 
     public CancelCommand(ITimeProApiClient api) => _api = api;
 
-    public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+    protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         if (!settings.Yes && !settings.Json)
         {

@@ -23,7 +23,7 @@ public class TenantListCommand : Command<TenantListCommand.Settings>
         _config = config;
     }
 
-    public override int Execute(CommandContext context, Settings settings)
+    protected override int Execute(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         var tenants = _config.ListTenants();
         var global = _config.LoadGlobalConfig();

@@ -52,6 +52,7 @@ coverage/
 ## Environment
 .env
 .env.local
+.envrc.*
 
 ## Generated agent skills
 .agents/

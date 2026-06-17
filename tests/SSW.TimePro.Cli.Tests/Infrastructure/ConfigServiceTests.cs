@@ -1,5 +1,6 @@
 using FluentAssertions;
 using SSW.TimePro.Cli.Infrastructure.Config;
+using System.Text.Json;
 using Xunit;
 
 namespace SSW.TimePro.Cli.Tests.Infrastructure;
@@ -86,6 +87,33 @@ public class ConfigServiceTests : IDisposable
     {
         var tenant = new TenantConfig { TenantId = "ssw" };
         tenant.GetTokenPageUrl().Should().Be("https://ssw.sswtimepro.com/b/admin/api-key");
+    }
+
+    [Fact]
+    public void TenantConfig_ToSummary_OmitsApiKeyWhenSerialized()
+    {
+        var tenant = new TenantConfig
+        {
+            TenantId = "test",
+            ApiUrl = "https://api.sswtimepro.com",
+            ApiKey = "super-secret",
+            EmployeeId = "TST",
+            EmployeeName = "Test User",
+            AppName = "SSW-TimePro-CLI"
+        };
+
+        var summary = tenant.ToSummary();
+        var json = JsonSerializer.Serialize(summary, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        json.Should().Contain("\"tenantId\":\"test\"");
+        json.Should().Contain("\"apiUrl\":\"https://api.sswtimepro.com\"");
+        json.Should().Contain("\"employeeId\":\"TST\"");
+        json.Should().Contain("\"employeeName\":\"Test User\"");
+        json.Should().NotContain("apiKey");
+        summary.IsProduction.Should().BeTrue();
     }
 
     public void Dispose()

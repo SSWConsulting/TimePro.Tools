@@ -1,4 +1,3 @@
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Spectre.Console;
@@ -15,7 +14,6 @@ public static class OutputHelper
         WriteIndented = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
 
@@ -26,8 +24,7 @@ public static class OutputHelper
     {
         if (useJson)
         {
-            var json = JsonSerializer.Serialize(data, JsonOptions);
-            AnsiConsole.WriteLine(json);
+            WriteRawJson(data);
         }
         else
         {
@@ -40,8 +37,7 @@ public static class OutputHelper
     /// </summary>
     public static void WriteJson<T>(T data)
     {
-        var json = JsonSerializer.Serialize(data, JsonOptions);
-        AnsiConsole.WriteLine(json);
+        WriteRawJson(data);
     }
 
     /// <summary>
@@ -74,5 +70,19 @@ public static class OutputHelper
     public static void WriteInfo(string message)
     {
         AnsiConsole.MarkupLine($"[blue]{Markup.Escape(message)}[/]");
+    }
+
+    private static void WriteRawJson<T>(T data)
+    {
+        var json = SerializeJson(data);
+
+        // Emit raw JSON to stdout without terminal formatting so it stays
+        // machine-readable for tools like jq.
+        Console.Out.WriteLine(json);
+    }
+
+    internal static string SerializeJson<T>(T data)
+    {
+        return JsonSerializer.Serialize(data, JsonOptions);
     }
 }

@@ -32,7 +32,9 @@ public class TenantInfoCommand : Command<TenantInfoCommand.Settings>
             return 1;
         }
 
-        OutputHelper.Render(tenant, settings.Json, t =>
+        var summary = tenant.ToSummary();
+
+        OutputHelper.Render(summary, settings.Json, t =>
         {
             var table = new Table().NoBorder().HideHeaders().AddColumn("Key").AddColumn("Value");
             table.AddRow("[bold]Tenant[/]", Markup.Escape(t.TenantId));

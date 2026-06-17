@@ -34,7 +34,9 @@ public class TenantListCommand : Command<TenantListCommand.Settings>
             return 0;
         }
 
-        OutputHelper.Render(tenants, settings.Json, list =>
+        var summaries = tenants.Select(t => t.ToSummary()).ToList();
+
+        OutputHelper.Render(summaries, settings.Json, list =>
         {
             var table = new Table()
                 .AddColumn("")

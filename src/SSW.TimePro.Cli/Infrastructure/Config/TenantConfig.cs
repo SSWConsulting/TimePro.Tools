@@ -41,4 +41,30 @@ public class TenantConfig
         ApiUrl.Contains("api.sswtimepro.com", StringComparison.OrdinalIgnoreCase)
         && !ApiUrl.Contains("staging", StringComparison.OrdinalIgnoreCase)
         && !ApiUrl.Contains("local", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Safe-to-display view that omits secrets such as the API key.
+    /// </summary>
+    public TenantConfigSummary ToSummary()
+    {
+        return new TenantConfigSummary
+        {
+            TenantId = TenantId,
+            ApiUrl = ApiUrl,
+            EmployeeId = EmployeeId,
+            EmployeeName = EmployeeName,
+            AppName = AppName,
+            IsProduction = IsProduction
+        };
+    }
+}
+
+public class TenantConfigSummary
+{
+    public string TenantId { get; set; } = string.Empty;
+    public string ApiUrl { get; set; } = string.Empty;
+    public string? EmployeeId { get; set; }
+    public string? EmployeeName { get; set; }
+    public string AppName { get; set; } = string.Empty;
+    public bool IsProduction { get; set; }
 }

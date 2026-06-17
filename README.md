@@ -500,10 +500,16 @@ Add to your Codex MCP config:
 }
 ```
 
+## Documentation
+
+- [Technologies and Architecture](docs/Technologies-and-Architecture.md) - Technical stack, architecture overview, design patterns, API boundary, and ALM notes
+- [Testing Strategy](docs/Testing-Strategy.md) - Unit, integration, and E2E test approach
+- [Accounting Commands](docs/accounting.md) - Read-only accounting command reference
+
 ## Project Structure
 
 ```
-timepro-cli/
+timepro.tools/
 ├── src/SSW.TimePro.Cli/
 │   ├── Program.cs                    # Entry point, DI, command tree
 │   ├── Infrastructure/
@@ -535,7 +541,7 @@ timepro-cli/
 │   ├── SSW.TimePro.Cli.Tests/       # Unit tests (xUnit + FluentAssertions)
 │   └── SSW.TimePro.Cli.Integration/ # WireMock.Net integration tests
 ├── scripts/e2e/                     # E2E shell scripts for staging
-└── docs/plans/                      # Architecture + testing strategy
+└── docs/                            # Technical and command documentation
 ```
 
 ## Configuration

@@ -140,7 +140,9 @@ public class CheckCommand : AsyncCommand<CheckCommand.Settings>
                 AnsiConsole.WriteLine();
             });
 
-            return errors > 0 ? 1 : 0;
+            // --json mode: the check ran fine, so a week with gaps is data (errors/allCovered
+            // in the payload), not a process failure. Human mode keeps non-zero for shell gating.
+            return settings.Json ? 0 : (errors > 0 ? 1 : 0);
         }
         catch (ApiException ex)
         {

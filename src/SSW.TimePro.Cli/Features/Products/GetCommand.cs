@@ -42,7 +42,11 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
             var p = await _api.GetProductAsync(settings.ProductId, CancellationToken.None);
             if (p is null)
             {
-                OutputHelper.WriteWarning($"Product '{settings.ProductId}' not found.");
+                // Held product ID that doesn't resolve is a failed lookup — emit found:false for parsers, then fail.
+                if (settings.Json)
+                    OutputHelper.WriteJson(new { found = false, productId = settings.ProductId });
+                else
+                    OutputHelper.WriteWarning($"Product '{settings.ProductId}' not found.");
                 return 1;
             }
 

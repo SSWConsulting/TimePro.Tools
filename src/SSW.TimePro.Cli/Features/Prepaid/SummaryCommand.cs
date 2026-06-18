@@ -44,17 +44,23 @@ public class SummaryCommand : AsyncCommand<SummaryCommand.Settings>
             var summary = await _api.GetPrepaidStatusSummaryAsync(settings.InvoiceId, CancellationToken.None);
             if (summary is null)
             {
-                OutputHelper.WriteWarning($"Invoice {settings.InvoiceId} not found.");
+                // Held invoice ID that doesn't resolve is a failed lookup — emit found:false for parsers, then fail.
+                if (settings.Json)
+                    OutputHelper.WriteJson(new { found = false, invoiceId = settings.InvoiceId });
+                else
+                    OutputHelper.WriteWarning($"Invoice {settings.InvoiceId} not found.");
                 return 1;
             }
 
             if (!string.Equals(summary.InvoiceType, "Prepaid", StringComparison.OrdinalIgnoreCase))
             {
+                // Invoice exists but isn't prepaid — that's the answer, not a failure.
                 if (settings.Json)
                 {
                     OutputHelper.WriteJson(new
                     {
-                        error = $"Invoice {settings.InvoiceId} is not a prepaid invoice.",
+                        found = true,
+                        isPrepaid = false,
                         invoiceId = settings.InvoiceId,
                         invoiceType = summary.InvoiceType
                     });
@@ -64,7 +70,7 @@ public class SummaryCommand : AsyncCommand<SummaryCommand.Settings>
                     OutputHelper.WriteWarning($"Invoice {settings.InvoiceId} is type '{summary.InvoiceType ?? "unknown"}', not Prepaid.");
                 }
 
-                return 1;
+                return 0;
             }
 
             OutputHelper.Render(summary, settings.Json, s =>

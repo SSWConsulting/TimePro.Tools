@@ -43,7 +43,11 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
             var inv = await _api.GetInvoiceAsync(settings.InvoiceId, CancellationToken.None);
             if (inv is null)
             {
-                OutputHelper.WriteWarning($"Invoice {settings.InvoiceId} not found.");
+                // Held invoice ID that doesn't resolve is a failed lookup — emit found:false for parsers, then fail.
+                if (settings.Json)
+                    OutputHelper.WriteJson(new { found = false, invoiceId = settings.InvoiceId });
+                else
+                    OutputHelper.WriteWarning($"Invoice {settings.InvoiceId} not found.");
                 return 1;
             }
 

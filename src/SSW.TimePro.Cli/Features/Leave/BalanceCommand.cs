@@ -60,11 +60,12 @@ public class BalanceCommand : AsyncCommand<BalanceCommand.Settings>
             var stats = await _api.GetLeaveStatsAsync(empId, cancellationToken);
             if (stats is null)
             {
+                // No stats is a valid lookup result, not a failure.
                 if (settings.Json)
-                    OutputHelper.WriteJsonError($"No leave stats found for {empId}.", 404);
+                    OutputHelper.WriteJson(new { found = false, empId });
                 else
                     OutputHelper.WriteWarning($"No leave stats found for {empId}.");
-                return 1;
+                return 0;
             }
 
             OutputHelper.Render(stats, settings.Json, s =>

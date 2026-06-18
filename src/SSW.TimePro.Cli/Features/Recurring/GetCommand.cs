@@ -41,7 +41,11 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
             var r = await _api.GetRecurringInvoiceAsync(settings.RecurringId, CancellationToken.None);
             if (r is null)
             {
-                OutputHelper.WriteWarning($"Recurring invoice {settings.RecurringId} not found.");
+                // Held recurring-invoice ID that doesn't resolve is a failed lookup — emit found:false for parsers, then fail.
+                if (settings.Json)
+                    OutputHelper.WriteJson(new { found = false, recurringId = settings.RecurringId });
+                else
+                    OutputHelper.WriteWarning($"Recurring invoice {settings.RecurringId} not found.");
                 return 1;
             }
 

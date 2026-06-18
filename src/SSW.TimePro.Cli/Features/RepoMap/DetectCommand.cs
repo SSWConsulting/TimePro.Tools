@@ -33,7 +33,8 @@ public class DetectCommand : Command<DetectCommand.Settings>
                 OutputHelper.WriteJson(new { detected = false, path = cwd });
             else
                 OutputHelper.WriteInfo($"No mapping found for '{cwd}'");
-            return 1;
+            // No match is a valid result, not a failure.
+            return 0;
         }
 
         OutputHelper.Render(new

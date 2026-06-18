@@ -71,8 +71,12 @@ public class CopyCommand : AsyncCommand<CopyCommand.Settings>
 
             if (real.Count == 0)
             {
-                OutputHelper.WriteError($"No timesheets found on {fromDate:yyyy-MM-dd} to copy");
-                return 1;
+                // Nothing to copy is a valid state, not a failure.
+                if (settings.Json)
+                    OutputHelper.WriteJson(new { copied = 0, from = settings.From, to = settings.To, timesheets = Array.Empty<object>() });
+                else
+                    OutputHelper.WriteInfo($"No timesheets found on {fromDate:yyyy-MM-dd} to copy");
+                return 0;
             }
 
             // Resolve location for target date

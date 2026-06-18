@@ -61,8 +61,12 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
 
             if (rate is null)
             {
-                OutputHelper.WriteWarning($"No rate found for client '{settings.ClientId}' on {date:yyyy-MM-dd}");
-                return 1;
+                // No rate is a valid lookup result, not a failure.
+                if (settings.Json)
+                    OutputHelper.WriteJson(new { found = false, clientId = settings.ClientId, date = date.ToString("yyyy-MM-dd") });
+                else
+                    OutputHelper.WriteWarning($"No rate found for client '{settings.ClientId}' on {date:yyyy-MM-dd}");
+                return 0;
             }
 
             OutputHelper.Render(rate, settings.Json, r =>

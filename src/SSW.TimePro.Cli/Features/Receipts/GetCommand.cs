@@ -42,7 +42,11 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
             var r = await _api.GetReceiptDetailAsync(settings.ReceiptId, CancellationToken.None);
             if (r is null)
             {
-                OutputHelper.WriteWarning($"Receipt {settings.ReceiptId} not found.");
+                // Held receipt ID that doesn't resolve is a failed lookup — emit found:false for parsers, then fail.
+                if (settings.Json)
+                    OutputHelper.WriteJson(new { found = false, receiptId = settings.ReceiptId });
+                else
+                    OutputHelper.WriteWarning($"Receipt {settings.ReceiptId} not found.");
                 return 1;
             }
 

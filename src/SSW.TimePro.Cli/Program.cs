@@ -12,6 +12,7 @@ using Spectre.Console.Cli;
 using ClientSearch = SSW.TimePro.Cli.Features.Clients.SearchCommand;
 using ClientOutstanding = SSW.TimePro.Cli.Features.Clients.OutstandingCommand;
 using ProjectList = SSW.TimePro.Cli.Features.Projects.ListCommand;
+using ProjectRecent = SSW.TimePro.Cli.Features.Projects.RecentCommand;
 using RateGet = SSW.TimePro.Cli.Features.Rates.GetCommand;
 using RateList = SSW.TimePro.Cli.Features.Rates.ListCommand;
 using LeaveList = SSW.TimePro.Cli.Features.Leave.ListCommand;
@@ -184,6 +185,8 @@ app.Configure(config =>
         pj.SetDescription("Project operations");
         pj.AddCommand<ProjectList>("list")
             .WithDescription("List projects for a client");
+        pj.AddCommand<ProjectRecent>("recent")
+            .WithDescription("Surface recent/likely projects for timesheet filling");
     });
 
     config.AddBranch("proj", pj =>
@@ -191,6 +194,8 @@ app.Configure(config =>
         pj.SetDescription("Project operations (alias)");
         pj.AddCommand<ProjectList>("list")
             .WithDescription("List projects for a client");
+        pj.AddCommand<ProjectRecent>("recent")
+            .WithDescription("Surface recent/likely projects for timesheet filling");
     });
 
     // Rate

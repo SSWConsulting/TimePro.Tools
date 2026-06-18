@@ -66,6 +66,30 @@ public class LeaveModelTests
     }
 
     [Fact]
+    public void LeaveStats_deserializes_from_stats_endpoint_shape()
+    {
+        // Mirrors the live /api/leave/stats/{empId} payload.
+        const string json = """{"daysSinceLastLeave":14,"leaveTakenInLast12Months":18.38}""";
+
+        var stats = JsonSerializer.Deserialize<LeaveStats>(json, Opts);
+
+        stats.Should().NotBeNull();
+        stats!.DaysSinceLastLeave.Should().Be(14);
+        stats.LeaveTakenInLast12Months.Should().Be(18.38m);
+    }
+
+    [Fact]
+    public void LeaveStats_allows_null_daysSinceLastLeave()
+    {
+        const string json = """{"daysSinceLastLeave":null,"leaveTakenInLast12Months":0}""";
+
+        var stats = JsonSerializer.Deserialize<LeaveStats>(json, Opts);
+
+        stats!.DaysSinceLastLeave.Should().BeNull();
+        stats.LeaveTakenInLast12Months.Should().Be(0m);
+    }
+
+    [Fact]
     public void AllDay_length_and_offset_free_dates_bind()
     {
         var items = JsonSerializer.Deserialize<LeaveListResponse>(LeaveJson, Opts)!.Leaves!.Items;

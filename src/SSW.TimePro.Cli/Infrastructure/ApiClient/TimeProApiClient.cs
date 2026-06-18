@@ -39,6 +39,7 @@ public interface ITimeProApiClient
     Task<LeaveListResponse?> GetLeaveAsync(string filter, int pageNumber, int pageSize, CancellationToken ct = default);
     Task<LeaveListResponse?> GetLeaveAsync(string filter, int pageNumber, int pageSize, string? employeeId, CancellationToken ct = default);
     Task<List<LeaveTypeInfo>> GetLeaveTypesAsync(CancellationToken ct = default);
+    Task<LeaveStats?> GetLeaveStatsAsync(string employeeId, CancellationToken ct = default);
     Task CreateLeaveAsync(CreateLeaveRequest request, CancellationToken ct = default);
     Task UpdateLeaveAsync(UpdateLeaveRequest request, CancellationToken ct = default);
     Task CancelLeaveAsync(string leaveId, CancelLeaveRequest request, CancellationToken ct = default);
@@ -279,6 +280,12 @@ public class TimeProApiClient : ITimeProApiClient
     public async Task<List<LeaveTypeInfo>> GetLeaveTypesAsync(CancellationToken ct = default)
     {
         return await GetAsync<List<LeaveTypeInfo>>("/api/leave/types", ct) ?? [];
+    }
+
+    public async Task<LeaveStats?> GetLeaveStatsAsync(string employeeId, CancellationToken ct = default)
+    {
+        return await GetAsync<LeaveStats>(
+            $"/api/leave/stats/{Uri.EscapeDataString(employeeId)}", ct);
     }
 
     public async Task CreateLeaveAsync(CreateLeaveRequest request, CancellationToken ct = default)

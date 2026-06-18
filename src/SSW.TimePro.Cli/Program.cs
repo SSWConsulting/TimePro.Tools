@@ -18,6 +18,7 @@ using RateList = SSW.TimePro.Cli.Features.Rates.ListCommand;
 using LeaveList = SSW.TimePro.Cli.Features.Leave.ListCommand;
 using LeaveCreate = SSW.TimePro.Cli.Features.Leave.CreateCommand;
 using LeaveCancel = SSW.TimePro.Cli.Features.Leave.CancelCommand;
+using LeaveBalance = SSW.TimePro.Cli.Features.Leave.BalanceCommand;
 using InvList = SSW.TimePro.Cli.Features.Invoices.ListCommand;
 using InvGet = SSW.TimePro.Cli.Features.Invoices.GetCommand;
 using InvLines = SSW.TimePro.Cli.Features.Invoices.LinesCommand;
@@ -144,6 +145,8 @@ app.Configure(config =>
             .WithDescription("Create a leave request");
         branch.AddCommand<LeaveCancel>("cancel")
             .WithDescription("Cancel a leave request");
+        branch.AddCommand<LeaveBalance>("balance")
+            .WithDescription("Show leave stats (days since last leave, leave taken in last 12 months)");
     }
 
     config.AddBranch("leave", lv =>

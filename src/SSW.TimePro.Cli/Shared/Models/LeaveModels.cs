@@ -61,6 +61,20 @@ public class LeaveEntry
     };
 }
 
+/// <summary>
+/// Per-employee leave summary from <c>GET /api/leave/stats/{employeeId}</c>.
+/// Note: TimePro does not expose entitlement/remaining per leave type — this is
+/// the only per-person leave-balance signal the API provides.
+/// </summary>
+public class LeaveStats
+{
+    /// <summary>Days since the employee's most recent leave. Null if no prior leave on record.</summary>
+    public int? DaysSinceLastLeave { get; set; }
+
+    /// <summary>Total leave (hours) taken by the employee in the last 12 months.</summary>
+    public decimal LeaveTakenInLast12Months { get; set; }
+}
+
 public class LeaveTypeInfo
 {
     public int Id { get; set; }

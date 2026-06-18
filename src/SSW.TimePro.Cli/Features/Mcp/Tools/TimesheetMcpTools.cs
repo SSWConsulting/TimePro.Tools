@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using ModelContextProtocol.Server;
+using SSW.TimePro.Cli.Features.Timesheets;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using SSW.TimePro.Cli.Shared;
@@ -162,6 +163,86 @@ public class TimesheetMcpTools
     {
         await _api.DeleteTimesheetAsync(timesheetId, ct);
         return JsonSerializer.Serialize(new { success = true, timesheetId }, JsonOpts);
+    }
+
+    [McpServerTool]
+    [Description("Validate a week of timesheets for gaps and issues (leave-aware). Returns per-day coverage with hours, leave, issues, plus allCovered. week: 0=this week (default), -1=last week. The single most useful tool for confirming a week is complete before submitting.")]
+    public async Task<string> CheckWeek(
+        [Description("Week offset. 0=this week (default), -1=last week.")] int week = 0,
+        [Description("empId to check. Defaults to the current user's empId.")] string? empId = null,
+        [Description("Alias for empId.")] string? employeeId = null,
+        CancellationToken ct = default)
+    {
+        const int leavePageSize = 200;
+
+        var tenant = _config.LoadActiveTenantConfig();
+        if (tenant?.EmployeeId is null)
+            return """{"error": "Not logged in. Run 'tp login --tenant <id>' first."}""";
+
+        var targetEmpId = ResolveEmpId(empId, employeeId, tenant.EmployeeId);
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var monday = today.AddDays(-(int)today.DayOfWeek + (int)DayOfWeek.Monday + (week * 7));
+        if (today.DayOfWeek == DayOfWeek.Sunday)
+            monday = monday.AddDays(-7);
+        var friday = monday.AddDays(4);
+
+        // Fetch leave once across UPCOMING + PAST (mirrors `tp ts check`).
+        var leaveEntries = new List<LeaveEntry>();
+        foreach (var filter in new[] { "UPCOMING", "PAST" })
+        {
+            var response = await _api.GetLeaveAsync(filter, 1, leavePageSize, targetEmpId, ct);
+            var items = response?.Leaves?.Items;
+            if (items is not null)
+                leaveEntries.AddRange(items);
+        }
+        var approvedLeave = CheckEvaluator.ToLeaveDays(leaveEntries);
+
+        var days = new List<object>();
+        int errors = 0, warnings = 0, infos = 0;
+        var dayChecks = new List<CheckEvaluator.DayCheck>();
+
+        for (var d = monday; d <= friday; d = d.AddDays(1))
+        {
+            var timesheets = await _api.GetTimesheetsAsync(targetEmpId, d, ct);
+            var real = timesheets.Where(t => !t.IsSuggested).ToList();
+            var suggestedCount = timesheets.Count(t => t.IsSuggested);
+
+            var check = CheckEvaluator.EvaluateDay(d, real, suggestedCount, approvedLeave);
+            dayChecks.Add(check);
+
+            errors += check.Issues.Count(i => i.Severity == "error");
+            warnings += check.Issues.Count(i => i.Severity == "warning");
+            infos += check.Issues.Count(i => i.Severity == "info");
+
+            days.Add(new
+            {
+                date = check.Date.ToString("yyyy-MM-dd"),
+                dayOfWeek = check.Date.DayOfWeek.ToString(),
+                totalHours = check.TotalHours,
+                timesheetCount = check.TimesheetCount,
+                suggestedCount = check.SuggestedCount,
+                leaveHours = check.LeaveHours,
+                leaveType = check.LeaveType,
+                covered = check.Covered,
+                coverReason = check.CoverReason,
+                issues = check.Issues.Select(i => new { i.Severity, i.Message })
+            });
+        }
+
+        var result = new
+        {
+            empId = targetEmpId,
+            weekStart = monday.ToString("yyyy-MM-dd"),
+            weekEnd = friday.ToString("yyyy-MM-dd"),
+            errors,
+            warnings,
+            infos,
+            allCovered = dayChecks.All(c => c.Covered),
+            days
+        };
+
+        return JsonSerializer.Serialize(result, JsonOpts);
     }
 
     [McpServerTool]

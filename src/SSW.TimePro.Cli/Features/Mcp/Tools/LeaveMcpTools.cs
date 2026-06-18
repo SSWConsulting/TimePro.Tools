@@ -46,6 +46,33 @@ public class LeaveMcpTools
         return JsonSerializer.Serialize(response?.Leaves?.Items ?? [], JsonOpts);
     }
 
+    [McpServerTool]
+    [Description("Get leave stats for an employee: days since last leave and total leave hours taken in the last 12 months. Defaults to the current user's empId. (TimePro does not expose entitlement/remaining per leave type.)")]
+    public async Task<string> GetLeaveBalance(
+        [Description("empId to read. Defaults to the current user's empId.")] string? empId = null,
+        [Description("Alias for empId.")] string? employeeId = null,
+        CancellationToken ct = default)
+    {
+        var tenant = _config.LoadActiveTenantConfig();
+        if (tenant is null)
+            return """{"error": "Not logged in. Run 'tp login --tenant <id>' first."}""";
+
+        var targetEmpId = ResolveEmpId(empId, employeeId) ?? tenant.EmployeeId;
+        if (string.IsNullOrWhiteSpace(targetEmpId))
+            return """{"error": "No empId available. Provide empId or log in again."}""";
+
+        var stats = await _api.GetLeaveStatsAsync(targetEmpId, ct);
+        if (stats is null)
+            return JsonSerializer.Serialize(new { error = $"No leave stats found for {targetEmpId}." }, JsonOpts);
+
+        return JsonSerializer.Serialize(new
+        {
+            empId = targetEmpId,
+            stats.DaysSinceLastLeave,
+            stats.LeaveTakenInLast12Months
+        }, JsonOpts);
+    }
+
     private static string? ResolveEmpId(string? empId, string? employeeId)
     {
         var requestedEmpId = !string.IsNullOrWhiteSpace(empId) ? empId : employeeId;

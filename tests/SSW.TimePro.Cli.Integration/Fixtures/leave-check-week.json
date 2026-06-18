@@ -1,0 +1,89 @@
+{
+  "leaves": {
+    "pageNumber": 1,
+    "pageSize": 200,
+    "totalItems": 3,
+    "totalPages": 1,
+    "items": [
+      {
+        "id": "c1c1c1c1-1111-1111-1111-111111111111",
+        "startDate": "2026-03-31T00:00:00+10:00",
+        "endDate": "2026-03-31T23:59:00+10:00",
+        "createdAt": "2026-03-01T08:00:00.0000000+00:00",
+        "updatedAt": null,
+        "note": "Full day off",
+        "approvedBy": "admin@test.com",
+        "optionalEmp": [],
+        "requestedEmpId": "TST",
+        "leaveType": {
+          "id": 1,
+          "name": "Annual Leave",
+          "order": 1,
+          "isActive": true,
+          "leaveTimesheetSettings": null
+        },
+        "status": 2,
+        "daysAway": 0,
+        "length": 8.0,
+        "allDay": true,
+        "timeLessOverride": null,
+        "cancellationReason": null,
+        "startDateWithoutOffset": "2026-03-31T00:00:00",
+        "endDateWithoutOffset": "2026-03-31T23:59:00"
+      },
+      {
+        "id": "c2c2c2c2-2222-2222-2222-222222222222",
+        "startDate": "2026-04-01T00:00:00+10:00",
+        "endDate": "2026-04-01T11:30:00+10:00",
+        "createdAt": "2026-03-01T08:00:00.0000000+00:00",
+        "updatedAt": null,
+        "note": "Half day appointment",
+        "approvedBy": "admin@test.com",
+        "optionalEmp": [],
+        "requestedEmpId": "TST",
+        "leaveType": {
+          "id": 2,
+          "name": "Personal Leave",
+          "order": 2,
+          "isActive": true,
+          "leaveTimesheetSettings": null
+        },
+        "status": 2,
+        "daysAway": 0,
+        "length": 2.5,
+        "allDay": false,
+        "timeLessOverride": null,
+        "cancellationReason": null,
+        "startDateWithoutOffset": "2026-04-01T09:00:00",
+        "endDateWithoutOffset": "2026-04-01T11:30:00"
+      },
+      {
+        "id": "c3c3c3c3-3333-3333-3333-333333333333",
+        "startDate": "2026-04-02T00:00:00+10:00",
+        "endDate": "2026-04-02T23:59:00+10:00",
+        "createdAt": "2026-03-01T08:00:00.0000000+00:00",
+        "updatedAt": null,
+        "note": "Cancelled day off",
+        "approvedBy": "admin@test.com",
+        "optionalEmp": [],
+        "requestedEmpId": "TST",
+        "leaveType": {
+          "id": 1,
+          "name": "Annual Leave",
+          "order": 1,
+          "isActive": true,
+          "leaveTimesheetSettings": null
+        },
+        "status": 7,
+        "daysAway": 0,
+        "length": 8.0,
+        "allDay": true,
+        "timeLessOverride": null,
+        "cancellationReason": "Plans changed",
+        "startDateWithoutOffset": "2026-04-02T00:00:00",
+        "endDateWithoutOffset": "2026-04-02T23:59:00"
+      }
+    ]
+  },
+  "cancelledCount": 1
+}

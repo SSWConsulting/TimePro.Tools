@@ -1,15 +1,19 @@
 using System.ComponentModel;
+using System.Text.Json.Serialization;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using SSW.TimePro.Cli.Infrastructure.Output;
+using SSW.TimePro.Cli.Shared.Models;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
 namespace SSW.TimePro.Cli.Features.Timesheets;
 
-[Description("Validate timesheets for a week — check for gaps and issues")]
+[Description("Validate timesheets for a week — check for gaps and issues (leave-aware)")]
 public class CheckCommand : AsyncCommand<CheckCommand.Settings>
 {
+    private const int LeavePageSize = 200;
+
     private readonly ITimeProApiClient _api;
     private readonly IConfigService _config;
 
@@ -54,72 +58,44 @@ public class CheckCommand : AsyncCommand<CheckCommand.Settings>
 
         try
         {
-            var dayResults = new List<object>();
+            // Fetch leave ONCE for the run — the checked week may be entirely past
+            // (e.g. --week -1) or a Mon–Thu leave may already be "past" by Friday,
+            // so query both UPCOMING and PAST and merge.
+            var approvedLeave = await LoadApprovedLeaveAsync(empId, cancellationToken);
+
+            var dayResults = new List<DayJson>();
+            var dayChecks = new List<CheckEvaluator.DayCheck>();
             int errors = 0, warnings = 0, infos = 0;
 
             for (var d = monday; d <= friday; d = d.AddDays(1))
             {
-                var timesheets = await _api.GetTimesheetsAsync(empId, d, CancellationToken.None);
+                var timesheets = await _api.GetTimesheetsAsync(empId, d, cancellationToken);
                 var real = timesheets.Where(t => !t.IsSuggested).ToList();
                 var suggested = timesheets.Where(t => t.IsSuggested).ToList();
-                var totalHours = real.Sum(t => t.TotalTime);
 
-                var issues = new List<(string severity, string message)>();
+                var check = CheckEvaluator.EvaluateDay(d, real, suggested.Count, approvedLeave);
+                dayChecks.Add(check);
 
-                if (real.Count == 0)
-                {
-                    issues.Add(("error", "No timesheets entered"));
-                    errors++;
-                }
-                else if (totalHours < 7.5m)
-                {
-                    issues.Add(("warning", $"Under 8 hours ({totalHours:0.0}h)"));
-                    warnings++;
-                }
+                errors += check.Issues.Count(i => i.Severity == "error");
+                warnings += check.Issues.Count(i => i.Severity == "warning");
+                infos += check.Issues.Count(i => i.Severity == "info");
 
-                if (totalHours > 10m)
+                dayResults.Add(new DayJson
                 {
-                    issues.Add(("warning", $"Over 10 hours ({totalHours:0.0}h)"));
-                    warnings++;
-                }
-
-                // Check overlapping times
-                for (int i = 0; i < real.Count; i++)
-                {
-                    for (int j = i + 1; j < real.Count; j++)
-                    {
-                        if (TimesOverlap(real[i].StartTime, real[i].EndTime, real[j].StartTime, real[j].EndTime))
-                        {
-                            issues.Add(("error", $"Overlap: #{real[i].TimeId} and #{real[j].TimeId}"));
-                            errors++;
-                        }
-                    }
-                }
-
-                // Check for missing descriptions
-                foreach (var ts in real.Where(t => !t.HasNotes || string.IsNullOrWhiteSpace(t.Notes)))
-                {
-                    issues.Add(("warning", $"#{ts.TimeId} has no description"));
-                    warnings++;
-                }
-
-                // Unaccepted suggested timesheets
-                if (suggested.Count > 0)
-                {
-                    issues.Add(("info", $"{suggested.Count} suggested timesheet(s) not accepted"));
-                    infos++;
-                }
-
-                dayResults.Add(new
-                {
-                    date = d.ToString("yyyy-MM-dd"),
-                    dayOfWeek = d.DayOfWeek.ToString(),
-                    totalHours,
-                    timesheetCount = real.Count,
-                    suggestedCount = suggested.Count,
-                    issues = issues.Select(i => new { i.severity, i.message })
+                    Date = check.Date.ToString("yyyy-MM-dd"),
+                    DayOfWeek = check.Date.DayOfWeek.ToString(),
+                    TotalHours = check.TotalHours,
+                    TimesheetCount = check.TimesheetCount,
+                    SuggestedCount = check.SuggestedCount,
+                    LeaveHours = check.LeaveHours,
+                    LeaveType = check.LeaveType,
+                    Covered = check.Covered,
+                    CoverReason = check.CoverReason,
+                    Issues = check.Issues.Select(i => new IssueJson(i.Severity, i.Message)).ToList()
                 });
             }
+
+            var allCovered = dayChecks.All(c => c.Covered);
 
             var result = new
             {
@@ -129,6 +105,7 @@ public class CheckCommand : AsyncCommand<CheckCommand.Settings>
                 errors,
                 warnings,
                 infos,
+                allCovered,
                 days = dayResults
             };
 
@@ -137,39 +114,47 @@ public class CheckCommand : AsyncCommand<CheckCommand.Settings>
                 AnsiConsole.WriteLine();
                 AnsiConsole.Write(new Rule($"[bold]Week Check: {monday:MMM d} - {friday:MMM d, yyyy}[/]").LeftJustified().RuleStyle("dim"));
 
-                foreach (var dayObj in dayResults)
+                foreach (var check in dayChecks)
                 {
-                    // Use dynamic to access anonymous type
-                    var day = (dynamic)dayObj;
-                    string date = day.date;
-                    string dow = day.dayOfWeek;
-                    decimal hours = day.totalHours;
-                    var issueList = ((IEnumerable<dynamic>)day.issues).ToList();
-
                     string icon;
-                    if (issueList.Any(i => (string)i.severity == "error"))
+                    if (check.Issues.Any(i => i.Severity == "error"))
                         icon = "[red]x[/]";
-                    else if (issueList.Any(i => (string)i.severity == "warning"))
+                    else if (check.Issues.Any(i => i.Severity == "warning"))
                         icon = "[yellow]![/]";
                     else
                         icon = "[green]v[/]";
 
-                    var dateOnly = DateOnly.ParseExact(date, "yyyy-MM-dd");
-                    AnsiConsole.MarkupLine($" {icon} {dateOnly:ddd dd}   {hours,5:0.0}h   {(issueList.Count == 0 ? "[green]OK[/]" : "")}");
-
-                    foreach (var issue in issueList)
+                    var marker = check.CoverReason switch
                     {
-                        string sev = issue.severity;
-                        string msg = issue.message;
-                        var color = sev switch { "error" => "red", "warning" => "yellow", _ => "dim" };
-                        AnsiConsole.MarkupLine($"              [{color}]{Markup.Escape(msg)}[/]");
+                        "holiday" => " [blue]PH[/]",
+                        "leave-full" => " [blue]Leave[/]",
+                        "leave-partial" => $" [blue]Leave {check.LeaveHours:0.0}h[/]",
+                        _ => ""
+                    };
+
+                    var statusLabel = check.Issues.Count == 0
+                        ? "[green]OK[/]"
+                        : (!check.HasError && check.Covered ? "[green]OK[/]" : "");
+
+                    AnsiConsole.MarkupLine($" {icon} {check.Date:ddd dd}   {check.TotalHours,5:0.0}h{marker}   {statusLabel}");
+
+                    foreach (var issue in check.Issues)
+                    {
+                        var color = issue.Severity switch
+                        {
+                            "error" => "red",
+                            "warning" => "yellow",
+                            "info" when check.CoverReason is "holiday" or "leave-full" => "blue",
+                            _ => "dim"
+                        };
+                        AnsiConsole.MarkupLine($"              [{color}]{Markup.Escape(issue.Message)}[/]");
                     }
                 }
 
                 AnsiConsole.Write(new Rule().RuleStyle("dim"));
 
                 if (errors == 0 && warnings == 0)
-                    OutputHelper.WriteSuccess("All clear — no issues found");
+                    OutputHelper.WriteSuccess(allCovered ? "All clear — every day covered" : "All clear — no issues found");
                 else
                     AnsiConsole.MarkupLine($" [red]{errors} error(s)[/], [yellow]{warnings} warning(s)[/], [dim]{infos} info(s)[/]");
 
@@ -185,23 +170,45 @@ public class CheckCommand : AsyncCommand<CheckCommand.Settings>
         }
     }
 
-    private static bool TimesOverlap(string? start1, string? end1, string? start2, string? end2)
+    /// <summary>
+    /// Loads approved leave for the employee across both UPCOMING and PAST filters,
+    /// dedupes by Id, and reduces to date-ranged day records.
+    /// </summary>
+    private async Task<List<CheckEvaluator.LeaveDay>> LoadApprovedLeaveAsync(string empId, CancellationToken ct)
     {
-        if (start1 is null || end1 is null || start2 is null || end2 is null) return false;
-        try
+        var entries = new List<LeaveEntry>();
+
+        foreach (var filter in new[] { "UPCOMING", "PAST" })
         {
-            var s1 = DateTime.Parse(start1);
-            var e1 = DateTime.Parse(end1);
-            var s2 = DateTime.Parse(start2);
-            var e2 = DateTime.Parse(end2);
-            return s1 < e2 && s2 < e1;
+            var response = await _api.GetLeaveAsync(filter, 1, LeavePageSize, empId, ct);
+            var items = response?.Leaves?.Items;
+            if (items is not null)
+                entries.AddRange(items);
         }
-        catch
-        {
-            return false;
-        }
+
+        return CheckEvaluator.ToLeaveDays(entries);
     }
 
     private static string ResolveEmpId(string? requestedEmpId, string defaultEmpId) =>
         string.IsNullOrWhiteSpace(requestedEmpId) ? defaultEmpId : requestedEmpId.Trim();
+
+    /// <summary>Per-day JSON shape. <see cref="LeaveType"/> is always emitted (null when no leave).</summary>
+    private sealed class DayJson
+    {
+        public string Date { get; init; } = string.Empty;
+        public string DayOfWeek { get; init; } = string.Empty;
+        public decimal TotalHours { get; init; }
+        public int TimesheetCount { get; init; }
+        public int SuggestedCount { get; init; }
+        public decimal LeaveHours { get; init; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+        public string? LeaveType { get; init; }
+
+        public bool Covered { get; init; }
+        public string CoverReason { get; init; } = string.Empty;
+        public IReadOnlyList<IssueJson> Issues { get; init; } = [];
+    }
+
+    private sealed record IssueJson(string Severity, string Message);
 }

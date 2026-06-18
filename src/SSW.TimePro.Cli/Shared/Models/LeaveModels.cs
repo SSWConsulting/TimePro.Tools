@@ -5,6 +5,9 @@ namespace SSW.TimePro.Cli.Shared.Models;
 public class LeaveListResponse
 {
     public PaginatedList<LeaveEntry>? Leaves { get; set; }
+
+    /// <summary>Number of cancelled leave entries in this result set (list envelope field "cancelledCount").</summary>
+    public int CancelledCount { get; set; }
 }
 
 public class PaginatedList<T>
@@ -22,9 +25,22 @@ public class LeaveEntry
     public string? StartDate { get; set; }
     public string? EndDate { get; set; }
     public string? CreatedAt { get; set; }
+
+    /// <summary>Last-modified timestamp from the server (API field "updatedAt").</summary>
+    public string? UpdatedAt { get; set; }
+
     public string? Note { get; set; }
     public string? ApprovedBy { get; set; }
     public string? RequestedEmpId { get; set; }
+
+    /// <summary>Number of working days this leave spans (API field "daysAway").</summary>
+    public decimal DaysAway { get; set; }
+
+    /// <summary>Manual hours override applied to the leave, if any (API field "timeLessOverride").</summary>
+    public decimal? TimeLessOverride { get; set; }
+
+    /// <summary>Reason supplied when the leave was cancelled (API field "cancellationReason").</summary>
+    public string? CancellationReason { get; set; }
 
     /// <summary>Local start without TZ offset (e.g. "2026-03-30T00:00:00"). Prefer the date portion for day matching.</summary>
     [JsonPropertyName("startDateWithoutOffset")]

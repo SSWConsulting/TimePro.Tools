@@ -31,7 +31,10 @@ public class LeaveModelTests
             "leaveType": { "id": 1, "name": "Annual Leave", "isActive": true },
             "status": 2,
             "length": 8.0,
-            "allDay": true
+            "allDay": true,
+            "daysAway": 1.0,
+            "updatedAt": "2026-03-25T09:15:00+10:00",
+            "timeLessOverride": 8.0
           },
           {
             "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
@@ -41,11 +44,13 @@ public class LeaveModelTests
             "leaveType": { "id": 1, "name": "Annual Leave", "isActive": true },
             "status": 7,
             "length": 2.5,
-            "allDay": false
+            "allDay": false,
+            "daysAway": 0.5,
+            "cancellationReason": "Plans changed"
           }
         ]
       },
-      "cancelledCount": 0
+      "cancelledCount": 1
     }
     """;
 
@@ -103,5 +108,24 @@ public class LeaveModelTests
         items[1].AllDay.Should().BeFalse();
         items[1].Length.Should().Be(2.5m);
         items[1].StartDateLocal.Should().Be("2026-04-01T15:00:00");
+    }
+
+    [Fact]
+    public void Server_fields_dropped_by_the_model_now_bind()
+    {
+        var resp = JsonSerializer.Deserialize<LeaveListResponse>(LeaveJson, Opts);
+        var items = resp!.Leaves!.Items;
+
+        // Previously omitted by the CLI model — additive bindings (P2-3).
+        resp.CancelledCount.Should().Be(1);
+
+        items[0].DaysAway.Should().Be(1.0m);
+        items[0].UpdatedAt.Should().Be("2026-03-25T09:15:00+10:00");
+        items[0].TimeLessOverride.Should().Be(8.0m);
+        items[0].CancellationReason.Should().BeNull();
+
+        items[1].DaysAway.Should().Be(0.5m);
+        items[1].CancellationReason.Should().Be("Plans changed");
+        items[1].TimeLessOverride.Should().BeNull();
     }
 }

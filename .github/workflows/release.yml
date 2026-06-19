@@ -1,0 +1,83 @@
+name: Release (NuGet)
+
+# Manually-triggered release of the `tp` .NET global tool to NuGet.
+# Defaults to a dry run (pack + upload artifact only). Set dry_run=false to publish.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Package version (e.g. 1.2.3). Leave blank to use the version in the .csproj."
+        required: false
+        type: string
+      dry_run:
+        description: "Pack and upload the artifact without pushing to NuGet."
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    env:
+      PROJECT: src/SSW.TimePro.Cli/SSW.TimePro.Cli.csproj
+      SOLUTION: SSW.TimePro.Timesheets.Cli.slnx
+      CONFIGURATION: Release
+      PACKAGE_OUTPUT: ${{ github.workspace }}/artifacts/nupkg
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: bash scripts/cloud-setup.sh
+
+      - name: Build
+        run: dotnet build "$SOLUTION" --configuration "$CONFIGURATION" --no-restore
+
+      - name: Test
+        run: dotnet test "$SOLUTION" --configuration "$CONFIGURATION" --no-build --no-restore
+
+      - name: NuGet vulnerability audit
+        run: bash scripts/security/nuget-audit.sh
+
+      - name: Pack
+        run: |
+          version_args=()
+          if [[ -n "${{ inputs.version }}" ]]; then
+            version_args+=("-p:Version=${{ inputs.version }}")
+          fi
+          dotnet pack "$PROJECT" \
+            --configuration "$CONFIGURATION" \
+            --no-build \
+            --output "$PACKAGE_OUTPUT" \
+            "${version_args[@]}"
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nupkg
+          path: ${{ env.PACKAGE_OUTPUT }}/*.nupkg
+          if-no-files-found: error
+
+      - name: Push to NuGet
+        if: ${{ inputs.dry_run == false }}
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if [[ -z "${NUGET_API_KEY:-}" ]]; then
+            echo "::error::NUGET_API_KEY secret is not set. Add it in repository settings before publishing." >&2
+            exit 1
+          fi
+          dotnet nuget push "$PACKAGE_OUTPUT"/*.nupkg \
+            --api-key "$NUGET_API_KEY" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate

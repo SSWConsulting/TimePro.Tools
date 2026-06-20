@@ -66,6 +66,10 @@ public class ScrumCommand : AsyncCommand<ScrumCommand.Settings>
         [Description("Emit the structured scrum model as JSON")]
         public bool Json { get; set; }
 
+        // --smart is the spiritual successor to the original SSW AutoScrum
+        // (github.com/AwesomeBlazor/AutoScrum): it revives AutoScrum's
+        // yesterday/today/blockers selection heuristics, adapted to GitHub's
+        // state model and TimePro's project/timesheet data.
         [CommandOption("--smart")]
         [Description("Use AutoScrum-inspired selection: today/yesterday/blockers by state-change date + assigned issues")]
         public bool Smart { get; set; }

@@ -54,6 +54,14 @@ public class ScrumCommand : AsyncCommand<ScrumCommand.Settings>
         [Description("Emit the HTML body to stdout instead of the styled terminal view")]
         public bool Html { get; set; }
 
+        [CommandOption("--template-md-only")]
+        [Description("Emit the raw markdown daily-scrum template for the current scope and exit")]
+        public bool TemplateMarkdownOnly { get; set; }
+
+        [CommandOption("--template-html-only")]
+        [Description("Emit the raw HTML daily-scrum template for the current scope and exit")]
+        public bool TemplateHtmlOnly { get; set; }
+
         [CommandOption("--json")]
         [Description("Emit the structured scrum model as JSON")]
         public bool Json { get; set; }
@@ -117,7 +125,7 @@ public class ScrumCommand : AsyncCommand<ScrumCommand.Settings>
         ScrumModel model;
         try
         {
-            model = await gatherer.BuildAsync(tenant.EmployeeId, today, projectOverrides, forceInternal, CancellationToken.None, settings.Smart);
+            model = await gatherer.BuildAsync(tenant.EmployeeId, today, projectOverrides, forceInternal, cancellationToken, settings.Smart);
         }
         catch (ApiException ex)
         {
@@ -130,8 +138,20 @@ public class ScrumCommand : AsyncCommand<ScrumCommand.Settings>
 
         var globalConfig = _config.LoadGlobalConfig();
         var renderer = new ScrumRenderer(globalConfig.Scrum);
+        var templateRenderer = new ScrumTemplateRenderer(_config.ConfigDirectory);
+        var tenantId = tenant.TenantId;
 
         // --- Output modes --------------------------------------------------
+        if (settings.TemplateMarkdownOnly)
+        {
+            Console.Write(templateRenderer.ResolveRawTemplate(ScrumTemplateFormat.Markdown, tenantId, model.PrimaryClientId));
+            return 0;
+        }
+        if (settings.TemplateHtmlOnly)
+        {
+            Console.Write(templateRenderer.ResolveRawTemplate(ScrumTemplateFormat.Html, tenantId, model.PrimaryClientId));
+            return 0;
+        }
         if (settings.Json)
         {
             OutputHelper.WriteJson(model);
@@ -139,7 +159,7 @@ public class ScrumCommand : AsyncCommand<ScrumCommand.Settings>
         }
         if (settings.Html)
         {
-            Console.WriteLine(renderer.RenderHtml(model));
+            Console.WriteLine(templateRenderer.Render(ScrumTemplateFormat.Html, tenantId, model.PrimaryClientId, model, globalConfig.Scrum));
             return 0;
         }
 
@@ -151,14 +171,14 @@ public class ScrumCommand : AsyncCommand<ScrumCommand.Settings>
         if (settings.CopyAndExit)
         {
             var format = ParseFormat(settings.Format);
-            CopyBody(renderer, model, format, full: model.IsInternal);
+            CopyBody(renderer, templateRenderer, globalConfig.Scrum, tenantId, model, format, full: model.IsInternal);
             return 0;
         }
 
         // --- Interactive loop ---------------------------------------------
         if (settings.Interactive)
         {
-            return RunInteractive(renderer, model);
+            return RunInteractive(renderer, templateRenderer, globalConfig.Scrum, tenantId, model);
         }
 
         // Non-interactive help hint
@@ -175,7 +195,12 @@ public class ScrumCommand : AsyncCommand<ScrumCommand.Settings>
         _ => CopyFormat.Rich
     };
 
-    private int RunInteractive(ScrumRenderer renderer, ScrumModel model)
+    private int RunInteractive(
+        ScrumRenderer renderer,
+        ScrumTemplateRenderer templateRenderer,
+        ScrumConfig config,
+        string tenantId,
+        ScrumModel model)
     {
         AnsiConsole.MarkupLine("[dim]──────────────────────────────────────────────────────────[/]");
         AnsiConsole.MarkupLine("[dim][[r]] copy rich text   [[m]] copy markdown   [[p]] copy plain[/]");
@@ -196,11 +221,18 @@ public class ScrumCommand : AsyncCommand<ScrumCommand.Settings>
                 _ => null
             };
             if (format is null) continue;
-            CopyBody(renderer, model, format.Value, full: isFull);
+            CopyBody(renderer, templateRenderer, config, tenantId, model, format.Value, full: isFull);
         }
     }
 
-    private void CopyBody(ScrumRenderer renderer, ScrumModel model, CopyFormat format, bool full)
+    private void CopyBody(
+        ScrumRenderer renderer,
+        ScrumTemplateRenderer templateRenderer,
+        ScrumConfig config,
+        string tenantId,
+        ScrumModel model,
+        CopyFormat format,
+        bool full)
     {
         // Re-render with forced internal if the user asked for the full-fat variant.
         var modelToCopy = model;
@@ -211,6 +243,7 @@ public class ScrumCommand : AsyncCommand<ScrumCommand.Settings>
                 TodayDate = model.TodayDate,
                 YesterdayDate = model.YesterdayDate,
                 IsInternal = true,
+                PrimaryClientId = model.PrimaryClientId,
                 PrimaryClientName = model.PrimaryClientName,
                 Yesterday = model.Yesterday,
                 Today = model.Today,
@@ -228,13 +261,14 @@ public class ScrumCommand : AsyncCommand<ScrumCommand.Settings>
         switch (format)
         {
             case CopyFormat.Rich:
-                var html = renderer.RenderHtml(modelToCopy);
+                var html = templateRenderer.Render(ScrumTemplateFormat.Html, tenantId, modelToCopy.PrimaryClientId, modelToCopy, config);
                 var plainFallback = renderer.RenderPlain(modelToCopy);
                 result = clip.CopyRich(html, plainFallback);
                 label = "rich text";
                 break;
             case CopyFormat.Markdown:
-                result = clip.CopyPlain(renderer.RenderMarkdown(modelToCopy));
+                var markdown = templateRenderer.Render(ScrumTemplateFormat.Markdown, tenantId, modelToCopy.PrimaryClientId, modelToCopy, config);
+                result = clip.CopyPlain(markdown);
                 label = "markdown";
                 break;
             case CopyFormat.Plain:

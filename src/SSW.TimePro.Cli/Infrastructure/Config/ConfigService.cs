@@ -7,6 +7,7 @@ namespace SSW.TimePro.Cli.Infrastructure.Config;
 /// </summary>
 public interface IConfigService
 {
+    string ConfigDirectory { get; }
     GlobalConfig LoadGlobalConfig();
     void SaveGlobalConfig(GlobalConfig config);
     TenantConfig? LoadTenantConfig(string tenantId);
@@ -68,6 +69,8 @@ public class ConfigService : IConfigService
     {
         _basePath = basePath;
     }
+
+    public string ConfigDirectory => _basePath;
 
     private string GlobalConfigFile => Path.Combine(_basePath, "config.json");
     private string TenantsDir => Path.Combine(_basePath, "tenants");

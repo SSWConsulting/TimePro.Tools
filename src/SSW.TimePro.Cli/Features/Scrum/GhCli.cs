@@ -5,10 +5,20 @@ using System.Text.Json.Serialization;
 namespace SSW.TimePro.Cli.Features.Scrum;
 
 /// <summary>
+/// Abstraction over the GitHub activity the scrum gatherer needs, so it can be
+/// faked in tests (the real implementation shells out to <c>gh</c>).
+/// </summary>
+public interface IGhCli
+{
+    List<GhCli.PullRequest> ListMyPullRequests(string ownerRepo, int limit = 20);
+    List<GhCli.Issue> ListMyAssignedIssues(string ownerRepo, int limit = 10);
+}
+
+/// <summary>
 /// Thin wrapper over the local <c>gh</c> CLI. We shell out so we inherit the
 /// user's existing GitHub auth — no token plumbing needed.
 /// </summary>
-public class GhCli
+public class GhCli : IGhCli
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

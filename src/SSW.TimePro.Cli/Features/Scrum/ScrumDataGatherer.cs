@@ -14,9 +14,9 @@ public class ScrumDataGatherer
 {
     private readonly ITimeProApiClient _api;
     private readonly IConfigService _config;
-    private readonly GhCli _gh;
+    private readonly IGhCli _gh;
 
-    public ScrumDataGatherer(ITimeProApiClient api, IConfigService config, GhCli gh)
+    public ScrumDataGatherer(ITimeProApiClient api, IConfigService config, IGhCli gh)
     {
         _api = api;
         _config = config;
@@ -89,6 +89,7 @@ public class ScrumDataGatherer
         {
             TodayDate = today,
             IsInternal = isInternal,
+            PrimaryClientId = todaysProjects.FirstOrDefault().ClientId,
             PrimaryClientName = todaysProjects.FirstOrDefault().Client
         };
 

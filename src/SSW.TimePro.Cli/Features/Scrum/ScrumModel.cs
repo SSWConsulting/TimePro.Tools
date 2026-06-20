@@ -21,6 +21,11 @@ public class ScrumModel
     /// </summary>
     public string? PrimaryClientName { get; set; }
 
+    /// <summary>
+    /// Primary client id for resolving scoped daily scrum templates.
+    /// </summary>
+    public string? PrimaryClientId { get; set; }
+
     public List<ScrumItem> Yesterday { get; set; } = [];
     public List<ScrumItem> Today { get; set; } = [];
 

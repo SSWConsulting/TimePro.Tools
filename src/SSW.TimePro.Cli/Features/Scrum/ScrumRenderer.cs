@@ -206,7 +206,7 @@ public class ScrumRenderer
         return $"- {prefix} – {item.Title}";
     }
 
-    private static string RenderItemText(ScrumItem item, bool markdown)
+    internal static string RenderItemText(ScrumItem item, bool markdown)
     {
         var parts = new List<string>();
         if (!string.IsNullOrEmpty(item.Status)) parts.Add(item.Status);
@@ -221,7 +221,7 @@ public class ScrumRenderer
         return $"- {prefix} – {item.Title}";
     }
 
-    private static string RenderItemHtml(ScrumItem item)
+    internal static string RenderItemHtml(ScrumItem item)
     {
         var parts = new List<string>();
         if (!string.IsNullOrEmpty(item.Status)) parts.Add(WebUtility.HtmlEncode(item.Status));

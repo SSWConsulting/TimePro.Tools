@@ -129,7 +129,12 @@ public class ScrumDataGatherer
         //    --smart: uses ScrumItemSelector (AutoScrum-inspired heuristics).
         //    default: original behaviour (open PRs for today, merged PRs for yesterday).
         var previousWorkDay = ScrumItemSelector.PreviousWorkDay(today);
-        var hadPreviousProjectDay = yesterday is not null;
+        // Yesterday/today boundary. Defaults to midnight (null); when a cutoff time
+        // is configured (e.g. 09:00) work completed this morning before stand-up
+        // still appears as done today.
+        DateTimeOffset? cutoff = global.Scrum.CutoffTime is { } cutoffTime
+            ? new DateTimeOffset(today.ToDateTime(cutoffTime, DateTimeKind.Local))
+            : null;
 
         foreach (var proj in todaysProjects)
         {
@@ -164,8 +169,8 @@ public class ScrumDataGatherer
                     Labels: []));
 
                 var selection = ScrumItemSelector.Select(
-                    today, previousWorkDay, hadPreviousProjectDay,
-                    selectorPrs, selectorIssues);
+                    today, previousWorkDay, selectorPrs, selectorIssues,
+                    cutoff, global.Scrum.YesterdayLookbackDays);
 
                 foreach (var item in selection.Yesterday) model.Yesterday.Add(item);
                 foreach (var item in selection.Today) model.Today.Add(item);

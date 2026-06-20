@@ -110,7 +110,7 @@ public class ScrumItemSelectorTests
     public void Select_OpenPr_IsInToday()
     {
         var pr = OpenPr();
-        var result = ScrumItemSelector.Select(Tuesday, Monday, hadPreviousProjectDay: false, [pr], []);
+        var result = ScrumItemSelector.Select(Tuesday, Monday, [pr], []);
 
         result.Today.Should().ContainSingle(i => i.Reference == "#42" && i.Kind == "PR");
     }
@@ -119,7 +119,7 @@ public class ScrumItemSelectorTests
     public void Select_OpenIssue_IsInToday()
     {
         var issue = OpenIssue();
-        var result = ScrumItemSelector.Select(Tuesday, Monday, hadPreviousProjectDay: false, [], [issue]);
+        var result = ScrumItemSelector.Select(Tuesday, Monday, [], [issue]);
 
         result.Today.Should().ContainSingle(i => i.Reference == "#7" && i.Kind == "PBI");
     }
@@ -128,7 +128,7 @@ public class ScrumItemSelectorTests
     public void Select_MergedPr_IsNotInToday()
     {
         var pr = MergedPr();
-        var result = ScrumItemSelector.Select(Tuesday, Monday, hadPreviousProjectDay: false, [pr], []);
+        var result = ScrumItemSelector.Select(Tuesday, Monday, [pr], []);
 
         result.Today.Should().BeEmpty();
     }
@@ -140,7 +140,7 @@ public class ScrumItemSelectorTests
     {
         // Merged at 14:00 on Monday; today is Tuesday → in yesterday window.
         var pr = MergedPr(mergedAt: LocalDt(Monday, 14));
-        var result = ScrumItemSelector.Select(Tuesday, Monday, hadPreviousProjectDay: true, [pr], []);
+        var result = ScrumItemSelector.Select(Tuesday, Monday, [pr], []);
 
         result.Yesterday.Should().ContainSingle(i => i.Reference == "#108" && i.Status == "✅ Done");
     }
@@ -150,7 +150,7 @@ public class ScrumItemSelectorTests
     {
         // Merged two days before yesterday — too old.
         var pr = MergedPr(mergedAt: LocalDt(new DateOnly(2026, 3, 25), 10));
-        var result = ScrumItemSelector.Select(Tuesday, Monday, hadPreviousProjectDay: true, [pr], []);
+        var result = ScrumItemSelector.Select(Tuesday, Monday, [pr], []);
 
         result.Yesterday.Should().BeEmpty();
     }
@@ -162,28 +162,30 @@ public class ScrumItemSelectorTests
         // (the window is [prevMidnight, todayMidnight), exclusive on the right).
         var todayMidnight = LocalDt(Tuesday, 0);
         var pr = MergedPr(mergedAt: todayMidnight);
-        var result = ScrumItemSelector.Select(Tuesday, Monday, hadPreviousProjectDay: true, [pr], []);
+        var result = ScrumItemSelector.Select(Tuesday, Monday, [pr], []);
 
         result.Yesterday.Should().BeEmpty();
     }
 
     [Fact]
-    public void Select_OpenPrUpdatedBeforeToday_IsInYesterdayWhenHadPreviousDay()
+    public void Select_OpenPrUpdatedRecently_IsInYesterday()
     {
-        // Open PR last updated yesterday afternoon — still in-flight yesterday.
+        // Open PR last updated yesterday afternoon — still in-flight, so yesterday.
         var pr = OpenPr(updatedAt: LocalDt(Monday, 15));
-        var result = ScrumItemSelector.Select(Tuesday, Monday, hadPreviousProjectDay: true, [pr], []);
+        var result = ScrumItemSelector.Select(Tuesday, Monday, [pr], []);
 
         result.Yesterday.Should().ContainSingle(i => i.Reference == "#42");
     }
 
     [Fact]
-    public void Select_OpenPrUpdatedBeforeToday_NotInYesterdayWhenNoTimesheetOnPreviousDay()
+    public void Select_OpenPrUpdatedBeyondLookback_IsNotInYesterday()
     {
-        // No timesheet on previous day → the "still in-flight" rule should not fire.
-        var pr = OpenPr(updatedAt: LocalDt(Monday, 15));
-        var result = ScrumItemSelector.Select(Tuesday, Monday, hadPreviousProjectDay: false, [pr], []);
+        // Open PR untouched for 20 days is beyond the in-progress lookback (14d):
+        // it's today's work to resume, but not claimed as yesterday's.
+        var pr = OpenPr(updatedAt: LocalDt(Tuesday.AddDays(-20), 15));
+        var result = ScrumItemSelector.Select(Tuesday, Monday, [pr], []);
 
+        result.Today.Should().ContainSingle(i => i.Reference == "#42");
         result.Yesterday.Should().BeEmpty();
     }
 
@@ -191,7 +193,7 @@ public class ScrumItemSelectorTests
     public void Select_ClosedIssueOnPreviousWorkDay_IsInYesterday()
     {
         var issue = ClosedIssue(closedAt: LocalDt(Monday, 11));
-        var result = ScrumItemSelector.Select(Tuesday, Monday, hadPreviousProjectDay: true, [], [issue]);
+        var result = ScrumItemSelector.Select(Tuesday, Monday, [], [issue]);
 
         result.Yesterday.Should().ContainSingle(i => i.Reference == "#13" && i.Status == "✅ Done");
     }
@@ -202,7 +204,7 @@ public class ScrumItemSelectorTests
     public void Select_OpenPrWithBlockedLabel_IsInBlockers()
     {
         var pr = OpenPr(labels: ["blocked", "bug"]);
-        var result = ScrumItemSelector.Select(Tuesday, Monday, hadPreviousProjectDay: false, [pr], []);
+        var result = ScrumItemSelector.Select(Tuesday, Monday, [pr], []);
 
         result.Blockers.Should().ContainSingle(i => i.Reference == "#42");
     }
@@ -212,7 +214,7 @@ public class ScrumItemSelectorTests
     {
         // Blockers should also appear in Today so the scrum email shows them.
         var pr = OpenPr(labels: ["Blocked"]);
-        var result = ScrumItemSelector.Select(Tuesday, Monday, hadPreviousProjectDay: false, [pr], []);
+        var result = ScrumItemSelector.Select(Tuesday, Monday, [pr], []);
 
         result.Today.Should().ContainSingle(i => i.Reference == "#42");
         result.Blockers.Should().ContainSingle(i => i.Reference == "#42");
@@ -222,7 +224,7 @@ public class ScrumItemSelectorTests
     public void Select_DraftPr_IsInBlockers()
     {
         var pr = OpenPr(isDraft: true);
-        var result = ScrumItemSelector.Select(Tuesday, Monday, hadPreviousProjectDay: false, [pr], []);
+        var result = ScrumItemSelector.Select(Tuesday, Monday, [pr], []);
 
         result.Blockers.Should().ContainSingle(i => i.Reference == "#42");
     }
@@ -231,7 +233,7 @@ public class ScrumItemSelectorTests
     public void Select_OpenIssueWithBlockedLabel_IsInBlockers()
     {
         var issue = OpenIssue(labels: ["BLOCKED"]);
-        var result = ScrumItemSelector.Select(Tuesday, Monday, hadPreviousProjectDay: false, [], [issue]);
+        var result = ScrumItemSelector.Select(Tuesday, Monday, [], [issue]);
 
         result.Blockers.Should().ContainSingle(i => i.Reference == "#7");
     }
@@ -240,7 +242,7 @@ public class ScrumItemSelectorTests
     public void Select_ClosedPrNotBlocked_HasNoBlockers()
     {
         var pr = MergedPr();
-        var result = ScrumItemSelector.Select(Tuesday, Monday, hadPreviousProjectDay: false, [pr], []);
+        var result = ScrumItemSelector.Select(Tuesday, Monday, [pr], []);
 
         result.Blockers.Should().BeEmpty();
     }
@@ -252,7 +254,7 @@ public class ScrumItemSelectorTests
     {
         // Two calls with same PR should not duplicate in today.
         var pr = OpenPr();
-        var result = ScrumItemSelector.Select(Tuesday, Monday, hadPreviousProjectDay: false, [pr, pr], []);
+        var result = ScrumItemSelector.Select(Tuesday, Monday, [pr, pr], []);
 
         result.Today.Should().HaveCount(1);
     }
@@ -262,7 +264,7 @@ public class ScrumItemSelectorTests
     {
         // Open (in-flight) PRs go into both Yesterday and Today (AutoScrum rule).
         var pr = OpenPr(updatedAt: LocalDt(Monday, 15));
-        var result = ScrumItemSelector.Select(Tuesday, Monday, hadPreviousProjectDay: true, [pr], []);
+        var result = ScrumItemSelector.Select(Tuesday, Monday, [pr], []);
 
         result.Yesterday.Should().ContainSingle(i => i.Reference == "#42");
         result.Today.Should().ContainSingle(i => i.Reference == "#42");
@@ -288,7 +290,7 @@ public class ScrumItemSelectorTests
             OpenIssue(number: 7, title: "Order history page")
         };
 
-        var result = ScrumItemSelector.Select(Tuesday, Monday, hadPreviousProjectDay: true, prs, issues);
+        var result = ScrumItemSelector.Select(Tuesday, Monday, prs, issues);
 
         // Yesterday: PR42 (in-flight), PR108 (merged), PR55 (blocked, still open, updated yesterday)
         result.Yesterday.Should().HaveCount(3);

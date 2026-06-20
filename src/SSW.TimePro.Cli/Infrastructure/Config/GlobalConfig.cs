@@ -43,4 +43,23 @@ public class ScrumConfig
     /// <summary>Footer link referenced in the SSW daily scrum rule.</summary>
     [JsonPropertyName("footerUrl")]
     public string FooterUrl { get; set; } = "https://my.sugarlearning.com/SSW/items/8291";
+
+    /// <summary>
+    /// Optional local time-of-day boundary between "yesterday" and "today" for
+    /// scrum classification. Work completed before this cutoff (back to the
+    /// previous work day) is "yesterday"; work completed after it (this morning)
+    /// shows as done under "today". When unset (null) the boundary is midnight
+    /// (standard behaviour). Set e.g. "09:00:00" so a PR merged at 09:30 before a
+    /// 10:00 stand-up still appears.
+    /// </summary>
+    [JsonPropertyName("cutoffTime")]
+    public TimeOnly? CutoffTime { get; set; }
+
+    /// <summary>
+    /// How many days back an in-progress (open) item may have last been touched
+    /// and still count as "yesterday". Keeps ongoing work visible across gaps and
+    /// sprint boundaries where the literal previous work day is empty. Default 14.
+    /// </summary>
+    [JsonPropertyName("yesterdayLookbackDays")]
+    public int YesterdayLookbackDays { get; set; } = 14;
 }

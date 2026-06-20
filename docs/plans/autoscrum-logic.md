@@ -244,3 +244,24 @@ When false (default), existing behaviour is unchanged.
 - **Configurable states**: "blocked" label name is hardcoded; could be a config entry.
 - **Hierarchy**: AutoScrum groups child tasks under their PBI parent. With GitHub, the natural grouping is issue → linked PR. A follow-up could group open PRs under their linked issue.
 - **Azure DevOps work item integration**: if the project has ADO work items (not just GitHub), the selector could consume them via the MCP ADO tools.
+
+## 5. Refinement — 14-day lookback + configurable cutoff
+
+Two changes addressing the yesterday/today picking AutoScrum never got right:
+
+- **14-day in-progress lookback.** An open item counts as "yesterday" when its last
+  activity falls in `[today - YesterdayLookbackDays, cutoff)` (default 14 days),
+  instead of requiring a timesheet on the *literal* previous work day. This keeps
+  ongoing work visible across gaps and — crucially — on the **first day of a new
+  sprint**, when the previous day inside that sprint is empty (-1 day). The old
+  `hadPreviousProjectDay` gate is removed.
+- **Configurable cutoff (`ScrumConfig.CutoffTime`, default null = midnight).** The
+  cutoff is the local yesterday/today boundary. Completed (merged/closed) work
+  **before** it → Yesterday (done); **after** it (this morning) → Today (done) —
+  so a PR merged at 09:30 before a 10:00 stand-up is never lost. Set e.g.
+  `"cutoffTime": "09:00:00"` in `~/.config/timepro-cli/config.json`.
+
+Selector signature: `Select(today, previousWorkDay, prs, issues, cutoff? = null, inProgressLookbackDays = 14)`.
+The merged/closed yesterday window remains `[previousWorkDay 00:00, cutoff)` and still
+spans the weekend (Monday picks up Saturday/Sunday). Covered by
+`ScrumItemSelectorYesterdayTodayTests`.

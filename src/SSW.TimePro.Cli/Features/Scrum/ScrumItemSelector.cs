@@ -62,13 +62,22 @@ public static class ScrumItemSelector
     public static Selection Select(
         DateOnly today,
         DateOnly previousWorkDay,
-        bool hadPreviousProjectDay,
         IEnumerable<GitHubPr> prs,
-        IEnumerable<GitHubIssue> issues)
+        IEnumerable<GitHubIssue> issues,
+        DateTimeOffset? cutoff = null,
+        int inProgressLookbackDays = 14)
     {
-        // Work with midnight-local DateTimeOffset values for comparisons.
-        var todayMidnight = today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Local);
+        // The cutoff is the local boundary between "yesterday" and "today".
+        // Defaults to today midnight; callers pass a configured time (e.g. 09:00)
+        // so work completed this morning before stand-up still shows as done today.
+        var cutoffLocal = cutoff?.LocalDateTime
+            ?? today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Local);
         var prevMidnight = previousWorkDay.ToDateTime(TimeOnly.MinValue, DateTimeKind.Local);
+        // In-progress items count as "yesterday" if last touched within this window
+        // (default 14 days), independent of whether a timesheet exists for the
+        // literal previous work day — this survives gaps and sprint boundaries.
+        var lookbackFloor = today.AddDays(-inProgressLookbackDays)
+            .ToDateTime(TimeOnly.MinValue, DateTimeKind.Local);
 
         var yesterdayItems = new List<ScrumItem>();
         var todayItems = new List<ScrumItem>();
@@ -78,6 +87,27 @@ public static class ScrumItemSelector
         var inYesterday = new HashSet<string>();
         var inToday = new HashSet<string>();
         var inBlockers = new HashSet<string>();
+
+        // Place a completed (merged/closed) item: before the cutoff -> Yesterday
+        // (done); from the cutoff onward (i.e. this morning) -> Today (done today),
+        // so a merge just before stand-up is never lost. Older than the previous
+        // work day is dropped.
+        void ClassifyDone(DateTimeOffset? when, string key, Func<string, ScrumItem> make)
+        {
+            if (!when.HasValue) return;
+            var ts = when.Value.LocalDateTime;
+            if (ts >= prevMidnight && ts < cutoffLocal && inYesterday.Add(key))
+                yesterdayItems.Add(make("✅ Done"));
+            else if (ts >= cutoffLocal && inToday.Add(key))
+                todayItems.Add(make("✅ Done"));
+        }
+
+        // An in-flight (open) item counts as Yesterday when last touched in
+        // [lookbackFloor, cutoff) — recent enough, but before today's cutoff.
+        bool TouchedInYesterdayWindow(DateTimeOffset? updatedAt) =>
+            updatedAt.HasValue &&
+            updatedAt.Value.LocalDateTime >= lookbackFloor &&
+            updatedAt.Value.LocalDateTime < cutoffLocal;
 
         // ── PRs ───────────────────────────────────────────────────────────
 
@@ -103,28 +133,13 @@ public static class ScrumItemSelector
                     inToday.Add(key);
                 }
 
-                // Yesterday: open PR that was already in-flight on the previous project day.
-                // Rule mirrors AutoScrum: InProgress with StateChangeDate < todayMidnight.
-                if (hadPreviousProjectDay &&
-                    pr.UpdatedAt.HasValue &&
-                    pr.UpdatedAt.Value.LocalDateTime < todayMidnight &&
-                    !inYesterday.Contains(key))
-                {
+                // Yesterday: in-flight within the lookback window (before the cutoff).
+                if (TouchedInYesterdayWindow(pr.UpdatedAt) && inYesterday.Add(key))
                     yesterdayItems.Add(MakePrItem(pr, status: string.Empty));
-                    inYesterday.Add(key);
-                }
             }
             else if (pr.State is "MERGED" or "CLOSED")
             {
-                // Yesterday: merged/closed in the window [previousWorkDayMidnight, todayMidnight).
-                if (pr.MergedAt.HasValue &&
-                    pr.MergedAt.Value.LocalDateTime >= prevMidnight &&
-                    pr.MergedAt.Value.LocalDateTime < todayMidnight &&
-                    !inYesterday.Contains(key))
-                {
-                    yesterdayItems.Add(MakePrItem(pr, "✅ Done"));
-                    inYesterday.Add(key);
-                }
+                ClassifyDone(pr.MergedAt, key, status => MakePrItem(pr, status));
             }
         }
 
@@ -150,27 +165,13 @@ public static class ScrumItemSelector
                     inToday.Add(key);
                 }
 
-                // Yesterday: open issue that was already in-flight on the previous project day.
-                if (hadPreviousProjectDay &&
-                    issue.UpdatedAt.HasValue &&
-                    issue.UpdatedAt.Value.LocalDateTime < todayMidnight &&
-                    !inYesterday.Contains(key))
-                {
+                // Yesterday: in-flight within the lookback window (before the cutoff).
+                if (TouchedInYesterdayWindow(issue.UpdatedAt) && inYesterday.Add(key))
                     yesterdayItems.Add(MakeIssueItem(issue, status: string.Empty));
-                    inYesterday.Add(key);
-                }
             }
             else if (issue.State == "CLOSED")
             {
-                // Yesterday: closed in the [previousWorkDayMidnight, todayMidnight) window.
-                if (issue.ClosedAt.HasValue &&
-                    issue.ClosedAt.Value.LocalDateTime >= prevMidnight &&
-                    issue.ClosedAt.Value.LocalDateTime < todayMidnight &&
-                    !inYesterday.Contains(key))
-                {
-                    yesterdayItems.Add(MakeIssueItem(issue, "✅ Done"));
-                    inYesterday.Add(key);
-                }
+                ClassifyDone(issue.ClosedAt, key, status => MakeIssueItem(issue, status));
             }
         }
 

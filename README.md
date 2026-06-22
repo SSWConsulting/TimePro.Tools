@@ -30,23 +30,30 @@ SSW TimePro is a time tracking and invoicing system. This CLI makes it fast to v
 
 ### 1. Install as global tool
 
+The install script grabs the latest release and installs (or updates) the `tp`
+global tool. It first checks that the .NET 10 SDK is present. Re-run it any time
+to upgrade to the newest release.
+
+**macOS / Linux:**
+
 ```bash
-git clone https://github.com/SSWConsulting/timepro.tools.git
-cd timepro.tools
-dotnet pack src/SSW.TimePro.Cli/ -c Release -o artifacts/nupkg
-dotnet tool install -g --add-source artifacts/nupkg SSW.TimePro.Cli
+curl -fsSL https://raw.githubusercontent.com/SSWConsulting/timepro.tools/main/scripts/install.sh | bash
 ```
 
-This makes the `tp` command available system-wide.
+**Windows (PowerShell):**
 
-To update after pulling new changes:
+```powershell
+irm https://raw.githubusercontent.com/SSWConsulting/timepro.tools/main/scripts/install.ps1 | iex
+```
+
+This makes the `tp` command available system-wide. If `tp` isn't found
+afterwards, add the .NET tools directory (`~/.dotnet/tools`, or
+`%USERPROFILE%\.dotnet\tools` on Windows) to your `PATH` and open a new terminal.
+
+Check the installed version any time with:
 
 ```bash
-cd timepro.tools
-git pull
-dotnet pack src/SSW.TimePro.Cli/ -c Release -o artifacts/nupkg
-dotnet tool uninstall -g SSW.TimePro.Cli
-dotnet tool install -g --add-source artifacts/nupkg SSW.TimePro.Cli
+tp --version
 ```
 
 To uninstall:
@@ -55,23 +62,8 @@ To uninstall:
 dotnet tool uninstall -g SSW.TimePro.Cli
 ```
 
-<details>
-<summary>Alternative: Run from project directory without global install</summary>
-
-```bash
-git clone https://github.com/SSWConsulting/timepro.tools.git
-cd timepro.tools
-dotnet build
-```
-
-Then prefix all commands with `dotnet run`:
-
-```bash
-dotnet run --project src/SSW.TimePro.Cli -- login --tenant ssw
-dotnet run --project src/SSW.TimePro.Cli -- ts get --week
-```
-
-</details>
+> Building from source instead? See
+> [Local development](#local-development-build-from-source) below.
 
 ### 2. Authenticate
 
@@ -599,6 +591,31 @@ Config is stored at `~/.config/timepro-cli/`:
 | `config.json` | Active tenant, WFH days, default location |
 | `tenants/{id}.json` | Per-tenant credentials (API key, employee ID, API URL) |
 | `repo-mappings.json` | Repository-to-client/project mappings |
+
+## Local development (build from source)
+
+Contributors working on the CLI itself run it from the repository rather than the
+released package. This needs the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
+
+```bash
+git clone https://github.com/SSWConsulting/timepro.tools.git
+cd timepro.tools
+dotnet build
+```
+
+Run commands directly from the project without a global install:
+
+```bash
+dotnet run --project src/SSW.TimePro.Cli -- login --tenant ssw
+dotnet run --project src/SSW.TimePro.Cli -- ts get --week
+```
+
+To install your local build as the global `tp` tool (e.g. to test packaging):
+
+```bash
+dotnet pack src/SSW.TimePro.Cli/ -c Release -o artifacts/nupkg
+dotnet tool update -g --add-source artifacts/nupkg SSW.TimePro.Cli
+```
 
 ## Running Tests
 

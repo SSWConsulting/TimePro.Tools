@@ -4,6 +4,7 @@ using SSW.TimePro.Cli.Features.Bookings;
 using SSW.TimePro.Cli.Features.Tenants;
 using SSW.TimePro.Cli.Features.Timesheets;
 using SSW.TimePro.Cli.Features.Users;
+using SSW.TimePro.Cli.Infrastructure;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using SSW.TimePro.Cli.Infrastructure.DependencyInjection;
@@ -65,7 +66,7 @@ var app = new CommandApp(registrar);
 app.Configure(config =>
 {
     config.SetApplicationName("tp");
-    config.SetApplicationVersion("0.1.0");
+    config.SetApplicationVersion($"{BuildInfo.Version}+{BuildInfo.Commit}");
 
     // Auth
     config.AddCommand<LoginCommand>("login")

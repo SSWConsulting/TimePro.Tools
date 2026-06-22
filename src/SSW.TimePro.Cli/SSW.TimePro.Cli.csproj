@@ -8,7 +8,12 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>tp</ToolCommandName>
     <PackageId>SSW.TimePro.Cli</PackageId>
-    <Version>0.1.0</Version>
+    <!-- Major.minor only. The release workflow appends the patch (GitHub run number),
+         e.g. 0.1.42, via -p:Version=. Local builds default to <VersionPrefix>.0 (e.g. 0.1.0). -->
+    <VersionPrefix>0.1</VersionPrefix>
+    <!-- Give local builds a full three-part version (0.1.0) rather than the bare "0.1"
+         MSBuild would otherwise use. A CI -p:Version= takes precedence over this. -->
+    <Version Condition="'$(Version)' == ''">$(VersionPrefix).0</Version>
     <Authors>SSW</Authors>
     <Company>SSW</Company>
     <Description>CLI-first tool with MCP support for managing SSW TimePro timesheets</Description>
@@ -31,5 +36,28 @@
     <PackageReference Include="Spectre.Console" />
     <PackageReference Include="Spectre.Console.Cli" />
   </ItemGroup>
+
+  <!--
+    Embed the git commit hash as assembly metadata so the running tool can report
+    exactly which build it is (read at runtime by Infrastructure/BuildInfo.cs).
+    Works locally and in CI; if git is unavailable the build still succeeds and
+    the commit resolves to "unknown". A CI override can pass -p:GitCommit=<sha>.
+  -->
+  <Target Name="EmbedGitCommit" BeforeTargets="CoreGenerateAssemblyInfo">
+    <Exec Command="git -C &quot;$(MSBuildProjectDirectory)&quot; rev-parse --short=12 HEAD"
+          ConsoleToMSBuild="true"
+          ContinueOnError="true"
+          StandardOutputImportance="low"
+          EchoOff="true"
+          Condition="'$(GitCommit)' == ''">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitCommit" />
+    </Exec>
+    <ItemGroup Condition="'$(GitCommit)' != ''">
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>GitCommit</_Parameter1>
+        <_Parameter2>$(GitCommit)</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
 
 </Project>

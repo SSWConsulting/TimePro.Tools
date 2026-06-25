@@ -18,8 +18,9 @@ public static class OutputHelper
     };
 
     // Compact options for the machine-readable error envelope emitted on the
-    // --json path. Always emit every key (code/detail null when absent) so the
-    // shape is stable for agents parsing stdout.
+    // --json path. The core keys (code/message/detail) are always present (null when absent) so
+    // the shape is stable for agents parsing stdout; `recovery` is an optional extra, present only
+    // on errors that carry a recovery recipe.
     private static readonly JsonSerializerOptions ErrorEnvelopeOptions = new()
     {
         WriteIndented = false,

@@ -1,3 +1,4 @@
+using System.Globalization;
 using SSW.TimePro.Cli.Shared.Models;
 
 namespace SSW.TimePro.Cli.Features.Rates;
@@ -61,9 +62,11 @@ public static class RateResolver
     /// </summary>
     public static IReadOnlyList<RecoveryOption> BuildRecoveryOptions(string clientId, RateRecommendation rec)
     {
+        // Invariant culture: these strings are CLI commands — a locale decimal comma would not
+        // round-trip through arg parsing on machines with a different separator.
         var amounts = rec.Source == RateSource.None
             ? "--rate <amount> --prepaid <amount>"
-            : $"--rate {rec.Rate:0.##} --prepaid {rec.PrepaidRate:0.##}";
+            : $"--rate {rec.Rate.ToString("0.##", CultureInfo.InvariantCulture)} --prepaid {rec.PrepaidRate.ToString("0.##", CultureInfo.InvariantCulture)}";
 
         return new[]
         {

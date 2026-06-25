@@ -77,9 +77,9 @@ public static class OutputHelper
     /// <c>--json</c> path: <c>{"error":{"code":&lt;code|null&gt;,"message":...,"detail":&lt;detail|null&gt;}}</c>.
     /// This keeps stdout valid JSON for an agent even when an API call fails.
     /// </summary>
-    public static void WriteJsonError(string message, int? code = null, string? detail = null)
+    public static void WriteJsonError(string message, int? code = null, string? detail = null, object? recovery = null)
     {
-        var envelope = new ErrorEnvelope(new ErrorPayload(code, message, detail));
+        var envelope = new ErrorEnvelope(new ErrorPayload(code, message, detail, recovery));
         Console.Out.WriteLine(JsonSerializer.Serialize(envelope, ErrorEnvelopeOptions));
     }
 
@@ -89,7 +89,10 @@ public static class OutputHelper
     private sealed record ErrorPayload(
         [property: JsonPropertyName("code")] int? Code,
         [property: JsonPropertyName("message")] string Message,
-        [property: JsonPropertyName("detail")] string? Detail);
+        [property: JsonPropertyName("detail")] string? Detail,
+        // Optional, omitted when absent: a machine-actionable recovery recipe an agent can follow.
+        [property: JsonPropertyName("recovery")]
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] object? Recovery = null);
 
     /// <summary>
     /// Writes a success message.

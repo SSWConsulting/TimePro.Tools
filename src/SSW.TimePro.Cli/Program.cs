@@ -16,6 +16,9 @@ using ProjectList = SSW.TimePro.Cli.Features.Projects.ListCommand;
 using ProjectRecent = SSW.TimePro.Cli.Features.Projects.RecentCommand;
 using RateGet = SSW.TimePro.Cli.Features.Rates.GetCommand;
 using RateList = SSW.TimePro.Cli.Features.Rates.ListCommand;
+using RateRecommend = SSW.TimePro.Cli.Features.Rates.RecommendCommand;
+using RateCreate = SSW.TimePro.Cli.Features.Rates.CreateCommand;
+using RateUpdate = SSW.TimePro.Cli.Features.Rates.UpdateCommand;
 using LeaveList = SSW.TimePro.Cli.Features.Leave.ListCommand;
 using LeaveCreate = SSW.TimePro.Cli.Features.Leave.CreateCommand;
 using LeaveCancel = SSW.TimePro.Cli.Features.Leave.CancelCommand;
@@ -210,6 +213,12 @@ app.Configure(config =>
             .WithDescription("Get client rate for current employee");
         rate.AddCommand<RateList>("list")
             .WithDescription("List all configured rates for a client (paged)");
+        rate.AddCommand<RateRecommend>("recommend")
+            .WithDescription("Show the recommended rate (latest client rate, else employee default)");
+        rate.AddCommand<RateCreate>("create")
+            .WithDescription("Create a new client rate");
+        rate.AddCommand<RateUpdate>("update")
+            .WithDescription("Update an existing client rate");
     });
 
     // Iteration (with alias)

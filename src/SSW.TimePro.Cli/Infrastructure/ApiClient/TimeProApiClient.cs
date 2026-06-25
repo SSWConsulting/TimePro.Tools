@@ -25,6 +25,8 @@ public interface ITimeProApiClient
     Task<List<ClientSearchResult>> SearchClientsAsync(string employeeId, string searchText, CancellationToken ct = default);
     Task<List<ProjectForSelect>> GetProjectsForClientAsync(string employeeId, string clientId, CancellationToken ct = default);
     Task<ClientRateResponse?> GetClientRateAsync(string employeeId, string clientId, DateOnly date, CancellationToken ct = default);
+    Task<ClientRateInit?> InitializeClientRateAsync(string employeeId, string clientId, CancellationToken ct = default);
+    Task SaveClientRateAsync(SaveClientRateModel model, CancellationToken ct = default);
     Task<decimal?> GetClientTaxRateAsync(string clientId, CancellationToken ct = default);
     Task<List<AppointmentItem>> GetAppointmentsAsync(string employeeId, DateOnly start, DateOnly end, CancellationToken ct = default);
     Task<TimesheetResponse?> CreateTimesheetAsync(TimesheetRequest request, CancellationToken ct = default);
@@ -194,6 +196,18 @@ public class TimeProApiClient : ITimeProApiClient
     {
         var url = $"/api/Timesheets/GetClientRate?empID={Uri.EscapeDataString(employeeId)}&clientID={Uri.EscapeDataString(clientId)}&timesheetDateCreated={date:yyyy-MM-dd}";
         return await GetAsync<ClientRateResponse>(url, ct);
+    }
+
+    public async Task<ClientRateInit?> InitializeClientRateAsync(
+        string employeeId, string clientId, CancellationToken ct = default)
+    {
+        var url = $"/api/Timesheets/InitializeClientRate?empID={Uri.EscapeDataString(employeeId)}&clientID={Uri.EscapeDataString(clientId)}";
+        return await GetAsync<ClientRateInit>(url, ct);
+    }
+
+    public async Task SaveClientRateAsync(SaveClientRateModel model, CancellationToken ct = default)
+    {
+        await PostAsync<object>("/api/Timesheets/SaveClientRate", model, ct);
     }
 
     public async Task<decimal?> GetClientTaxRateAsync(string clientId, CancellationToken ct = default)

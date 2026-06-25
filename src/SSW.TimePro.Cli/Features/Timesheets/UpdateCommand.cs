@@ -54,6 +54,10 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
         [Description("New billable type: B, BPP, or W")]
         public string? Billable { get; set; }
 
+        [CommandOption("--sell-price <AMOUNT>")]
+        [Description("Override this timesheet's sell price (its own snapshot, independent of the client rate). Unchanged if omitted.")]
+        public decimal? SellPrice { get; set; }
+
         [CommandOption("--date <DATE>")]
         [Description("Date the timesheet is on (yyyy-MM-dd). Used to look up the existing entry. Defaults to searching recent weeks.")]
         public string? Date { get; set; }
@@ -98,9 +102,10 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
                 ?? throw new InvalidOperationException("Cannot determine date for existing timesheet");
             var dateOnly = DateOnly.ParseExact(existingDateStr, "yyyy-MM-dd", CultureInfo.InvariantCulture);
 
-            // The GET endpoint doesn't return CategoryID — resolve it via the query API
-            var categoryId = settings.Category
-                ?? await ResolveCategoryIdAsync(tenant.EmployeeId, dateOnly, settings.TimesheetId);
+            // The list GET returns neither CategoryID nor the sell-price snapshot — resolve both
+            // from the query API entry for this timesheet.
+            var existingEntry = await GetExistingEntryAsync(tenant.EmployeeId, dateOnly, settings.TimesheetId);
+            var categoryId = settings.Category ?? existingEntry?.CategoryId;
 
             // Build the full request from the existing timesheet, applying overrides
             var request = new TimesheetRequest
@@ -126,9 +131,11 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
                 BillableId = settings.Billable ?? existing.BillableId ?? "B",
             };
 
-            // Re-fetch the rate for the client
-            var rate = await _api.GetClientRateAsync(tenant.EmployeeId, request.ClientId, dateOnly, CancellationToken.None);
-            request.SellPrice = rate?.Rate;
+            // A timesheet's sell price is its own snapshot once created — independent of the client
+            // rate — so a manager can e.g. discount one line without touching the rate or future
+            // timesheets. Preserve the existing snapshot (SaveTimesheet requires a sell price); only
+            // change it when --sell-price is given.
+            request.SellPrice = settings.SellPrice ?? existingEntry?.SellPrice;
 
             var changes = new List<string>();
             if (settings.Location is not null)
@@ -147,6 +154,8 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
                 changes.Add($"Category -> {settings.Category}");
             if (settings.Billable is not null)
                 changes.Add($"Billable -> {settings.Billable}");
+            if (settings.SellPrice is not null)
+                changes.Add($"Sell price -> ${settings.SellPrice:F2}");
 
             if (changes.Count == 0)
             {
@@ -231,7 +240,11 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
     /// The GET /api/Timesheets/GetTimesheetListViewModel endpoint does not return
     /// CategoryID. We use the query/summary API to resolve it.
     /// </summary>
-    private async Task<string?> ResolveCategoryIdAsync(string empId, DateOnly date, int timesheetId)
+    /// <summary>
+    /// The query-API entry for an existing timesheet. Unlike the list GET, it carries the
+    /// CategoryID and the sell-price snapshot, both of which the SaveTimesheet edit payload needs.
+    /// </summary>
+    private async Task<TimesheetSummaryEntry?> GetExistingEntryAsync(string empId, DateOnly date, int timesheetId)
     {
         var filter = new TimesheetSummaryFilter
         {
@@ -241,7 +254,6 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
         };
 
         var entries = await _api.QueryTimesheetsAsync(filter, CancellationToken.None);
-        var match = entries.FirstOrDefault(e => e.TimeId == timesheetId);
-        return match?.CategoryId;
+        return entries.FirstOrDefault(e => e.TimeId == timesheetId);
     }
 }

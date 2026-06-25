@@ -138,9 +138,8 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
 
             if (!rateActive && settings.RejectIfRateExpired)
             {
-                var init = await _api.InitializeClientRateAsync(tenant.EmployeeId, request.ClientId, CancellationToken.None);
-                var rec = init is not null ? RateResolver.Recommend(init) : new RateRecommendation(0m, 0m, RateSource.None);
-                RateGuard.ReportNoActiveRate(request.ClientId, rec, settings.Json);
+                // Fail fast — no recommendation lookup needed just to report the expiry.
+                RateGuard.ReportNoActiveRate(request.ClientId, new RateRecommendation(0m, 0m, RateSource.None), settings.Json);
                 return 1;
             }
 

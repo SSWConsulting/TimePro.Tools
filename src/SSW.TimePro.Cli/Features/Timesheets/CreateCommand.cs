@@ -250,11 +250,18 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
     private async Task<decimal?> ResolveMissingRateAsync(
         string empId, string clientId, string billableId, bool yes, bool json, bool rejectIfExpired, CancellationToken ct)
     {
+        // Fail fast on an explicit reject — no recommendation lookup, no extra API call.
+        if (rejectIfExpired)
+        {
+            RateGuard.ReportNoActiveRate(clientId, new RateRecommendation(0m, 0m, RateSource.None), json);
+            return null;
+        }
+
         var init = await _api.InitializeClientRateAsync(empId, clientId, ct);
         var rec = init is not null ? RateResolver.Recommend(init) : new RateRecommendation(0m, 0m, RateSource.None);
 
-        // Can't (or shouldn't) prompt — report a recovery recipe and abort instead of creating a rate.
-        if (yes || json || rejectIfExpired)
+        // Non-interactive: can't prompt — report the recovery recipe (with recommended amounts) and abort.
+        if (yes || json)
         {
             RateGuard.ReportNoActiveRate(clientId, rec, json);
             return null;

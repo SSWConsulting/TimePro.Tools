@@ -67,6 +67,10 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
         [Description("Skip confirmation prompt")]
         public bool Yes { get; set; }
 
+        [CommandOption("--reject-if-rate-expired")]
+        [Description("Fail (with recovery guidance) instead of creating a rate when the client rate is expired or not set")]
+        public bool RejectIfRateExpired { get; set; }
+
         [CommandOption("--json")]
         [Description("Output as JSON")]
         public bool Json { get; set; }
@@ -134,9 +138,10 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
             else
             {
                 sellPrice = await ResolveMissingRateAsync(
-                    tenant.EmployeeId, settings.ClientId, billableId, settings.Yes, settings.Json, cancellationToken);
+                    tenant.EmployeeId, settings.ClientId, billableId,
+                    settings.Yes, settings.Json, settings.RejectIfRateExpired, cancellationToken);
                 if (sellPrice is null)
-                    return 1; // user cancelled, or non-interactive with no rate set
+                    return 1; // rejected, user cancelled, or non-interactive with no rate set
             }
 
             // Auto-resolve category when not explicitly specified
@@ -236,122 +241,47 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
 
     /// <summary>
     /// No active rate exists for the client (expired or never set), which the API needs to derive a
-    /// sell price. Interactively offer two distinct paths — create a new rate row (Angular-style) or
-    /// extend the existing rate in place by 6 months — and return the resolved sell price (null to
-    /// abort). In non-interactive mode (<paramref name="yes"/> / <paramref name="json"/>) it can't
-    /// prompt, so it returns a machine-actionable recovery recipe instead.
+    /// sell price. Mirrors the Angular timesheet form: interactively offer to create a rate inline
+    /// (amount defaulting to the recommended one, or typed). Returns the resolved sell price, or null
+    /// to abort. When non-interactive (<paramref name="yes"/> / <paramref name="json"/>) or
+    /// <paramref name="rejectIfExpired"/> is set, it doesn't create anything — it returns a
+    /// machine-actionable recovery recipe and aborts.
     /// </summary>
     private async Task<decimal?> ResolveMissingRateAsync(
-        string empId, string clientId, string billableId, bool yes, bool json, CancellationToken ct)
+        string empId, string clientId, string billableId, bool yes, bool json, bool rejectIfExpired, CancellationToken ct)
     {
         var init = await _api.InitializeClientRateAsync(empId, clientId, ct);
         var rec = init is not null ? RateResolver.Recommend(init) : new RateRecommendation(0m, 0m, RateSource.None);
 
-        // The latest existing rate row (incl. expired) — required to extend a rate in place.
-        var previous = await GetLatestRateRowAsync(empId, clientId, ct);
-
-        if (yes || json)
+        // Can't (or shouldn't) prompt — report a recovery recipe and abort instead of creating a rate.
+        if (yes || json || rejectIfExpired)
         {
-            // Non-interactive: can't prompt, so hand back a machine-actionable recovery recipe an
-            // agent can run (set a rate, then retry) rather than just a human-facing instruction.
-            var steps = RateResolver.BuildRecoveryOptions(clientId, rec, previous?.ClientRateId, DateOnly.FromDateTime(DateTime.Today));
-            var msg = $"No active rate for client '{clientId}' (expired or not set). " +
-                      "Set a rate using one of the recovery commands below, then retry this timesheet.";
-
-            if (json)
-            {
-                var recovery = new
-                {
-                    reason = "no_active_rate",
-                    clientId,
-                    recommended = rec.Source == RateSource.None
-                        ? null
-                        : (object)new { rate = rec.Rate, prepaidRate = rec.PrepaidRate, source = rec.Source.ToString() },
-                    steps
-                };
-                OutputHelper.WriteJsonError(msg, code: null, detail: null, recovery: recovery);
-            }
-            else
-            {
-                OutputHelper.WriteError(msg);
-                foreach (var s in steps)
-                    OutputHelper.WriteInfo($"  [{s.Action}] {s.Command}");
-            }
+            RateGuard.ReportNoActiveRate(clientId, rec, json);
             return null;
         }
 
         OutputHelper.WriteWarning($"No rate is set (or it has expired) for client '{clientId}'.");
-
-        const string createChoice = "Create a new rate (Angular-style: new row)";
-        const string extendChoice = "Extend the existing rate by 6 months (update in place)";
-        var choices = new List<string> { createChoice };
-        if (previous?.ClientRateId is not null)
-            choices.Add(extendChoice);
-        choices.Add("Cancel");
-
-        var choice = AnsiConsole.Prompt(new SelectionPrompt<string>()
-            .Title("How do you want to proceed?")
-            .AddChoices(choices));
-
-        if (choice == "Cancel")
+        if (!AnsiConsole.Confirm($"Create a rate for '{clientId}' now?"))
             return null;
 
-        if (choice == extendChoice)
-        {
-            // Update the existing row's expiry in place, keeping its amounts.
-            var expiry = RateResolver.ExtendedExpiry(DateOnly.FromDateTime(DateTime.Today), 6);
-            var rate = previous!.Rate ?? 0m;
-            var prepaid = previous.PrepaidRate ?? 0m;
-            await _api.SaveClientRateAsync(new SaveClientRateModel
-            {
-                ClientRateId = previous.ClientRateId, // update existing
-                EmpId = empId,
-                ClientId = clientId,
-                Rate = rate,
-                PrepaidRate = prepaid,
-                ExpiryDate = expiry.ToDateTime(TimeOnly.MinValue),
-                Notes = previous.Notes
-            }, ct);
-            OutputHelper.WriteSuccess($"Extended rate #{previous.ClientRateId}: ${rate:F2} now valid to {expiry:yyyy-MM-dd}.");
-            return RateResolver.SellPriceFor(billableId, rate, prepaid);
-        }
-
-        // Create a new rate row (Angular-style), defaulting to the recommended amounts.
-        var newRate = AnsiConsole.Prompt(new TextPrompt<decimal>($"Regular rate (recommended ${rec.Rate:F2}):")
+        // Create a rate inline, defaulting to the recommended amount (previous, else employee
+        // default) — the same choices the Angular dialog offers. Expiry is left to the API default;
+        // use 'tp rate update' to change it.
+        var rate = AnsiConsole.Prompt(new TextPrompt<decimal>($"Regular rate (recommended ${rec.Rate:F2}):")
             .DefaultValue(rec.Rate).ShowDefaultValue());
-        var newPrepaid = AnsiConsole.Prompt(new TextPrompt<decimal>($"Prepaid rate (recommended ${rec.PrepaidRate:F2}):")
+        var prepaid = AnsiConsole.Prompt(new TextPrompt<decimal>($"Prepaid rate (recommended ${rec.PrepaidRate:F2}):")
             .DefaultValue(rec.PrepaidRate).ShowDefaultValue());
-        var defaultExpiry = DateOnly.FromDateTime(DateTime.Today).AddMonths(12);
-        var expiryStr = AnsiConsole.Prompt(new TextPrompt<string>($"Expiry (yyyy-MM-dd):")
-            .DefaultValue(defaultExpiry.ToString("yyyy-MM-dd")).ShowDefaultValue());
-        var newExpiry = DateOnly.ParseExact(expiryStr, "yyyy-MM-dd", CultureInfo.InvariantCulture);
 
         await _api.SaveClientRateAsync(new SaveClientRateModel
         {
             EmpId = empId,
             ClientId = clientId,
-            Rate = newRate,
-            PrepaidRate = newPrepaid,
-            ExpiryDate = newExpiry.ToDateTime(TimeOnly.MinValue)
+            Rate = rate,
+            PrepaidRate = prepaid,
+            ExpiryDate = null
         }, ct);
-        OutputHelper.WriteSuccess($"Rate created: ${newRate:F2} (expires {newExpiry:yyyy-MM-dd}).");
-        return RateResolver.SellPriceFor(billableId, newRate, newPrepaid);
-    }
-
-    /// <summary>
-    /// The most recent rate row for the employee+client (including expired), used as the basis for
-    /// an in-place extend. Returns null when no rate has ever been configured.
-    /// </summary>
-    private async Task<ClientRateRow?> GetLatestRateRowAsync(string empId, string clientId, CancellationToken ct)
-    {
-        // Mirror the working 'rate list' call shape (selectAll:false + paging + sort); the API
-        // rejects selectAll:true with no paging. Sorted by expiry desc so the newest is first.
-        var table = await _api.ListClientRatesAsync(
-            clientId, empId, showExpired: true,
-            pageSize: 100, skip: 0, sortField: "ExpiryDate", direction: "desc", selectAll: false, ct);
-        return table?.Rates
-            .OrderByDescending(r => r.ExpiryDate ?? r.DateUpdated ?? r.DateCreated ?? DateTime.MinValue)
-            .FirstOrDefault();
+        OutputHelper.WriteSuccess($"Rate created: ${rate:F2}.");
+        return RateResolver.SellPriceFor(billableId, rate, prepaid);
     }
 
     /// <summary>

@@ -49,43 +49,30 @@ public static class RateResolver
     public static decimal SellPriceFor(string? billableId, decimal rate, decimal prepaidRate) =>
         string.Equals(billableId, "BPP", StringComparison.OrdinalIgnoreCase) ? prepaidRate : rate;
 
-    /// <summary>New expiry when extending a lapsed rate forward — always measured from <paramref name="from"/>.</summary>
-    public static DateOnly ExtendedExpiry(DateOnly from, int months = 6) => from.AddMonths(months);
-
     /// <summary>A rate is active on <paramref name="onDate"/> when it has no expiry or expires on/after that date.</summary>
     public static bool IsActive(DateTime? expiry, DateOnly onDate) =>
         expiry is null || DateOnly.FromDateTime(expiry.Value) >= onDate;
 
     /// <summary>
-    /// Build the ready-to-run recovery commands for a client that has no active rate, so a
-    /// non-interactive caller (an agent) can set a rate and retry. Always offers <c>create</c> (a
-    /// new rate row, Angular-style); when a previous rate row exists (<paramref name="previousRateId"/>)
-    /// it also offers <c>extend</c> — update that row's expiry forward 6 months in place.
+    /// Build the ready-to-run recovery command for a client that has no active rate, so a
+    /// non-interactive caller (an agent) can set a rate and retry. Mirrors the Angular timesheet
+    /// dialog, which only ever <c>create</c>s a rate (amount = recommended, else explicit); changing
+    /// an existing rate's expiry is a separate, explicit <c>tp rate update</c>.
     /// </summary>
-    public static IReadOnlyList<RecoveryOption> BuildRecoveryOptions(
-        string clientId, RateRecommendation rec, int? previousRateId, DateOnly today)
+    public static IReadOnlyList<RecoveryOption> BuildRecoveryOptions(string clientId, RateRecommendation rec)
     {
-        var options = new List<RecoveryOption>();
         var amounts = rec.Source == RateSource.None
             ? "--rate <amount> --prepaid <amount>"
             : $"--rate {rec.Rate:0.##} --prepaid {rec.PrepaidRate:0.##}";
 
-        options.Add(new RecoveryOption(
-            "create",
-            rec.Source == RateSource.None
-                ? "Create a new rate row with an explicit amount, then retry the timesheet."
-                : $"Create a new rate row at the recommended amount ({rec.Source}), then retry the timesheet.",
-            $"tp rate create --client {clientId} {amounts} --yes"));
-
-        if (previousRateId is not null)
+        return new[]
         {
-            var expiry = ExtendedExpiry(today, 6);
-            options.Add(new RecoveryOption(
-                "extend",
-                $"Extend the existing rate in place — push its expiry to {expiry:yyyy-MM-dd} — then retry the timesheet.",
-                $"tp rate update --client {clientId} --id {previousRateId} --expiry {expiry:yyyy-MM-dd} --yes"));
-        }
-
-        return options;
+            new RecoveryOption(
+                "create",
+                rec.Source == RateSource.None
+                    ? "Create a rate with an explicit amount, then retry."
+                    : $"Create a rate at the recommended amount ({rec.Source}), then retry.",
+                $"tp rate create --client {clientId} {amounts} --yes")
+        };
     }
 }

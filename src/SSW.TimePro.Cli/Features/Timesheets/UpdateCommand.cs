@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Globalization;
+using SSW.TimePro.Cli.Features.Rates;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using SSW.TimePro.Cli.Infrastructure.Output;
@@ -61,6 +62,10 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
         [CommandOption("--yes")]
         [Description("Skip confirmation prompt")]
         public bool Yes { get; set; }
+
+        [CommandOption("--reject-if-rate-expired")]
+        [Description("Fail (with recovery guidance) if the client rate is expired or not set")]
+        public bool RejectIfRateExpired { get; set; }
 
         [CommandOption("--json")]
         [Description("Output as JSON")]
@@ -128,6 +133,17 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
 
             // Re-fetch the rate for the client
             var rate = await _api.GetClientRateAsync(tenant.EmployeeId, request.ClientId, dateOnly, CancellationToken.None);
+            var rateActive = rate?.Rate is not null
+                && (string.IsNullOrEmpty(rate.ExpiryDate) || RateResolver.IsActive(DateTime.Parse(rate.ExpiryDate), dateOnly));
+
+            if (!rateActive && settings.RejectIfRateExpired)
+            {
+                var init = await _api.InitializeClientRateAsync(tenant.EmployeeId, request.ClientId, CancellationToken.None);
+                var rec = init is not null ? RateResolver.Recommend(init) : new RateRecommendation(0m, 0m, RateSource.None);
+                RateGuard.ReportNoActiveRate(request.ClientId, rec, settings.Json);
+                return 1;
+            }
+
             request.SellPrice = rate?.Rate;
 
             var changes = new List<string>();

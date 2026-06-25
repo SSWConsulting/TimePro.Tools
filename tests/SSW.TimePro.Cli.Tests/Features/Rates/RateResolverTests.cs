@@ -64,17 +64,6 @@ public class RateResolverTests
         RateResolver.SellPriceFor(billable, rate: 325, prepaidRate: 300).Should().Be(expected);
     }
 
-    // ── ExtendedExpiry ───────────────────────────────────────────
-
-    [Fact]
-    public void ExtendedExpiry_AddsMonthsFromGivenDate()
-    {
-        var from = new DateOnly(2026, 6, 26);
-
-        RateResolver.ExtendedExpiry(from, 6).Should().Be(new DateOnly(2026, 12, 26));
-        RateResolver.ExtendedExpiry(from).Should().Be(new DateOnly(2026, 12, 26)); // default 6 months
-    }
-
     // ── IsActive ─────────────────────────────────────────────────
 
     [Fact]
@@ -91,26 +80,13 @@ public class RateResolverTests
     // ── BuildRecoveryOptions ─────────────────────────────────────
 
     [Fact]
-    public void BuildRecoveryOptions_WithPreviousRateRow_OffersCreateAndInPlaceExtend()
-    {
-        var rec = new RateRecommendation(325, 300, RateSource.Previous);
-
-        var options = RateResolver.BuildRecoveryOptions("NWIND", rec, previousRateId: 914937214, new DateOnly(2026, 6, 26));
-
-        options.Should().HaveCount(2);
-        options[0].Action.Should().Be("create");
-        options[0].Command.Should().Be("tp rate create --client NWIND --rate 325 --prepaid 300 --yes");
-        options[1].Action.Should().Be("extend");
-        options[1].Command.Should().Be("tp rate update --client NWIND --id 914937214 --expiry 2026-12-26 --yes");
-    }
-
-    [Fact]
-    public void BuildRecoveryOptions_WithNoPreviousRow_OffersCreateOnly()
+    public void BuildRecoveryOptions_WithRecommendation_OffersCreateOnly()
     {
         var rec = new RateRecommendation(285, 270, RateSource.EmployeeDefault);
 
-        var options = RateResolver.BuildRecoveryOptions("NWIND", rec, previousRateId: null, new DateOnly(2026, 6, 26));
+        var options = RateResolver.BuildRecoveryOptions("NWIND", rec);
 
+        // Mirrors Angular: a missing rate is only ever resolved by creating one — no extend here.
         options.Should().ContainSingle();
         options[0].Action.Should().Be("create");
         options[0].Command.Should().Be("tp rate create --client NWIND --rate 285 --prepaid 270 --yes");
@@ -121,7 +97,7 @@ public class RateResolverTests
     {
         var rec = new RateRecommendation(0, 0, RateSource.None);
 
-        var options = RateResolver.BuildRecoveryOptions("NWIND", rec, previousRateId: null, new DateOnly(2026, 6, 26));
+        var options = RateResolver.BuildRecoveryOptions("NWIND", rec);
 
         options.Should().ContainSingle();
         options[0].Command.Should().Be("tp rate create --client NWIND --rate <amount> --prepaid <amount> --yes");

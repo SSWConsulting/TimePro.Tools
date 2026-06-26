@@ -4,13 +4,13 @@
 #
 # Usage:
 #   ./scripts/install.sh
-#   curl -fsSL https://raw.githubusercontent.com/SSWConsulting/timepro.tools/main/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/SSWConsulting/TimePro.Tools/main/scripts/install.sh | bash
 #
 # Works on macOS and Linux. Requires the .NET 10 SDK and either curl or wget.
 # Set GITHUB_TOKEN to raise the GitHub API rate limit (optional).
 set -euo pipefail
 
-REPO="SSWConsulting/timepro.tools"
+REPO="SSWConsulting/TimePro.Tools"
 PACKAGE_ID="SSW.TimePro.Cli"
 TOOL_COMMAND="tp"
 API_URL="https://api.github.com/repos/${REPO}/releases/latest"

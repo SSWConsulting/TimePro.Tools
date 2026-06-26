@@ -14,13 +14,13 @@ any time to upgrade.
 **macOS / Linux:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SSWConsulting/timepro.tools/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/SSWConsulting/TimePro.Tools/main/scripts/install.sh | bash
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
-irm https://raw.githubusercontent.com/SSWConsulting/timepro.tools/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/SSWConsulting/TimePro.Tools/main/scripts/install.ps1 | iex
 ```
 
 Both scripts are self-contained — they only need the .NET 10 SDK and a network

@@ -37,13 +37,13 @@ to upgrade to the newest release.
 **macOS / Linux:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SSWConsulting/timepro.tools/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/SSWConsulting/TimePro.Tools/main/scripts/install.sh | bash
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
-irm https://raw.githubusercontent.com/SSWConsulting/timepro.tools/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/SSWConsulting/TimePro.Tools/main/scripts/install.ps1 | iex
 ```
 
 This makes the `tp` command available system-wide. If `tp` isn't found
@@ -545,7 +545,7 @@ Editable source: [docs/architecture-diagram.excalidraw](docs/architecture-diagra
 ## Project Structure
 
 ```
-timepro.tools/
+TimePro.Tools/
 ├── Directory.Build.props            # Shared .NET project defaults
 ├── Directory.Packages.props         # Central NuGet package versions
 ├── src/SSW.TimePro.Cli/
@@ -598,8 +598,8 @@ Contributors working on the CLI itself run it from the repository rather than th
 released package. This needs the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 
 ```bash
-git clone https://github.com/SSWConsulting/timepro.tools.git
-cd timepro.tools
+git clone https://github.com/SSWConsulting/TimePro.Tools.git
+cd TimePro.Tools
 dotnet build
 ```
 

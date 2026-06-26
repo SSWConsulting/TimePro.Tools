@@ -11,7 +11,7 @@
   ./scripts/install.ps1
 
 .EXAMPLE
-  irm https://raw.githubusercontent.com/SSWConsulting/timepro.tools/main/scripts/install.ps1 | iex
+  irm https://raw.githubusercontent.com/SSWConsulting/TimePro.Tools/main/scripts/install.ps1 | iex
 
 .NOTES
   Set the GITHUB_TOKEN environment variable to raise the GitHub API rate limit (optional).
@@ -21,7 +21,7 @@ param()
 
 $ErrorActionPreference = 'Stop'
 
-$Repo      = 'SSWConsulting/timepro.tools'
+$Repo      = 'SSWConsulting/TimePro.Tools'
 $PackageId = 'SSW.TimePro.Cli'
 $ToolName  = 'tp'
 $ApiUrl    = "https://api.github.com/repos/$Repo/releases/latest"

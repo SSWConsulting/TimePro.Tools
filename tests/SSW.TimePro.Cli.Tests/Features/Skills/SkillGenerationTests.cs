@@ -60,6 +60,9 @@ public class SkillGenerationTests
         output.Should().Contain("name: timepro-accounting-cli");
         output.Should().Contain("allowed-tools: Bash(tp *)");
         output.Should().Contain("# TimePro Accounting (CLI)");
+        output.Should().Contain("tp client billable-work --from 2025-06-26 --to 2026-06-26 --threshold 50000 --json");
+        output.Should().Contain("billableTimesheetValueExGst");
+        output.Should().Contain("--output ./Reports/client-billable-work.csv");
         output.Should().NotContain("## Run these first");
         output.Should().NotContain("!`");
     }

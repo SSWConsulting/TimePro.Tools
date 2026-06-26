@@ -14,6 +14,8 @@ public interface IConfigService
     void SaveTenantConfig(TenantConfig config);
     void DeleteTenantConfig(string tenantId);
     TenantConfig? LoadActiveTenantConfig();
+    void SetActiveTenantOverride(TenantConfig tenant);
+    void ClearActiveTenantOverride();
     List<TenantConfig> ListTenants();
     List<RepoMappingEntry> LoadRepoMappings();
     void SaveRepoMappings(List<RepoMappingEntry> mappings);
@@ -50,6 +52,7 @@ public class RepoMappingEntry
 public class ConfigService : IConfigService
 {
     private readonly string _basePath;
+    private TenantConfig? _activeTenantOverride;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -125,11 +128,24 @@ public class ConfigService : IConfigService
 
     public TenantConfig? LoadActiveTenantConfig()
     {
+        if (_activeTenantOverride is not null)
+            return _activeTenantOverride;
+
         var global = LoadGlobalConfig();
         if (string.IsNullOrEmpty(global.ActiveTenant))
             return null;
 
         return LoadTenantConfig(global.ActiveTenant);
+    }
+
+    public void SetActiveTenantOverride(TenantConfig tenant)
+    {
+        _activeTenantOverride = tenant;
+    }
+
+    public void ClearActiveTenantOverride()
+    {
+        _activeTenantOverride = null;
     }
 
     public List<TenantConfig> ListTenants()

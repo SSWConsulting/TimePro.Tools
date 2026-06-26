@@ -7,6 +7,7 @@ using SSW.TimePro.Cli.Infrastructure;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using SSW.TimePro.Cli.Infrastructure.DependencyInjection;
+using SSW.TimePro.Cli.Infrastructure.Output;
 using Spectre.Console.Cli;
 
 using ClientSearch = SSW.TimePro.Cli.Features.Clients.SearchCommand;
@@ -58,9 +59,37 @@ using UserMe = SSW.TimePro.Cli.Features.Users.MeCommand;
 using UserList = SSW.TimePro.Cli.Features.Users.ListCommand;
 using UserGet = SSW.TimePro.Cli.Features.Users.GetCommand;
 
+var configService = new ConfigService();
+var tenantOverride = TenantOverrideResolver.ExtractCommandLineOptions(args);
+if (tenantOverride.Error is not null)
+{
+    OutputHelper.WriteError(tenantOverride.Error);
+    return 1;
+}
+
+var isHelpOrVersionRequest = tenantOverride.Args.Any(arg => arg is "--help" or "-h" or "--version");
+TenantConfig? overrideTenant = null;
+string? tenantOverrideError = null;
+if (!isHelpOrVersionRequest)
+{
+    overrideTenant = TenantOverrideResolver.ResolveTenantOverride(
+        configService,
+        tenantOverride.Options,
+        out tenantOverrideError);
+}
+
+if (tenantOverrideError is not null)
+{
+    OutputHelper.WriteError(tenantOverrideError);
+    return 1;
+}
+
+if (overrideTenant is not null)
+    configService.SetActiveTenantOverride(overrideTenant);
+
 // Configure DI
 var services = new ServiceCollection();
-services.AddSingleton<IConfigService, ConfigService>();
+services.AddSingleton<IConfigService>(configService);
 services.AddSingleton<ITenantProvider, DefaultTenantProvider>();
 services.AddHttpClient<ITimeProApiClient, TimeProApiClient>();
 
@@ -441,4 +470,4 @@ app.Configure(config =>
         .WithDescription("Start MCP server (stdio transport)");
 });
 
-return await app.RunAsync(args);
+return await app.RunAsync(tenantOverride.Args);

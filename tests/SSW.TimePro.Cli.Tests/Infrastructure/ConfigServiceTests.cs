@@ -75,6 +75,34 @@ public class ConfigServiceTests : IDisposable
     }
 
     [Fact]
+    public void LoadActiveTenantConfig_WhenOverrideIsSet_ReturnsOverrideWithoutChangingGlobalConfig()
+    {
+        _service.SaveGlobalConfig(new GlobalConfig { ActiveTenant = "northwind" });
+        _service.SaveTenantConfig(new TenantConfig
+        {
+            TenantId = "northwind",
+            ApiUrl = "https://api.sswtimepro.com",
+            ApiKey = "prod-key"
+        });
+
+        var stagingTenant = new TenantConfig
+        {
+            TenantId = "northwind-staging",
+            ApiUrl = "https://api.staging-sswtimepro.com",
+            ApiKey = "staging-key"
+        };
+
+        _service.SetActiveTenantOverride(stagingTenant);
+
+        _service.LoadActiveTenantConfig().Should().BeSameAs(stagingTenant);
+        _service.LoadGlobalConfig().ActiveTenant.Should().Be("northwind");
+
+        _service.ClearActiveTenantOverride();
+
+        _service.LoadActiveTenantConfig()!.TenantId.Should().Be("northwind");
+    }
+
+    [Fact]
     public void TenantConfig_IsProduction_DetectsCorrectly()
     {
         new TenantConfig { ApiUrl = "https://api.sswtimepro.com" }.IsProduction.Should().BeTrue();

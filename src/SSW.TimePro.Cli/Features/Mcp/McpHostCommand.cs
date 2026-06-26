@@ -15,8 +15,12 @@ public class McpHostCommand : AsyncCommand<McpHostCommand.Settings>
     public class Settings : CommandSettings
     {
         [CommandOption("--tenant <NAME>")]
-        [Description("Bind this MCP session to a specific tenant config (by name, e.g. ssw-staging). Defaults to the active tenant; does NOT change the global active tenant.")]
+        [Description("Bind this MCP session to a specific tenant config (by name, e.g. northwind-staging). Defaults to the active tenant; does NOT change the global active tenant.")]
         public string? Tenant { get; set; }
+
+        [CommandOption("--env|--environment <NAME>")]
+        [Description("Bind this MCP session to a tenant environment config, e.g. staging resolves active tenant 'northwind' to 'northwind-staging'. Does NOT change the global active tenant.")]
+        public string? Environment { get; set; }
     }
 
     protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
@@ -39,20 +43,24 @@ public class McpHostCommand : AsyncCommand<McpHostCommand.Settings>
 
         var app = builder.Build();
 
-        // Optional per-session tenant override — binds this MCP process to a specific
-        // tenant config without touching the global active tenant (config.json).
-        if (!string.IsNullOrWhiteSpace(settings.Tenant))
+        var config = app.Services.GetRequiredService<IConfigService>();
+
+        // Optional per-session tenant/environment override — binds this MCP process
+        // to a specific tenant config without touching the global active tenant.
+        var tenantOverride = TenantOverrideResolver.ResolveTenantOverride(
+            config,
+            new TenantOverrideOptions(settings.Tenant, settings.Environment),
+            out var tenantOverrideError);
+
+        if (tenantOverrideError is not null)
         {
-            var config = app.Services.GetRequiredService<IConfigService>();
-            var tenant = config.LoadTenantConfig(settings.Tenant.Trim());
-            if (tenant is null)
-            {
-                await Console.Error.WriteLineAsync(
-                    $"Unknown tenant '{settings.Tenant}'. Add it with 'tp login --tenant {settings.Tenant}' or pick one from 'tp tenant list'.");
-                return 1;
-            }
-            if (app.Services.GetRequiredService<ITenantProvider>() is DefaultTenantProvider provider)
-                provider.SetOverride(tenant);
+            await Console.Error.WriteLineAsync(tenantOverrideError);
+            return 1;
+        }
+
+        if (tenantOverride is not null)
+        {
+            config.SetActiveTenantOverride(tenantOverride);
         }
         else
         {
@@ -61,15 +69,11 @@ public class McpHostCommand : AsyncCommand<McpHostCommand.Settings>
             // fresh single-tenant install works in MCP without running 'tp tenant set'.
             // Does NOT touch the global active tenant. Zero/multiple configs → unchanged
             // (tools surface "Not logged in").
-            var config = app.Services.GetRequiredService<IConfigService>();
             if (config.LoadActiveTenantConfig() is null)
             {
                 var tenants = config.ListTenants();
-                if (tenants.Count == 1
-                    && app.Services.GetRequiredService<ITenantProvider>() is DefaultTenantProvider provider)
-                {
-                    provider.SetOverride(tenants[0]);
-                }
+                if (tenants.Count == 1)
+                    config.SetActiveTenantOverride(tenants[0]);
             }
         }
 

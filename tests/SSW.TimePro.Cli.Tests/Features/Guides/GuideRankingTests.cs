@@ -93,6 +93,21 @@ public class GuideRankingTests
         guide.RecommendedSkills.Should().Equal("timepro-accounting-cli");
     }
 
+    [Theory]
+    [InlineData("locked invoice", "Locked invoice or timesheet")]
+    [InlineData("reconciliation delta", "Prepaid reconciliation delta")]
+    [InlineData("credit note prepaid", "Credit note not reducing prepaid balance")]
+    [InlineData("receipt allocation", "Receipt allocated to the wrong invoice")]
+    [InlineData("recurring invoice", "Recurring invoice not generating")]
+    public void AccountingGuide_FindsNewDiagnosticGuides(string useCase, string expectedTitle)
+    {
+        var guide = AccountingGuide.For(useCase);
+
+        guide.MatchingGuides.Should().ContainSingle(match => match.Title == expectedTitle);
+        guide.MatchingGuides[0].MatchType.Should().Be("exact");
+        guide.RecommendedSkills.Should().Equal("timepro-accounting-cli");
+    }
+
     [Fact]
     public void GuideRanking_ReturnsAllTopicsWithoutQuery()
     {

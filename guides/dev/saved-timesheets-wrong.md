@@ -12,3 +12,8 @@ tp query --from 2026-03-01 --to 2026-03-31 --tenant northwind --env staging --em
 
 Check create/update/accept boundaries, rate enrichment, category/billable type,
 and whether the UI read model matches the API output.
+
+If a timesheet **can't be edited or moved at all**, it is probably **locked** by
+the invoice it is allocated to (a locked timesheet only allows location and
+description edits). That is an invoice/lock problem, not a saved-row problem — see
+`tp accounting guide --use-case "locked invoice or timesheet"`.

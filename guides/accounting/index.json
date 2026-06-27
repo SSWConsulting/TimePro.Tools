@@ -89,6 +89,83 @@
       ],
       "mcpTools": ["ListInvoices", "ListPaidReceipts", "ListCreditNotes"],
       "skills": ["timepro-accounting-cli"]
+    },
+    {
+      "slug": "invoice-timesheet-locked",
+      "file": "invoice-timesheet-locked.md",
+      "title": "Locked invoice or timesheet",
+      "description": "Diagnose why a timesheet can't be edited or moved, or an invoice can't be updated, posted, or reallocated — invoice lock vs timesheet-locked-by-invoice vs external sync.",
+      "keywords": ["locked", "lock", "locked timesheet", "locked invoice", "cannot edit invoice", "cannot move timesheet", "reallocate timesheet", "locked period", "posted invoice"],
+      "commands": [
+        "tp accounting guide --use-case \"locked invoice or timesheet\" --json",
+        "tp invoice get <invoiceId> --json",
+        "tp invoice timesheets <invoiceId> --json",
+        "tp invoice timesheets <invoiceId> --writeoff --json",
+        "tp creditnote list --client <clientId> --json"
+      ],
+      "mcpTools": ["GetInvoice", "GetInvoiceTimesheets", "ListCreditNotes"],
+      "skills": ["timepro-accounting-cli"]
+    },
+    {
+      "slug": "prepaid-reconciliation-delta",
+      "file": "prepaid-reconciliation-delta.md",
+      "title": "Prepaid reconciliation delta",
+      "description": "Chase a non-zero prepaid reconciliation delta (original minus drawn-down minus credited not equal to remaining) across drawdown rows, write-offs, and credit notes.",
+      "keywords": ["reconciliation delta", "prepaid delta", "drawdown delta", "prepaid reconciliation", "does not reconcile", "prepaid balance wrong"],
+      "commands": [
+        "tp accounting guide --use-case \"prepaid reconciliation delta\" --json",
+        "tp prepaid summary <invoiceId> --json",
+        "tp invoice timesheets <invoiceId> --json",
+        "tp invoice timesheets <invoiceId> --writeoff --json",
+        "tp creditnote list --client <clientId> --json"
+      ],
+      "mcpTools": ["GetInvoiceTimesheets", "ListCreditNotes"],
+      "skills": ["timepro-accounting-cli"]
+    },
+    {
+      "slug": "credit-note-prepaid-credit",
+      "file": "credit-note-prepaid-credit.md",
+      "title": "Credit note not reducing prepaid balance",
+      "description": "Explain why a credit note did not change a prepaid invoice's credited bucket — only crediting credit notes with a matching associated invoice count.",
+      "keywords": ["credit note prepaid", "credit not applied", "iscreditinginvoice", "standalone credit note", "credit balance unchanged", "associated invoice"],
+      "commands": [
+        "tp accounting guide --use-case \"credit note not reducing prepaid\" --json",
+        "tp creditnote list --client <clientId> --json",
+        "tp prepaid summary <invoiceId> --json"
+      ],
+      "mcpTools": ["ListCreditNotes"],
+      "skills": ["timepro-accounting-cli"]
+    },
+    {
+      "slug": "receipt-allocation",
+      "file": "receipt-allocation.md",
+      "title": "Receipt allocated to the wrong invoice",
+      "description": "Diagnose a payment that left an invoice outstanding or split incorrectly using receipt allocations and the receipt-to-invoice direction.",
+      "keywords": ["receipt allocation", "payment allocation", "paid but outstanding", "misallocated payment", "split payment", "wrong invoice payment"],
+      "commands": [
+        "tp accounting guide --use-case \"receipt allocated to wrong invoice\" --json",
+        "tp receipt get <receiptId> --json",
+        "tp invoice receipts <invoiceId> --json",
+        "tp invoice get <invoiceId> --json",
+        "tp receipt outstanding <clientId> --json"
+      ],
+      "mcpTools": [],
+      "skills": ["timepro-accounting-cli"]
+    },
+    {
+      "slug": "recurring-invoice-gap",
+      "file": "recurring-invoice-gap.md",
+      "title": "Recurring invoice not generating",
+      "description": "Diagnose a stalled or overdue recurring invoice template using isActive, lastInvEndDate, nextInvoiceDate, and the invoices it actually generated.",
+      "keywords": ["recurring invoice", "recurring not generating", "stalled recurring", "missing recurring invoice", "overdue recurring", "recurring template"],
+      "commands": [
+        "tp accounting guide --use-case \"recurring invoice not generating\" --json",
+        "tp recurring list --client <clientId> --outdated --json",
+        "tp recurring get <recurringId> --json",
+        "tp invoice list --query <clientId> --recurring --json"
+      ],
+      "mcpTools": ["ListInvoices"],
+      "skills": ["timepro-accounting-cli"]
     }
   ]
 }

@@ -36,7 +36,7 @@
       "file": "saved-timesheets-wrong.md",
       "title": "Saved timesheets wrong",
       "description": "Compare saved timesheet rows, wider date ranges, query output, rate enrichment, and create/update/accept boundaries.",
-      "keywords": ["timesheet", "timesheets", "saved timesheets", "duplicate", "missing rows", "accept", "create", "update"],
+      "keywords": ["timesheet", "timesheets", "saved timesheets", "duplicate", "missing rows", "accept", "create", "update", "locked timesheet", "cannot edit timesheet"],
       "commands": [
         "tp dev guide --use-case \"saved timesheets wrong\" --json",
         "tp ts get <date> --tenant <name> --env <env> --emp-id <empId> --json",

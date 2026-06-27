@@ -56,7 +56,8 @@ Check the installed version, active tenant/user, and update status any time with
 tp info
 ```
 
-Use `tp info --no-update-check` when you need a local-only check.
+Use `tp info --no-update-check` when you need a local-only check, or
+`tp info --detailed` for install history and config diagnostics.
 
 Check whether a newer GitHub Release is available:
 
@@ -141,7 +142,7 @@ tp ts get 2026-03-12       # Specific date
 | `tp map remove PATH` | Remove a repo mapping |
 | `tp query` | Query timesheets across employees/projects (`--group-by`, `--json`) |
 | `tp scrum` | Generate a daily scrum email from timesheets + GitHub (`--smart`, `--project`, `-i`, `--copy --format rich\|markdown\|plain`, `--json`, custom templates) |
-| `tp info [--no-update-check]` | Show version, active tenant/user, config stats, and update status |
+| `tp info [--detailed] [--no-update-check]` | Show version, active tenant/user, and update status |
 | `tp --check-update` | Check the latest GitHub Release and print update instructions |
 | `tp --check-version` | Alias for `tp --check-update` |
 | `tp --whats-new [--url]` | Show embedded Markdown release notes, or print the latest known release-notes URL |

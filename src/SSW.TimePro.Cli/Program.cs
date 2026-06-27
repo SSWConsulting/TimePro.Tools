@@ -462,7 +462,7 @@ app.Configure(config =>
 
     // Summary & Report (top-level)
     config.AddCommand<InfoCommand>("info")
-        .WithDescription("Show CLI version, tenant, user, config, and update status");
+        .WithDescription("Show update status and basic CLI context");
     config.AddCommand<SummaryCmd>("summary")
         .WithDescription("Project hours breakdown for a period");
     config.AddCommand<ReportCmd>("report")

@@ -8,7 +8,7 @@ using Spectre.Console.Cli;
 
 namespace SSW.TimePro.Cli.Features.Info;
 
-[Description("Show CLI version, tenant, user, config, and update status")]
+[Description("Show update status and basic CLI context")]
 public class InfoCommand : AsyncCommand<InfoCommand.Settings>
 {
     private readonly IConfigService _config;
@@ -18,6 +18,10 @@ public class InfoCommand : AsyncCommand<InfoCommand.Settings>
         [CommandOption("--json")]
         [Description("Output as JSON")]
         public bool Json { get; set; }
+
+        [CommandOption("--detailed")]
+        [Description("Include install history, tenant/config details, and release URL")]
+        public bool Detailed { get; set; }
 
         [CommandOption("--no-update-check")]
         [Description("Skip the GitHub release check")]
@@ -65,7 +69,18 @@ public class InfoCommand : AsyncCommand<InfoCommand.Settings>
             Tenant: activeTenant?.ToSummary(),
             Update: BuildUpdateSummary(updateCheck, global.Version));
 
-        OutputHelper.Render(summary, settings.Json, RenderHuman);
+        if (settings.Json)
+        {
+            if (settings.Detailed)
+                OutputHelper.WriteJson(summary);
+            else
+                OutputHelper.WriteJson(CliInfoBriefSummary.From(summary));
+        }
+        else
+        {
+            RenderHuman(summary, settings.Detailed);
+        }
+
         return 0;
     }
 
@@ -116,32 +131,40 @@ public class InfoCommand : AsyncCommand<InfoCommand.Settings>
             _ => "unknown"
         };
 
-    private static void RenderHuman(CliInfoSummary info)
+    private static void RenderHuman(CliInfoSummary info, bool detailed)
     {
         var table = new Table().NoBorder().HideHeaders().AddColumn("Key").AddColumn("Value");
-        table.AddRow("[bold]Version[/]", Markup.Escape($"{info.Version}+{info.Commit}"));
-        table.AddRow("[bold]Installed[/]", Markup.Escape(info.InstalledVersion.Version ?? "not recorded"));
-        table.AddRow("[bold]Previous version[/]", Markup.Escape(info.InstalledVersion.PreviousVersion ?? "none recorded"));
-        table.AddRow("[bold]Installed at[/]", Markup.Escape(FormatDate(info.InstalledVersion.InstalledAt)));
-        table.AddRow("[bold]Last update check[/]", Markup.Escape(FormatLastCheck(info)));
-        table.AddRow("[bold]Active tenant[/]", Markup.Escape(info.Config.ActiveTenant ?? "none"));
-        table.AddRow("[bold]Employee[/]", Markup.Escape(FormatEmployee(info.Tenant)));
-        table.AddRow("[bold]API URL[/]", Markup.Escape(info.Tenant?.ApiUrl ?? "none"));
-        table.AddRow("[bold]Environment[/]", info.Tenant is null
-            ? "none"
-            : info.Tenant.IsProduction ? "[red]Production[/]" : "[green]Staging/Dev[/]");
-        table.AddRow("[bold]Tenants[/]", info.Config.TenantCount.ToString());
-        table.AddRow("[bold]Repo mappings[/]", info.Config.RepoMappingCount.ToString());
-        table.AddRow("[bold]Default location[/]", Markup.Escape(info.Config.DefaultLocation));
-        table.AddRow("[bold]WFH days[/]", Markup.Escape(info.Config.WfhDays.Count == 0
-            ? "none"
-            : string.Join(", ", info.Config.WfhDays)));
+        table.AddRow("[bold]Version[/]", Markup.Escape(info.Version));
         table.AddRow("[bold]Update status[/]", Markup.Escape(info.Update.Status));
 
         if (!string.IsNullOrWhiteSpace(info.Update.LatestVersion))
             table.AddRow("[bold]Latest version[/]", Markup.Escape(info.Update.LatestVersion));
-        if (!string.IsNullOrWhiteSpace(info.Update.ReleaseUrl))
+
+        table.AddRow("[bold]Last checked[/]", Markup.Escape(FormatLastCheck(info)));
+        table.AddRow("[bold]Tenant[/]", Markup.Escape(info.Config.ActiveTenant ?? "none"));
+        table.AddRow("[bold]Employee[/]", Markup.Escape(FormatEmployee(info.Tenant)));
+
+        if (detailed)
+        {
+            table.AddRow("[bold]Commit[/]", Markup.Escape(info.Commit));
+            table.AddRow("[bold]Installed[/]", Markup.Escape(info.InstalledVersion.Version ?? "not recorded"));
+            table.AddRow("[bold]Previous version[/]", Markup.Escape(info.InstalledVersion.PreviousVersion ?? "none recorded"));
+            table.AddRow("[bold]Installed at[/]", Markup.Escape(FormatDate(info.InstalledVersion.InstalledAt)));
+            table.AddRow("[bold]API URL[/]", Markup.Escape(info.Tenant?.ApiUrl ?? "none"));
+            table.AddRow("[bold]Environment[/]", info.Tenant is null
+                ? "none"
+                : info.Tenant.IsProduction ? "[red]Production[/]" : "[green]Staging/Dev[/]");
+            table.AddRow("[bold]Tenants[/]", info.Config.TenantCount.ToString());
+            table.AddRow("[bold]Repo mappings[/]", info.Config.RepoMappingCount.ToString());
+            table.AddRow("[bold]Default location[/]", Markup.Escape(info.Config.DefaultLocation));
+            table.AddRow("[bold]WFH days[/]", Markup.Escape(info.Config.WfhDays.Count == 0
+                ? "none"
+                : string.Join(", ", info.Config.WfhDays)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(info.Update.ReleaseUrl) && (detailed || info.Update.UpdateAvailable))
             table.AddRow("[bold]Release notes[/]", Markup.Escape(info.Update.ReleaseUrl));
+
         if (!string.IsNullOrWhiteSpace(info.Update.ErrorMessage))
             table.AddRow("[bold]Update check error[/]", Markup.Escape(info.Update.ErrorMessage));
 
@@ -188,6 +211,22 @@ public sealed record CliInfoSummary(
     ConfigSummary Config,
     TenantConfigSummary? Tenant,
     UpdateSummary Update);
+
+public sealed record CliInfoBriefSummary(
+    string Version,
+    string? ActiveTenant,
+    string? EmployeeId,
+    string? EmployeeName,
+    UpdateSummary Update)
+{
+    public static CliInfoBriefSummary From(CliInfoSummary summary) =>
+        new(
+            Version: summary.Version,
+            ActiveTenant: summary.Config.ActiveTenant,
+            EmployeeId: summary.Tenant?.EmployeeId,
+            EmployeeName: summary.Tenant?.EmployeeName,
+            Update: summary.Update);
+}
 
 public sealed record InstalledVersionSummary(
     string? Version,

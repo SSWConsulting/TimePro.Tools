@@ -37,7 +37,7 @@ public class ReleaseNotesCatalogTests
             previousVersion: "0.2.1",
             installedAt: DateTimeOffset.Parse("2026-06-27T10:30:00Z"));
 
-        markdown.Should().Contain("# What's new in tp");
+        markdown.Should().Contain("# What's new in TimePro.Tools");
         markdown.Should().Contain("Current version: `0.2.3`");
         markdown.Should().Contain("Previous version: `0.2.1`");
         markdown.Should().Contain("# 0.2.3");

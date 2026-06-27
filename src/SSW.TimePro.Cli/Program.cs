@@ -65,6 +65,8 @@ using UserList = SSW.TimePro.Cli.Features.Users.ListCommand;
 using UserGet = SSW.TimePro.Cli.Features.Users.GetCommand;
 using AccountingGuide = SSW.TimePro.Cli.Features.Accounting.GuideCommand;
 using DeveloperGuide = SSW.TimePro.Cli.Features.Developer.GuideCommand;
+using CheckUpdateCmd = SSW.TimePro.Cli.Features.Updates.CheckUpdateCommand;
+using WhatsNewCmd = SSW.TimePro.Cli.Features.Updates.WhatsNewCommand;
 
 var configService = new ConfigService();
 var featureFlags = FeatureFlagCommandLineInterceptor.ExtractCommandLineOptions(args);
@@ -139,6 +141,12 @@ app.Configure(config =>
 
     config.AddCommand<FeatureCommand>("feature")
         .WithDescription("Enable, disable, and inspect optional feature packs");
+    config.AddCommand<CheckUpdateCmd>("check-update")
+        .WithDescription("Check the latest GitHub Release and print update instructions");
+    config.AddCommand<CheckUpdateCmd>("check-version")
+        .WithDescription("Alias for check-update");
+    config.AddCommand<WhatsNewCmd>("whats-new")
+        .WithDescription("Show embedded release notes since the previous installed version");
 
     // Helper to register all timesheet subcommands on a branch
     void RegisterTimesheetCommands(IConfigurator<CommandSettings> branch)

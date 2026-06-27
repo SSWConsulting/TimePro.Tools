@@ -63,11 +63,14 @@ For scripts that need only the version string, `tp --version` prints just that.
 Check whether a newer GitHub Release is available:
 
 ```bash
-tp --check-update
-tp --check-version
-tp --whats-new
-tp --whats-new --url
+tp check-update
+tp check-version
+tp whats-new
+tp whats-new --url
 ```
+
+The older top-level flags still work too: `tp --check-update`,
+`tp --check-version`, `tp --whats-new`, and `tp --whats-new --url`.
 
 To uninstall:
 
@@ -145,9 +148,9 @@ tp ts get 2026-03-12       # Specific date
 | `tp scrum` | Generate a daily scrum email from timesheets + GitHub (`--smart`, `--project`, `-i`, `--copy --format rich\|markdown\|plain`, `--json`, custom templates) |
 | `tp feature [FEATURE] [enable\|disable]` | Enable optional feature packs (`accounting`, `developer`) for skills and MCP |
 | `tp info [--detailed] [--no-update-check]` | Show version, active tenant/user, and update status |
-| `tp --check-update` | Check the latest GitHub Release and print update instructions |
-| `tp --check-version` | Alias for `tp --check-update` |
-| `tp --whats-new [--url]` | Show embedded Markdown release notes, or print the latest known release-notes URL |
+| `tp check-update` | Check the latest GitHub Release and print update instructions |
+| `tp check-version` | Alias for `tp check-update` |
+| `tp whats-new [--url]` | Show embedded Markdown release notes, or print the latest known release-notes URL |
 | `tp skills create TARGET [--global]` | Generate unified agent skill files using enabled feature packs |
 | `tp user me` | Show current user info |
 | `tp user list [QUERY]` | List users and match names/emails to EmpIDs (`--emp-id`, `--email`, `--all`, `--json`) |

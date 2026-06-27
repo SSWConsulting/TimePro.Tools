@@ -15,5 +15,5 @@ and whether the UI read model matches the API output.
 
 If a timesheet **can't be edited or moved at all**, it is probably **locked** by
 the invoice it is allocated to (a locked timesheet only allows location and
-description edits). That is an invoice/lock problem, not a saved-row problem — see
+description edits). That is an invoice lock problem, not a saved-row problem — see
 `tp accounting guide --use-case "locked invoice or timesheet"`.

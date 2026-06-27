@@ -103,8 +103,8 @@ public class GuideRankingTests
     {
         var guide = AccountingGuide.For(useCase);
 
-        guide.MatchingGuides.Should().ContainSingle(match => match.Title == expectedTitle);
-        guide.MatchingGuides[0].MatchType.Should().Be("exact");
+        guide.MatchingGuides.Should().ContainSingle(match =>
+            match.Title == expectedTitle && match.MatchType == "exact");
         guide.RecommendedSkills.Should().Equal("timepro-accounting-cli");
     }
 

@@ -149,7 +149,7 @@
         "tp invoice get <invoiceId> --json",
         "tp receipt outstanding <clientId> --json"
       ],
-      "mcpTools": [],
+      "mcpTools": ["GetReceiptDetail", "GetInvoiceReceipts", "GetClientOutstanding"],
       "skills": ["timepro-accounting-cli"]
     },
     {

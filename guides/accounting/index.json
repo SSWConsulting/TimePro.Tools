@@ -48,6 +48,34 @@
       "skills": ["timepro-accounting-cli"]
     },
     {
+      "slug": "clients-50k-invoiced-revenue",
+      "file": "clients-50k-invoiced-revenue.md",
+      "title": "Clients with 50k invoiced revenue",
+      "description": "Export clients with at least $50k invoiced revenue in the last 12 months using invoice-backed totals.",
+      "keywords": ["50k revenue", "invoiced revenue", "clients 50k", "revenue threshold", "last 12 months", "invoice backed revenue"],
+      "commands": [
+        "tp accounting guide --use-case \"50k revenue\" --json",
+        "tp client billable-work --from <yyyy-MM-dd> --to <yyyy-MM-dd> --threshold 0 --json",
+        "tp invoice list --limit 500 --field DateCreated --dir desc --json"
+      ],
+      "mcpTools": ["ListInvoices"],
+      "skills": ["timepro-accounting-cli"]
+    },
+    {
+      "slug": "monthly-sales-receipts",
+      "file": "monthly-sales-receipts.md",
+      "title": "Monthly sales and receipts",
+      "description": "Summarize monthly invoiced sales and receipt cash-in totals from paged invoice and receipt lists.",
+      "keywords": ["monthly sales", "monthly receipts", "sales receipts", "cash in", "monthly revenue", "invoice month"],
+      "commands": [
+        "tp accounting guide --use-case \"monthly sales receipts\" --json",
+        "tp invoice list --limit 500 --field DateCreated --dir desc --json",
+        "tp receipt list --limit 500 --field PaymentDate --dir desc --json"
+      ],
+      "mcpTools": ["ListInvoices", "ListPaidReceipts"],
+      "skills": ["timepro-accounting-cli"]
+    },
+    {
       "slug": "external-comparison",
       "file": "external-comparison.md",
       "title": "External comparison",

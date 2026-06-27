@@ -1,3 +1,9 @@
+<!--
+Template source for a generated TimePro agent skill.
+SkillRenderer adds YAML frontmatter when tp skills create writes SKILL.md.
+Do not install this file directly as an agent skill.
+-->
+
 # TimePro Developer Timesheet Diagnostics
 
 Use this skill when a bug is about suggested timesheets, CRM bookings, saved timesheets, missing rows, duplicate rows, or an accept/create/update flow.

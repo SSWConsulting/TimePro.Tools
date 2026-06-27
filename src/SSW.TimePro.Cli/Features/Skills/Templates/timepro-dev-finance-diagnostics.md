@@ -1,3 +1,9 @@
+<!--
+Template source for a generated TimePro agent skill.
+SkillRenderer adds YAML frontmatter when tp skills create writes SKILL.md.
+Do not install this file directly as an agent skill.
+-->
+
 # TimePro Developer Finance Diagnostics
 
 Use this skill when a bug is about invoices, credit notes, receipts, client rates, prepaid drawdown, tax, billing status, or external accounting sync. This overlaps with accounting scenarios, but the developer goal is different: find the faulty code/data boundary and verify a fix, not produce a final accounting reconciliation.

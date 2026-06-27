@@ -1,3 +1,9 @@
+<!--
+Template source for a generated TimePro agent skill.
+SkillRenderer adds YAML frontmatter when tp skills create writes SKILL.md.
+Do not install this file directly as an agent skill.
+-->
+
 # TimePro Environment Compare
 
 Use this skill to compare TimePro environments for consistency before or after a fix, migration, configuration change, or data investigation.

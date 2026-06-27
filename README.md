@@ -17,7 +17,7 @@ SSW TimePro is a time tracking and invoicing system. This CLI makes it fast to v
 - **Daily Scrum** — Generate an SSW-format daily scrum email from timesheets, CRM bookings and GitHub activity, with AutoScrum-inspired `--smart` selection, overridable per-tenant/client templates, rich-text / markdown / plain clipboard support and an interactive copy mode
 - **Location Defaults** — Set WFH days so location is auto-applied when creating timesheets
 - **CSV Export** — Export timesheets for tax reports or analysis
-- **Skills Generation** — Generate agent skill files with project context and `gh` commands
+- **Skills + Diagnostic Guides** — Generate agent skill files and search indexed accounting/developer diagnostic recipes
 - **MCP Server** — Exposes timesheet, lookup, and leave tools by default, with optional accounting/prepaid tools via feature packs
 
 ## Prerequisites
@@ -337,6 +337,8 @@ Generated skills use one format for Claude, Codex, and `.agents` installs:
 - YAML frontmatter includes `name`, `description`, and `allowed-tools`.
 - Deterministic read-only commands are listed in a plain `Run these first` bash block.
 - No load-time command execution syntax is emitted.
+- Packaged source templates are marked as templates in the repo; generated
+  `SKILL.md` files omit those source-only comments.
 
 The generated skills include:
 - `tp info --json` as the first health/update check
@@ -361,6 +363,16 @@ New guide-backed diagnostics are welcomed. See
 [`docs/diagnostic-guides.md`](docs/diagnostic-guides.md) for how to add
 accounting or developer guide indexes, Markdown recipes, ranking
 keywords, and tests.
+
+Use guide search when the workflow is specific enough that a Markdown recipe is
+better than a new command:
+
+```bash
+tp accounting guide --use-case "50k revenue" --json
+tp accounting guide --use-case "monthly sales receipts" --json
+tp dev guide --use-case "suggested timesheets missing" --json
+tp dev guide --use-case "appinsights exception correlation" --json
+```
 
 ### Summary & Report
 

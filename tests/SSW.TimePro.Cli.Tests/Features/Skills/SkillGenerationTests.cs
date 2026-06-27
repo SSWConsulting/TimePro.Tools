@@ -9,6 +9,20 @@ public class SkillGenerationTests
 {
     private static GlobalConfig Global() => new() { DefaultLocation = "Office" };
 
+    private static string RepoRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "SSW.TimePro.Timesheets.Cli.slnx")))
+                return directory.FullName;
+
+            directory = directory.Parent;
+        }
+
+        throw new InvalidOperationException("Could not find repository root.");
+    }
+
     private static SkillContentModel Timesheets(
         RepoMappingEntry? repoMapping = null,
         string? ghRepoSlug = null) =>
@@ -32,6 +46,20 @@ public class SkillGenerationTests
         output.Should().Contain("name: timepro-timesheets");
         output.Should().Contain("description:");
         output.Should().Contain("allowed-tools: Bash(tp *), Bash(sl *)");
+    }
+
+    [Fact]
+    public void PackagedTemplates_HaveTemplateSourceHeader()
+    {
+        var templateDir = Path.Combine(RepoRoot(), "src", "SSW.TimePro.Cli", "Features", "Skills", "Templates");
+        var templates = Directory.GetFiles(templateDir, "*.md");
+
+        templates.Should().NotBeEmpty();
+        foreach (var template in templates)
+        {
+            File.ReadAllText(template)
+                .Should().StartWith(SkillTemplateRenderer.TemplateSourceHeader, because: $"{Path.GetFileName(template)} is a source template, not a standalone agent skill");
+        }
     }
 
     [Fact]
@@ -201,6 +229,8 @@ public class SkillGenerationTests
         };
 
         outputs.Should().OnlyContain(output => !output.Contains("{{", StringComparison.Ordinal));
+        outputs.Should().OnlyContain(output => !output.Contains(SkillTemplateRenderer.TemplateSourceHeader, StringComparison.Ordinal));
+        outputs.Should().OnlyContain(output => !output.Contains("Template source for a generated TimePro agent skill.", StringComparison.Ordinal));
     }
 
     [Fact]

@@ -4,12 +4,21 @@ namespace SSW.TimePro.Cli.Features.Skills;
 
 public static class SkillTemplateRenderer
 {
+    public const string TemplateSourceHeader = """
+<!--
+Template source for a generated TimePro agent skill.
+SkillRenderer adds YAML frontmatter when tp skills create writes SKILL.md.
+Do not install this file directly as an agent skill.
+-->
+
+""";
+
     public static string Render(string templateFileName) =>
         Render(templateFileName, new Dictionary<string, string>());
 
     public static string Render(string templateFileName, IReadOnlyDictionary<string, string> values)
     {
-        var template = LoadTemplate(templateFileName);
+        var template = StripTemplateSourceHeader(LoadTemplate(templateFileName));
 
         foreach (var (key, value) in values)
         {
@@ -21,6 +30,11 @@ public static class SkillTemplateRenderer
 
         return template.TrimEnd() + "\n";
     }
+
+    private static string StripTemplateSourceHeader(string template) =>
+        template.StartsWith(TemplateSourceHeader, StringComparison.Ordinal)
+            ? template[TemplateSourceHeader.Length..]
+            : template;
 
     private static string LoadTemplate(string templateFileName)
     {

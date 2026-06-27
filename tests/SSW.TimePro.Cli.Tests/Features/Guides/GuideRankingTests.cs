@@ -80,6 +80,19 @@ public class GuideRankingTests
         guide.MatchingGuides[0].MatchType.Should().Be("contains-all");
     }
 
+    [Theory]
+    [InlineData("50k revenue", "Clients with 50k invoiced revenue")]
+    [InlineData("monthly receipts", "Monthly sales and receipts")]
+    public void AccountingGuide_FindsCommonReportGuides(string useCase, string expectedTitle)
+    {
+        var guide = AccountingGuide.For(useCase);
+
+        guide.MatchingGuides.Should().ContainSingle(match => match.Title == expectedTitle);
+        guide.MatchingGuides.Should().OnlyContain(match => match.MatchRank == 3);
+        guide.RecommendedCommands.Should().NotBeEmpty();
+        guide.RecommendedSkills.Should().Equal("timepro-accounting-cli");
+    }
+
     [Fact]
     public void GuideRanking_ReturnsAllTopicsWithoutQuery()
     {
@@ -136,5 +149,38 @@ public class GuideRankingTests
 
         foreach (var term in forbidden)
             searchableText.Should().NotContain(term, because: "developer guides must stay public and sanitized");
+    }
+
+    [Fact]
+    public void AccountingGuides_DoNotContainRecentPrivateIncidentBreadcrumbs()
+    {
+        var forbidden = new[]
+        {
+            "Azure DevOps",
+            "SSW.TimeProDotNet",
+            "ssw2",
+            "60456",
+            "60470",
+            "Jeoffrey",
+            "Jernej",
+            "Penny"
+        };
+
+        var guides = GuideCatalog.Load("accounting");
+        var searchableText = string.Join(
+            "\n",
+            guides.Select(guide => string.Join(
+                "\n",
+                [
+                    guide.Title,
+                    guide.Description,
+                    guide.Body,
+                    .. guide.Keywords,
+                    .. guide.Commands,
+                    .. guide.McpTools
+                ])));
+
+        foreach (var term in forbidden)
+            searchableText.Should().NotContain(term, because: "accounting guides must stay public and sanitized");
     }
 }

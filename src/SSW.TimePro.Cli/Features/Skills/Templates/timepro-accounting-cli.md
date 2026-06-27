@@ -1,3 +1,9 @@
+<!--
+Template source for a generated TimePro agent skill.
+SkillRenderer adds YAML frontmatter when tp skills create writes SKILL.md.
+Do not install this file directly as an agent skill.
+-->
+
 # TimePro Accounting (CLI)
 
 Accountant-facing read-only access to SSW TimePro via the `tp` CLI. Pipe `--json` output into `jq` or Python to calculate totals, compare against Xero, or audit historical data.

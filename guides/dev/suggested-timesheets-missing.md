@@ -24,9 +24,17 @@ tp ts suggest 2026-03-12 --tenant northwind --env staging --json
 ```
 
 Check, in order: **CRM booking exists for the date** (no booking -> no
-suggestion, by design), tenant-profile employee mismatch, leave/holiday coverage,
-saved rows hiding suggestions, duplicate prevention, and refresh persistence.
+suggestion, by design), tenant-profile employee mismatch, **employee profile
+fields present** (a missing timezone in particular can break suggestion
+generation), leave/holiday coverage, saved rows hiding suggestions, duplicate
+prevention, and refresh persistence.
 
 If there are no bookings, the fix is data, not code: add the CRM appointment for
 that day (or pick a date that has one), then re-run `tp ts suggest`. See the
 `crm-bookings-missing` guide to diagnose why a booking is absent.
+
+If bookings exist but suggestions still don't appear, check the employee's
+profile fields — a missing **timezone** (also site / work hours / time-less
+settings) can suppress suggestions. Confirm with
+`tp user get <empId> --tenant <name> --env <env> --json` and see the
+`leave-profile-field-issue` guide.

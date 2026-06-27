@@ -17,8 +17,8 @@ SSW TimePro is a time tracking and invoicing system. This CLI makes it fast to v
 - **Daily Scrum** — Generate an SSW-format daily scrum email from timesheets, CRM bookings and GitHub activity, with AutoScrum-inspired `--smart` selection, overridable per-tenant/client templates, rich-text / markdown / plain clipboard support and an interactive copy mode
 - **Location Defaults** — Set WFH days so location is auto-applied when creating timesheets
 - **CSV Export** — Export timesheets for tax reports or analysis
-- **Skills Generation** — Generate agent skill files with project context and `gh` commands
-- **MCP Server** — Exposes timesheet, lookup, leave, accounting, and prepaid tools for AI agents via stdio transport
+- **Skills + Diagnostic Guides** — Generate agent skill files and search indexed accounting/developer diagnostic recipes
+- **MCP Server** — Exposes timesheet, lookup, and leave tools by default, with optional accounting/prepaid tools via feature packs
 
 ## Prerequisites
 
@@ -63,11 +63,14 @@ For scripts that need only the version string, `tp --version` prints just that.
 Check whether a newer GitHub Release is available:
 
 ```bash
-tp --check-update
-tp --check-version
-tp --whats-new
-tp --whats-new --url
+tp check-update
+tp check-version
+tp whats-new
+tp whats-new --url
 ```
+
+The older top-level flags still work too: `tp --check-update`,
+`tp --check-version`, `tp --whats-new`, and `tp --whats-new --url`.
 
 To uninstall:
 
@@ -143,17 +146,20 @@ tp ts get 2026-03-12       # Specific date
 | `tp map remove PATH` | Remove a repo mapping |
 | `tp query` | Query timesheets across employees/projects (`--group-by`, `--json`) |
 | `tp scrum` | Generate a daily scrum email from timesheets + GitHub (`--smart`, `--project`, `-i`, `--copy --format rich\|markdown\|plain`, `--json`, custom templates) |
+| `tp feature [FEATURE] [enable\|disable]` | Enable optional feature packs (`accounting`, `developer`) for skills and MCP |
 | `tp info [--detailed] [--no-update-check]` | Show version, active tenant/user, and update status |
-| `tp --check-update` | Check the latest GitHub Release and print update instructions |
-| `tp --check-version` | Alias for `tp --check-update` |
-| `tp --whats-new [--url]` | Show embedded Markdown release notes, or print the latest known release-notes URL |
-| `tp skills create TARGET [--global] [--accounting]` | Generate unified agent skill files (`--accounting` for the accountant CLI skill) |
+| `tp check-update` | Check the latest GitHub Release and print update instructions |
+| `tp check-version` | Alias for `tp check-update` |
+| `tp whats-new [--url]` | Show embedded Markdown release notes, or print the latest known release-notes URL |
+| `tp skills create TARGET [--global]` | Generate unified agent skill files using enabled feature packs |
 | `tp user me` | Show current user info |
 | `tp user list [QUERY]` | List users and match names/emails to EmpIDs (`--emp-id`, `--email`, `--all`, `--json`) |
 | `tp user get EMP_ID` | Show focused user details by EmpID (`--json`) |
 | `tp blog list` | Latest blog posts (`--mine`, `--limit N`, `--all`) |
 | `tp mcp` | Start MCP server (stdio); `--tenant NAME` binds the session to a specific tenant config without changing the global active tenant |
 | **Accountant (read-only)** | See [`docs/accounting.md`](docs/accounting.md) |
+| `tp accounting guide [--refresh]` | Accounting AI guide for choosing read-only evidence packs and specialized skills |
+| `tp dev guide [--refresh]` | Developer AI guide for choosing bug reproduction and verification evidence |
 | `tp invoice list / get / lines / timesheets / receipts` | Invoices |
 | `tp receipt list / get / outstanding` | Receipts + aged debtors |
 | `tp creditnote list --client ID` | Credit notes |
@@ -324,7 +330,9 @@ Generate agent skill files for a project:
 ```bash
 tp skills create .agents                         # Generate unified skills for this project
 tp skills create .claude --global                # Generate unified skills under global config
-tp skills create .agents --accounting            # Also generate the accounting CLI skill
+
+tp feature accounting enable                     # Include accounting skills + accounting MCP tools
+tp feature developer enable                      # Include developer diagnostics/compare/bug skills
 ```
 
 Generated skills use one format for Claude, Codex, and `.agents` installs:
@@ -332,6 +340,8 @@ Generated skills use one format for Claude, Codex, and `.agents` installs:
 - YAML frontmatter includes `name`, `description`, and `allowed-tools`.
 - Deterministic read-only commands are listed in a plain `Run these first` bash block.
 - No load-time command execution syntax is emitted.
+- Packaged source templates are marked as templates in the repo; generated
+  `SKILL.md` files omit those source-only comments.
 
 The generated skills include:
 - `tp info --json` as the first health/update check
@@ -341,6 +351,52 @@ The generated skills include:
 - `gh` commands pre-filled with the repo slug for issue/PR lookup
 - Description format guide with PR and issue number examples
 - Project context (client, project, GitHub repo) auto-detected from repo mapping
+- Tenant setup (`timepro-tenant-setup`) for switching to `ssw-staging` or using per-command `--tenant` / `--env` overrides
+
+Optional generated skills:
+- Accounting (`timepro-accounting-cli`) when `tp feature accounting enable` is set
+- Developer diagnostics (`timepro-dev-diagnostics`) when `tp feature developer enable` is set
+- Developer timesheet diagnostics (`timepro-dev-timesheet-diagnostics`) when `tp feature developer enable` is set
+- Developer finance diagnostics (`timepro-dev-finance-diagnostics`) when `tp feature developer enable` is set
+- Environment comparison (`timepro-env-compare`) when `tp feature developer enable` is set
+
+Legacy shorthand flags `--accounting`, `--developer`, and `--dev` are intercepted before command parsing, enable the matching feature, and are then stripped from the command.
+
+New guide-backed diagnostics are welcomed. See
+[`docs/diagnostic-guides.md`](docs/diagnostic-guides.md) for how to add
+accounting or developer guide indexes, Markdown recipes, ranking
+keywords, and tests.
+
+Guides are downloaded from GitHub into
+`~/.config/timepro-cli/guides-cache/` and reused while the cache is fresh. The
+default cache time is 5 minutes and can be changed in
+`~/.config/timepro-cli/config.json`:
+
+```json
+{
+  "guides": {
+    "cacheMinutes": 5,
+    "repositoryUrl": "https://github.com/SSWConsulting/TimePro.Tools",
+    "branch": "main"
+  }
+}
+```
+
+Without `--refresh`, `tp` still checks GitHub when the cache is missing or older
+than `cacheMinutes`. Use `--refresh` when you want to bypass the cache for one
+run. For local branch testing, set `guides.branch` to your branch name, such as
+`codex/dev-skill-templates`. Embedded guides remain as an offline fallback.
+
+Use guide search when the workflow is specific enough that a Markdown recipe is
+better than a new command:
+
+```bash
+tp accounting guide --use-case "50k revenue" --json
+tp accounting guide --use-case "50k revenue" --refresh --json
+tp accounting guide --use-case "monthly sales receipts" --json
+tp dev guide --use-case "suggested timesheets missing" --json
+tp dev guide --use-case "appinsights exception correlation" --json
+```
 
 ### Summary & Report
 
@@ -482,15 +538,29 @@ tp blog list --limit 5 --all   # Include former employees
 
 ## MCP Server
 
-The MCP server exposes TimePro data to AI agents via stdio transport. Current tool groups include:
+The MCP server exposes TimePro data to AI agents via stdio transport. Before enabling optional MCP feature packs, ask what the user's MCP use-case is so the tool surface can be adjusted to the workflow rather than exposed by habit.
+
+Current default tool groups include:
 
 | Group | Examples |
 |-------|----------|
 | Timesheets | Get, create, update, delete, suggested timesheets, accept suggestions, list iterations, `check_week` (leave-aware weekly coverage) |
 | Lookup | Search clients, list projects, get client rate, CRM bookings, location and repo mapping |
 | Leave | List EasyLeave entries (optionally filtered by `empId`), `get_leave_balance` (days since last leave + 12-month hours) |
-| Accounting | Invoices, receipts, credit notes, products/SKUs, client rates, unbilled time, recurring invoices |
-| Reporting | Timesheet queries, current user, categories, billable types, locations, project summaries, prepaid drawdown status |
+
+Optional accounting MCP tools are enabled with:
+
+```bash
+tp feature accounting enable
+```
+
+That adds invoices, receipts, credit notes, products/SKUs, client rates, unbilled time, timesheet queries, current user/reference-code reporting, recurring invoices, and prepaid drawdown status. More complex accounting diagnostics live in guide-backed Markdown skills so teams can extend the collection without adding a dedicated command for every report.
+
+Developer diagnostics are CLI/skill workflows. Enable the generated developer skills with:
+
+```bash
+tp feature developer enable
+```
 
 **Tenant resolution:** the MCP server uses the active tenant (`tp tenant set`). Pass `--tenant NAME` in `args` to pin a session to a specific tenant config without changing the global active tenant. If no active tenant is set and exactly one tenant config exists, the server defaults to that single tenant — so a single-tenant install works out of the box.
 

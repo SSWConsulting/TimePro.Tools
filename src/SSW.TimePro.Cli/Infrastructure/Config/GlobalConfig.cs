@@ -17,6 +17,19 @@ public class GlobalConfig
     public string DefaultLocation { get; set; } = "Office";
 
     /// <summary>
+    /// Optional feature packs that affect generated skills and MCP tool registration.
+    /// </summary>
+    [JsonPropertyName("features")]
+    public Dictionary<string, FeatureConfig> Features { get; set; } = [];
+
+    /// <summary>
+    /// Generated skill versions installed by <c>tp skills create</c>.
+    /// Used by <c>tp info</c> to flag locally stale skills.
+    /// </summary>
+    [JsonPropertyName("skills")]
+    public Dictionary<string, SkillInstallConfig> Skills { get; set; } = [];
+
+    /// <summary>
     /// Tracks the installed CLI version so release notes can show what changed
     /// since the user's previous install.
     /// </summary>
@@ -28,6 +41,43 @@ public class GlobalConfig
     /// </summary>
     [JsonPropertyName("scrum")]
     public ScrumConfig Scrum { get; set; } = new();
+
+    /// <summary>
+    /// Settings used by <c>tp accounting guide</c> and <c>tp dev guide</c>.
+    /// </summary>
+    [JsonPropertyName("guides")]
+    public GuideConfig Guides { get; set; } = new();
+}
+
+public class FeatureConfig
+{
+    [JsonPropertyName("enabled")]
+    public bool Enabled { get; set; }
+
+    /// <summary>
+    /// Latest feature content version used by this local config.
+    /// Used by future skill/MCP auto-upgrade checks.
+    /// </summary>
+    [JsonPropertyName("version")]
+    public int Version { get; set; }
+}
+
+public class SkillInstallConfig
+{
+    [JsonPropertyName("version")]
+    public int Version { get; set; }
+
+    [JsonPropertyName("ignoredVersion")]
+    public int? IgnoredVersion { get; set; }
+
+    [JsonPropertyName("installedAt")]
+    public DateTimeOffset? InstalledAt { get; set; }
+
+    [JsonPropertyName("path")]
+    public string? Path { get; set; }
+
+    [JsonPropertyName("global")]
+    public bool Global { get; set; }
 }
 
 public class InstalledVersionConfig
@@ -46,6 +96,31 @@ public class InstalledVersionConfig
 
     [JsonPropertyName("lastUpdateCheckedVersion")]
     public string? LastUpdateCheckedVersion { get; set; }
+}
+
+public class GuideConfig
+{
+    public const string DefaultRepositoryUrl = "https://github.com/SSWConsulting/TimePro.Tools";
+    public const string DefaultBranch = "main";
+
+    /// <summary>
+    /// How long GitHub-downloaded diagnostic guides stay fresh in the local
+    /// cache. Set to 0 to refresh on every guide command.
+    /// </summary>
+    [JsonPropertyName("cacheMinutes")]
+    public int CacheMinutes { get; set; } = 5;
+
+    /// <summary>
+    /// GitHub repository that hosts the <c>guides/</c> folder.
+    /// </summary>
+    [JsonPropertyName("repositoryUrl")]
+    public string RepositoryUrl { get; set; } = DefaultRepositoryUrl;
+
+    /// <summary>
+    /// Branch or ref used when downloading guide content.
+    /// </summary>
+    [JsonPropertyName("branch")]
+    public string Branch { get; set; } = DefaultBranch;
 }
 
 /// <summary>

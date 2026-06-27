@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
+using SSW.TimePro.Cli.Features.Accounting;
 using SSW.TimePro.Cli.Features.Auth;
 using SSW.TimePro.Cli.Features.Bookings;
+using SSW.TimePro.Cli.Features.FeatureFlags;
 using SSW.TimePro.Cli.Features.Info;
 using SSW.TimePro.Cli.Features.Tenants;
 using SSW.TimePro.Cli.Features.Timesheets;
@@ -50,6 +52,7 @@ using MapList = SSW.TimePro.Cli.Features.RepoMap.ListCommand;
 using MapRemove = SSW.TimePro.Cli.Features.RepoMap.RemoveCommand;
 using MapDetect = SSW.TimePro.Cli.Features.RepoMap.DetectCommand;
 using SkillsCreate = SSW.TimePro.Cli.Features.Skills.CreateCommand;
+using SkillsIgnoreVersion = SSW.TimePro.Cli.Features.Skills.IgnoreVersionCommand;
 using BlogList = SSW.TimePro.Cli.Features.Blogs.ListCommand;
 using IterationList = SSW.TimePro.Cli.Features.Iterations.ListCommand;
 using SummaryCmd = SSW.TimePro.Cli.Features.Summary.SummaryCommand;
@@ -60,9 +63,16 @@ using ScrumCmd = SSW.TimePro.Cli.Features.Scrum.ScrumCommand;
 using UserMe = SSW.TimePro.Cli.Features.Users.MeCommand;
 using UserList = SSW.TimePro.Cli.Features.Users.ListCommand;
 using UserGet = SSW.TimePro.Cli.Features.Users.GetCommand;
+using AccountingGuide = SSW.TimePro.Cli.Features.Accounting.GuideCommand;
+using DeveloperGuide = SSW.TimePro.Cli.Features.Developer.GuideCommand;
+using CheckUpdateCmd = SSW.TimePro.Cli.Features.Updates.CheckUpdateCommand;
+using WhatsNewCmd = SSW.TimePro.Cli.Features.Updates.WhatsNewCommand;
 
 var configService = new ConfigService();
-var tenantOverride = TenantOverrideResolver.ExtractCommandLineOptions(args);
+var featureFlags = FeatureFlagCommandLineInterceptor.ExtractCommandLineOptions(args);
+FeatureFlagCommandLineInterceptor.EnableRequestedFeatures(configService, featureFlags.EnableFeatures);
+
+var tenantOverride = TenantOverrideResolver.ExtractCommandLineOptions(featureFlags.Args);
 if (tenantOverride.Error is not null)
 {
     OutputHelper.WriteError(tenantOverride.Error);
@@ -128,6 +138,15 @@ app.Configure(config =>
         tenant.AddCommand<TenantListCommand>("list")
             .WithDescription("List all stored tenants");
     });
+
+    config.AddCommand<FeatureCommand>("feature")
+        .WithDescription("Enable, disable, and inspect optional feature packs");
+    config.AddCommand<CheckUpdateCmd>("check-update")
+        .WithDescription("Check the latest GitHub Release and print update instructions");
+    config.AddCommand<CheckUpdateCmd>("check-version")
+        .WithDescription("Alias for check-update");
+    config.AddCommand<WhatsNewCmd>("whats-new")
+        .WithDescription("Show embedded release notes since the previous installed version");
 
     // Helper to register all timesheet subcommands on a branch
     void RegisterTimesheetCommands(IConfigurator<CommandSettings> branch)
@@ -317,9 +336,47 @@ app.Configure(config =>
         skills.SetDescription("Agent skill file management");
         skills.AddCommand<SkillsCreate>("create")
             .WithDescription("Generate agent skill files");
+        skills.AddCommand<SkillsIgnoreVersion>("ignore-version")
+            .WithDescription("Ignore the current bundled version for a generated skill");
     });
 
     // ───── Accounting (read-only) ─────
+
+    void RegisterAccountingCommands(IConfigurator<CommandSettings> branch)
+    {
+        branch.AddCommand<AccountingGuide>("guide")
+            .WithDescription("Show accounting AI guide questions, commands, MCP tools, and specialized skills");
+    }
+
+    config.AddBranch("accounting", accounting =>
+    {
+        accounting.SetDescription("Accounting guide (read-only)");
+        RegisterAccountingCommands(accounting);
+    });
+
+    config.AddBranch("acct", accounting =>
+    {
+        accounting.SetDescription("Accounting guide (alias)");
+        RegisterAccountingCommands(accounting);
+    });
+
+    void RegisterDeveloperCommands(IConfigurator<CommandSettings> branch)
+    {
+        branch.AddCommand<DeveloperGuide>("guide")
+            .WithDescription("Show developer AI guide questions, commands, telemetry follow-up, and specialized skills");
+    }
+
+    config.AddBranch("developer", dev =>
+    {
+        dev.SetDescription("Developer diagnostics guide");
+        RegisterDeveloperCommands(dev);
+    });
+
+    config.AddBranch("dev", dev =>
+    {
+        dev.SetDescription("Developer diagnostics guide (alias)");
+        RegisterDeveloperCommands(dev);
+    });
 
     // Invoice (with alias `inv`)
     void RegisterInvoiceCommands(IConfigurator<CommandSettings> branch)

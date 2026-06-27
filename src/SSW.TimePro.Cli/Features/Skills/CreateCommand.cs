@@ -19,10 +19,6 @@ public class CreateCommand : Command<CreateCommand.Settings>
         [CommandOption("--global")]
         [Description("Write to global config instead of local project")]
         public bool Global { get; set; }
-
-        [CommandOption("--accounting")]
-        [Description("Also write the accountant CLI skill (timepro-accounting-cli) alongside the timesheets skill. Opt-in; does not touch any existing HTTP-based timepro-accounting skill.")]
-        public bool Accounting { get; set; }
     }
 
     public CreateCommand(IConfigService config) => _config = config;
@@ -51,20 +47,43 @@ public class CreateCommand : Command<CreateCommand.Settings>
             ghRepoSlug = ghPath.TrimEnd('/');
         }
 
+        var installedAt = DateTimeOffset.UtcNow;
+
+        void WriteAndTrack(SkillContentModel model)
+        {
+            var outputFile = WriteSkill(baseDir, model);
+            SkillVersionService.RecordInstall(global, model, outputFile, settings.Global, installedAt);
+        }
+
         var timesheets = SkillModelBuilder.BuildTimesheets(
             tenant, global, repoMapping, ghRepoSlug);
-        WriteSkill(baseDir, timesheets);
+        WriteAndTrack(timesheets);
+        WriteAndTrack(SkillModelBuilder.BuildTenantSetup());
 
-        if (settings.Accounting)
+        var accountingEnabled = global.IsFeatureEnabled(FeatureCatalog.Accounting);
+        var developerEnabled = global.IsFeatureEnabled(FeatureCatalog.Developer);
+
+        if (accountingEnabled)
         {
-            var accounting = SkillModelBuilder.BuildAccounting(tenant);
-            WriteSkill(baseDir, accounting);
+            WriteAndTrack(SkillModelBuilder.BuildAccounting(tenant));
+            global.TouchFeatureVersion(FeatureCatalog.Accounting);
         }
+
+        if (developerEnabled)
+        {
+            WriteAndTrack(SkillModelBuilder.BuildDeveloperDiagnostics());
+            WriteAndTrack(SkillModelBuilder.BuildDeveloperTimesheetDiagnostics());
+            WriteAndTrack(SkillModelBuilder.BuildDeveloperFinanceDiagnostics());
+            WriteAndTrack(SkillModelBuilder.BuildEnvironmentCompare());
+            global.TouchFeatureVersion(FeatureCatalog.Developer);
+        }
+
+        _config.SaveGlobalConfig(global);
 
         return 0;
     }
 
-    private static void WriteSkill(string baseDir, SkillContentModel model)
+    private static string WriteSkill(string baseDir, SkillContentModel model)
     {
         var relativePath = SkillRenderer.RelativePath(model.Name);
         var outputFile = Path.Combine(baseDir, relativePath);
@@ -72,5 +91,6 @@ public class CreateCommand : Command<CreateCommand.Settings>
         Directory.CreateDirectory(Path.GetDirectoryName(outputFile)!);
         File.WriteAllText(outputFile, SkillRenderer.Render(model));
         OutputHelper.WriteSuccess($"Skill file written to {outputFile}");
+        return outputFile;
     }
 }

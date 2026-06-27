@@ -57,8 +57,14 @@ coverage/
 ## Generated agent skills
 .agents/*
 !.agents/skills/
+.agents/skills/*
 !.agents/skills/timepro-release/
 !.agents/skills/timepro-release/SKILL.md
+!.agents/skills/timepro-guide-curator/
+!.agents/skills/timepro-guide-curator/SKILL.md
+!.agents/skills/timepro-skill-generator/
+!.agents/skills/timepro-skill-generator/SKILL.md
+src/**/.agents/
 
 ## Generated reports
 Reports/

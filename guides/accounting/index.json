@@ -1,0 +1,94 @@
+{
+  "guides": [
+    {
+      "slug": "tax-mismatch",
+      "file": "tax-mismatch.md",
+      "title": "Tax mismatch",
+      "description": "Find non-zero allocated timesheets with 0% tax on an invoice that has non-zero tax.",
+      "keywords": ["tax", "gst", "0% tax", "zero tax", "tax mismatch", "taxable invoice", "timesheet tax"],
+      "commands": [
+        "tp accounting guide --use-case \"0% tax timesheets on taxable invoice\" --json",
+        "tp invoice list --query <clientOrInvoice> --limit 500 --json",
+        "tp invoice get <invoiceId> --json",
+        "tp invoice timesheets <invoiceId> --json"
+      ],
+      "mcpTools": ["ListInvoices", "GetInvoice", "GetInvoiceTimesheets"],
+      "skills": ["timepro-accounting-cli"]
+    },
+    {
+      "slug": "invoice-evidence-pack",
+      "file": "invoice-evidence-pack.md",
+      "title": "Invoice evidence pack",
+      "description": "Assemble invoice header, lines, allocated/write-off timesheets, receipts, and credit note evidence.",
+      "keywords": ["invoice", "invoice reconciliation", "evidence pack", "receipts", "writeoffs", "credit notes"],
+      "commands": [
+        "tp accounting guide --use-case \"invoice reconciliation evidence pack\" --json",
+        "tp invoice get <invoiceId> --json",
+        "tp invoice lines <invoiceId> --json",
+        "tp invoice timesheets <invoiceId> --writeoff --json",
+        "tp invoice receipts <invoiceId> --json"
+      ],
+      "mcpTools": ["GetInvoice", "GetInvoiceLines", "GetInvoiceTimesheets", "GetInvoiceReceipts", "ListCreditNotes"],
+      "skills": ["timepro-accounting-cli"]
+    },
+    {
+      "slug": "client-accounting-position",
+      "file": "client-accounting-position.md",
+      "title": "Client accounting position",
+      "description": "Gather client invoices, aged debtors, unbilled work, credit notes, rates, recurring templates, and revenue threshold evidence.",
+      "keywords": ["client", "aged debtors", "unbilled", "rates", "outstanding", "revenue", "50k"],
+      "commands": [
+        "tp accounting guide --use-case \"client accounting position\" --json",
+        "tp invoice list --query <clientId> --limit 500 --json",
+        "tp receipt outstanding <clientId> --json",
+        "tp unbilled list --client <clientId> --json",
+        "tp rate list --client <clientId> --show-expired --json"
+      ],
+      "mcpTools": ["ListInvoices", "GetClientOutstanding", "GetUnbilledTimesheetsForClient", "ListClientRates"],
+      "skills": ["timepro-accounting-cli"]
+    },
+    {
+      "slug": "clients-50k-invoiced-revenue",
+      "file": "clients-50k-invoiced-revenue.md",
+      "title": "Clients with 50k invoiced revenue",
+      "description": "Export clients with at least $50k invoiced revenue in the last 12 months using invoice-backed totals.",
+      "keywords": ["50k revenue", "invoiced revenue", "clients 50k", "revenue threshold", "last 12 months", "invoice backed revenue"],
+      "commands": [
+        "tp accounting guide --use-case \"50k revenue\" --json",
+        "tp client billable-work --from <yyyy-MM-dd> --to <yyyy-MM-dd> --threshold 0 --json",
+        "tp invoice list --limit 500 --field DateCreated --dir desc --json"
+      ],
+      "mcpTools": ["ListInvoices"],
+      "skills": ["timepro-accounting-cli"]
+    },
+    {
+      "slug": "monthly-sales-receipts",
+      "file": "monthly-sales-receipts.md",
+      "title": "Monthly sales and receipts",
+      "description": "Summarize monthly invoiced sales and receipt cash-in totals from paged invoice and receipt lists.",
+      "keywords": ["monthly sales", "monthly receipts", "sales receipts", "cash in", "monthly revenue", "invoice month"],
+      "commands": [
+        "tp accounting guide --use-case \"monthly sales receipts\" --json",
+        "tp invoice list --limit 500 --field DateCreated --dir desc --json",
+        "tp receipt list --limit 500 --field PaymentDate --dir desc --json"
+      ],
+      "mcpTools": ["ListInvoices", "ListPaidReceipts"],
+      "skills": ["timepro-accounting-cli"]
+    },
+    {
+      "slug": "external-comparison",
+      "file": "external-comparison.md",
+      "title": "External comparison",
+      "description": "Normalize TimePro invoices, receipts, credit notes, and tax amounts against Excel, CSV, Xero MCP, bank-feed MCP, or another source.",
+      "keywords": ["external", "comparison", "parity", "excel", "csv", "xero", "bank", "reconcile"],
+      "commands": [
+        "tp accounting guide --use-case \"external parity\" --json",
+        "tp invoice list --limit 500 --field DateCreated --dir desc --json",
+        "tp receipt list --limit 500 --field PaymentDate --dir desc --json",
+        "tp creditnote list --client <clientId> --json"
+      ],
+      "mcpTools": ["ListInvoices", "ListPaidReceipts", "ListCreditNotes"],
+      "skills": ["timepro-accounting-cli"]
+    }
+  ]
+}

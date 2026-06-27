@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
+using SSW.TimePro.Cli.Features.Mcp.Tools;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using Spectre.Console.Cli;
@@ -36,10 +37,17 @@ public class McpHostCommand : AsyncCommand<McpHostCommand.Settings>
         builder.Services.AddSingleton<ITenantProvider, DefaultTenantProvider>();
         builder.Services.AddHttpClient<ITimeProApiClient, TimeProApiClient>();
 
-        builder.Services
+        var mcpServer = builder.Services
             .AddMcpServer()
             .WithStdioServerTransport()
-            .WithToolsFromAssembly();
+            .WithTools<TimesheetMcpTools>()
+            .WithTools<LookupMcpTools>()
+            .WithTools<LeaveMcpTools>();
+
+        var globalConfig = new ConfigService().LoadGlobalConfig();
+
+        if (globalConfig.IsFeatureEnabled(FeatureCatalog.Accounting))
+            mcpServer.WithTools<AccountingMcpTools>();
 
         var app = builder.Build();
 

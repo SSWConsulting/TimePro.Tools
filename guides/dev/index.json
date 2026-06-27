@@ -1,0 +1,170 @@
+{
+  "guides": [
+    {
+      "slug": "suggested-timesheets-missing",
+      "file": "suggested-timesheets-missing.md",
+      "title": "Suggested timesheets missing",
+      "description": "Diagnose missing or stale suggested timesheets, including tenant-profile employee, CRM booking input, leave, saved rows, and refresh behavior.",
+      "keywords": ["suggested", "suggestions", "suggested timesheets", "ts suggest", "missing suggestions", "refresh suggestions"],
+      "commands": [
+        "tp dev guide --use-case \"suggested timesheets missing\" --json",
+        "tp tenant info --tenant <name> --env <env> --json",
+        "tp user me --tenant <name> --env <env> --json",
+        "tp bk list --date <date> --tenant <name> --env <env> --json",
+        "tp ts get <date> --tenant <name> --env <env> --emp-id <empId> --json",
+        "tp ts suggest <date> --tenant <name> --env <env> --json"
+      ],
+      "skills": ["timepro-dev-timesheet-diagnostics", "timepro-env-compare"]
+    },
+    {
+      "slug": "crm-bookings-missing",
+      "file": "crm-bookings-missing.md",
+      "title": "CRM bookings missing",
+      "description": "Diagnose missing CRM appointment inputs, employee mapping, date windows, and environment-specific booking behavior.",
+      "keywords": ["crm", "booking", "bookings", "appointments", "calendar", "bk list"],
+      "commands": [
+        "tp dev guide --use-case \"CRM bookings missing\" --json",
+        "tp tenant info --tenant <name> --env <env> --json",
+        "tp user get <empId> --tenant <name> --env <env> --json",
+        "tp bk list --date <date> --tenant <name> --env <env> --json",
+        "tp bk list --week 0 --tenant <name> --env <env> --json"
+      ],
+      "skills": ["timepro-dev-timesheet-diagnostics", "timepro-env-compare"]
+    },
+    {
+      "slug": "saved-timesheets-wrong",
+      "file": "saved-timesheets-wrong.md",
+      "title": "Saved timesheets wrong",
+      "description": "Compare saved timesheet rows, wider date ranges, query output, rate enrichment, and create/update/accept boundaries.",
+      "keywords": ["timesheet", "timesheets", "saved timesheets", "duplicate", "missing rows", "accept", "create", "update"],
+      "commands": [
+        "tp dev guide --use-case \"saved timesheets wrong\" --json",
+        "tp ts get <date> --tenant <name> --env <env> --emp-id <empId> --json",
+        "tp ts get --from <yyyy-MM-dd> --to <yyyy-MM-dd> --tenant <name> --env <env> --emp-id <empId> --json",
+        "tp query --from <yyyy-MM-dd> --to <yyyy-MM-dd> --tenant <name> --env <env> --emp-id <empId> --json"
+      ],
+      "skills": ["timepro-dev-timesheet-diagnostics"]
+    },
+    {
+      "slug": "employee-scoped-diagnostics",
+      "file": "employee-scoped-diagnostics.md",
+      "title": "Employee scoped diagnostics",
+      "description": "Resolve an employee identity and compare user detail, saved timesheets, leave, and query output for the same date window.",
+      "keywords": ["employee", "empid", "emp id", "user", "profile", "employee scoped", "date window"],
+      "commands": [
+        "tp dev guide --use-case \"employee scoped diagnostics\" --json",
+        "tp user list <nameOrEmail> --tenant <name> --env <env> --json",
+        "tp user get <empId> --tenant <name> --env <env> --json",
+        "tp ts get --from <yyyy-MM-dd> --to <yyyy-MM-dd> --tenant <name> --env <env> --emp-id <empId> --json",
+        "tp leave list --filter UPCOMING --tenant <name> --env <env> --emp-id <empId> --json",
+        "tp leave list --filter PAST --tenant <name> --env <env> --emp-id <empId> --json",
+        "tp query --from <yyyy-MM-dd> --to <yyyy-MM-dd> --tenant <name> --env <env> --emp-id <empId> --json"
+      ],
+      "skills": ["timepro-dev-timesheet-diagnostics", "timepro-env-compare"]
+    },
+    {
+      "slug": "leave-profile-field-issue",
+      "file": "leave-profile-field-issue.md",
+      "title": "Leave profile field issue",
+      "description": "Diagnose leave or coverage failures caused by missing employee profile fields such as timezone, site, work hours, or time-less settings.",
+      "keywords": ["leave", "easyleave", "timezone", "profile field", "null timezone", "coverage", "time-less"],
+      "commands": [
+        "tp dev guide --use-case \"leave profile field issue\" --json",
+        "tp user get <empId> --tenant <name> --env <env> --json",
+        "tp leave list --filter UPCOMING --tenant <name> --env <env> --emp-id <empId> --json",
+        "tp leave list --filter PAST --tenant <name> --env <env> --emp-id <empId> --json",
+        "tp ts check --week 0 --tenant <name> --env <env> --emp-id <empId> --json",
+        "tp ts get <date> --tenant <name> --env <env> --emp-id <empId> --json"
+      ],
+      "skills": ["timepro-dev-timesheet-diagnostics", "timepro-env-compare"]
+    },
+    {
+      "slug": "invoice-tax-bug",
+      "file": "invoice-tax-bug.md",
+      "title": "Invoice tax bug",
+      "description": "Find code, API, data, or read-model boundaries for invoice/timesheet tax mismatch bugs.",
+      "keywords": ["invoice", "tax", "gst", "0% tax", "timesheet tax", "taxable invoice"],
+      "commands": [
+        "tp dev guide --use-case \"0% tax timesheets on taxable invoice\" --json",
+        "tp accounting guide --use-case \"0% tax timesheets on taxable invoice\" --json",
+        "tp invoice get <invoiceId> --tenant <name> --env <env> --json",
+        "tp invoice timesheets <invoiceId> --tenant <name> --env <env> --json"
+      ],
+      "skills": ["timepro-dev-finance-diagnostics", "timepro-accounting-cli"]
+    },
+    {
+      "slug": "prepaid-invoice-state-bug",
+      "file": "prepaid-invoice-state-bug.md",
+      "title": "Prepaid invoice state bug",
+      "description": "Gather invoice, allocated timesheet, write-off, prepaid drawdown, and related date-window evidence for prepaid state bugs.",
+      "keywords": ["prepaid", "drawdown", "invoice state", "remaining credit", "writeoff", "allocated timesheets"],
+      "commands": [
+        "tp dev guide --use-case \"prepaid invoice state bug\" --json",
+        "tp invoice get <invoiceId> --tenant <name> --env <env> --json",
+        "tp invoice lines <invoiceId> --tenant <name> --env <env> --json",
+        "tp invoice timesheets <invoiceId> --tenant <name> --env <env> --json",
+        "tp invoice timesheets <invoiceId> --tenant <name> --env <env> --writeoff --json",
+        "tp prepaid summary <invoiceId> --tenant <name> --env <env> --json",
+        "tp query --from <yyyy-MM-dd> --to <yyyy-MM-dd> --tenant <name> --env <env> --client <clientId> --json"
+      ],
+      "skills": ["timepro-dev-finance-diagnostics", "timepro-accounting-cli"]
+    },
+    {
+      "slug": "client-rate-billing-status-bug",
+      "file": "client-rate-billing-status-bug.md",
+      "title": "Client rate and billing status bug",
+      "description": "Diagnose date-sensitive client rates, employee-specific rates, prepaid versus standard billing, unbilled rows, and outstanding status.",
+      "keywords": ["rate", "rates", "client rate", "billing", "unbilled", "prepaid", "outstanding"],
+      "commands": [
+        "tp dev guide --use-case \"client rate bug\" --json",
+        "tp rate get --client <clientId> --tenant <name> --env <env> --date <date> --json",
+        "tp rate list --client <clientId> --tenant <name> --env <env> --show-expired --json",
+        "tp unbilled list --client <clientId> --tenant <name> --env <env> --json"
+      ],
+      "skills": ["timepro-dev-finance-diagnostics", "timepro-accounting-cli"]
+    },
+    {
+      "slug": "appinsights-exception-correlation",
+      "file": "appinsights-exception-correlation.md",
+      "title": "AppInsights exception correlation",
+      "description": "Correlate a TimePro CLI-reproduced employee, date, invoice, or reference with recent Application Insights requests, traces, and exceptions.",
+      "keywords": ["appinsights", "application insights", "telemetry", "exception", "500", "trace", "correlation"],
+      "commands": [
+        "tp dev guide --use-case \"appinsights exception correlation\" --json",
+        "tp tenant info --tenant <name> --env <env> --json",
+        "tp ts get <date> --tenant <name> --env <env> --emp-id <empId> --json",
+        "tp invoice get <invoiceId> --tenant <name> --env <env> --json",
+        "az monitor app-insights query --app \"<appId>\" --analytics-query \"requests | where timestamp > ago(24h) | where tostring(customDimensions) has '<reference>' | project timestamp, name, resultCode, success, operation_Id | order by timestamp desc | take 50\"",
+        "az monitor app-insights query --app \"<appId>\" --analytics-query \"exceptions | where timestamp > ago(24h) | where tostring(customDimensions) has '<reference>' or outerMessage has '<reference>' | project timestamp, type, outerMessage, operation_Id | order by timestamp desc | take 50\""
+      ],
+      "skills": ["timepro-dev-diagnostics", "timepro-dev-timesheet-diagnostics", "timepro-dev-finance-diagnostics"]
+    },
+    {
+      "slug": "external-sync-bug",
+      "file": "external-sync-bug.md",
+      "title": "External sync bug",
+      "description": "Gather invoice, credit note, receipt, status/reference, and telemetry evidence for external accounting sync issues.",
+      "keywords": ["sync", "external sync", "xero", "receipt", "credit note", "status", "reference"],
+      "commands": [
+        "tp dev guide --use-case \"external sync bug\" --json",
+        "tp invoice get <invoiceId> --tenant <name> --env <env> --json",
+        "tp creditnote list --client <clientId> --tenant <name> --env <env> --json",
+        "tp receipt list --search <clientOrReference> --tenant <name> --env <env> --json"
+      ],
+      "skills": ["timepro-dev-finance-diagnostics", "timepro-accounting-cli"]
+    },
+    {
+      "slug": "environment-comparison",
+      "file": "environment-comparison.md",
+      "title": "Environment comparison",
+      "description": "Compare the same employee, date, client, invoice, or command across local, staging, and production profiles.",
+      "keywords": ["environment", "env", "compare", "staging", "prod", "production", "local", "consistency"],
+      "commands": [
+        "tp dev guide --use-case \"compare staging and prod\" --json",
+        "tp tenant info --tenant <name> --env prod --json",
+        "tp tenant info --tenant <name> --env staging --json"
+      ],
+      "skills": ["timepro-env-compare"]
+    }
+  ]
+}

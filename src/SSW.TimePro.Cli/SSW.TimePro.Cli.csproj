@@ -26,6 +26,9 @@
 
   <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="/" />
+    <EmbeddedResource Include="Features/Skills/Templates/*.md" />
+    <EmbeddedResource Include="../../guides/**/*.*"
+                      LogicalName="guides/%(RecursiveDir)%(Filename)%(Extension)" />
     <EmbeddedResource Include="../../release-notes/*.md"
                       Exclude="../../release-notes/latest.md"
                       LogicalName="release-notes/%(Filename)%(Extension)" />

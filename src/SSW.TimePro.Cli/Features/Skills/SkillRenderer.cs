@@ -4,8 +4,11 @@ namespace SSW.TimePro.Cli.Features.Skills;
 
 public sealed record PrefetchCommand(string Command, string Purpose);
 
+public sealed record SkillDefinition(string Name, int Version, string? FeatureKey);
+
 public sealed record SkillContentModel(
     string Name,
+    int Version,
     string Description,
     IReadOnlyList<string> AllowedTools,
     IReadOnlyList<PrefetchCommand> Prefetch,

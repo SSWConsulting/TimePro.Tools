@@ -87,7 +87,7 @@ public sealed class ReleaseNotesCatalog
 
         var lines = new List<string>
         {
-            "# What's new in tp",
+            "# What's new in TimePro.Tools",
             string.Empty,
             $"- Current version: `{currentVersion}`",
             $"- Previous version: `{(string.IsNullOrWhiteSpace(previousVersion) ? "none recorded" : previousVersion)}`",

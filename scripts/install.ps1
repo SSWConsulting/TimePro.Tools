@@ -13,8 +13,6 @@
 .EXAMPLE
   irm https://raw.githubusercontent.com/SSWConsulting/TimePro.Tools/main/scripts/install.ps1 | iex
 
-.NOTES
-  Set the GITHUB_TOKEN environment variable to raise the GitHub API rate limit (optional).
 #>
 [CmdletBinding()]
 param()
@@ -40,7 +38,6 @@ if (-not ((& dotnet --list-sdks) | Where-Object { $_ -match '^10\.' })) {
 # --- 2. Resolve the latest release's .nupkg asset ------------------------------
 Write-Info "Looking up the latest release of $Repo…"
 $headers = @{ 'User-Agent' = 'timepro-install'; 'Accept' = 'application/vnd.github+json' }
-if ($env:GITHUB_TOKEN) { $headers['Authorization'] = "Bearer $($env:GITHUB_TOKEN)" }
 
 $release = Invoke-RestMethod -Uri $ApiUrl -Headers $headers
 $asset = $release.assets | Where-Object { $_.name -like '*.nupkg' } | Select-Object -First 1
@@ -70,8 +67,19 @@ finally {
     Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
 }
 
-# --- 5. PATH check and next steps ----------------------------------------------
+# --- 5. Record installed version and check PATH --------------------------------
 $toolsDir = Join-Path (Join-Path $HOME '.dotnet') 'tools'
+$toolPathCandidates = @(
+    (Join-Path $toolsDir $ToolName),
+    (Join-Path $toolsDir "$ToolName.exe")
+)
+$toolPath = $toolPathCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+if ($toolPath) {
+    & $toolPath info --no-update-check *> $null
+} elseif (Get-Command $ToolName -ErrorAction SilentlyContinue) {
+    & $ToolName info --no-update-check *> $null
+}
+
 $onPath = ($env:PATH -split [System.IO.Path]::PathSeparator) -contains $toolsDir
 if (-not $onPath) {
     Write-Warn "The .NET tools directory is not on your PATH: $toolsDir"

@@ -60,6 +60,7 @@ section that is inert on every agent:
 Run these read-only commands before you start, and read their output:
 
 ```bash
+tp info --json              # CLI health, active tenant, user, and update status
 tp project recent --json    # ranked likely projects + repo paths (start here)
 tp ts get --week --json     # current week's entries + suggestions
 tp bk list --week --json    # CRM bookings for the week
@@ -95,6 +96,7 @@ optional run-these-first block, and final output path.
 The timesheets skill keeps:
 
 - `allowed-tools: Bash(tp *), Bash(sl *)`
+- `tp info --json` as the first health/update check, preferred over `tp --version`
 - `tp project recent --json` as the first project-selection step
 - the existing timesheet, booking, leave, repo mapping, scrum, and troubleshooting guidance
 - Northwind-only examples (`NWIND`, `1I776Q`, `Northwind/traders-app`)

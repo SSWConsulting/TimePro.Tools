@@ -5,6 +5,8 @@ Accountant-facing read-only access to SSW TimePro via the `tp` CLI. Pipe `--json
 ## Setup
 This skill reuses the tenant config already configured for `tp`. If `tp login` has been run, nothing else is needed. Otherwise run `tp login --tenant <id>` first.
 
+Start with `tp info --json`; prefer it over `tp --version` because it includes active tenant, user, and update status.
+
 The sibling skill `timepro-accounting` without the `-cli` suffix hits the same API via raw HTTP. Prefer this CLI skill when `tp` is installed.
 
 ## Before reconciling

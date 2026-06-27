@@ -7,7 +7,6 @@
 #   curl -fsSL https://raw.githubusercontent.com/SSWConsulting/TimePro.Tools/main/scripts/install.sh | bash
 #
 # Works on macOS and Linux. Requires the .NET 10 SDK and either curl or wget.
-# Set GITHUB_TOKEN to raise the GitHub API rate limit (optional).
 set -euo pipefail
 
 REPO="SSWConsulting/TimePro.Tools"
@@ -37,7 +36,6 @@ fi
 fetch() {  # fetch <url> -> stdout (GitHub API; sends auth + JSON Accept headers)
   if command -v curl >/dev/null 2>&1; then
     local args=(-fsSL -H "User-Agent: timepro-install" -H "Accept: application/vnd.github+json")
-    [ -n "${GITHUB_TOKEN:-}" ] && args+=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
     curl "${args[@]}" "$1"
   elif command -v wget >/dev/null 2>&1; then
     wget -qO- --header="Accept: application/vnd.github+json" "$1"
@@ -94,8 +92,14 @@ download "$asset_url" "$tmpdir/$filename"
 info "Installing ${PACKAGE_ID} ${version} as a global tool…"
 dotnet tool update --global --add-source "$tmpdir" --version "$version" "$PACKAGE_ID"
 
-# --- 6. PATH check and next steps ----------------------------------------------
+# --- 6. Record installed version and check PATH --------------------------------
 tools_dir="${HOME}/.dotnet/tools"
+if [ -x "${tools_dir}/${TOOL_COMMAND}" ]; then
+  "${tools_dir}/${TOOL_COMMAND}" info --no-update-check >/dev/null 2>&1 || true
+elif command -v "${TOOL_COMMAND}" >/dev/null 2>&1; then
+  "${TOOL_COMMAND}" info --no-update-check >/dev/null 2>&1 || true
+fi
+
 case ":${PATH}:" in
   *":${tools_dir}:"*) ;;
   *)

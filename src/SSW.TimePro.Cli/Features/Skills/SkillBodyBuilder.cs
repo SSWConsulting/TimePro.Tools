@@ -11,6 +11,7 @@ public static class SkillBodyBuilder
 {
     public static IReadOnlyList<PrefetchCommand> TimesheetsPrefetch { get; } =
     [
+        new("tp info --json", "CLI health, active tenant, user, and update status"),
         new("tp project recent --json", "ranked likely projects + repo paths (start here)"),
         new("tp ts get --week --json", "current week's entries + suggestions"),
         new("tp bk list --week --json", "CRM bookings for the week"),

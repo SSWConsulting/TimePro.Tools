@@ -50,10 +50,23 @@ This makes the `tp` command available system-wide. If `tp` isn't found
 afterwards, add the .NET tools directory (`~/.dotnet/tools`, or
 `%USERPROFILE%\.dotnet\tools` on Windows) to your `PATH` and open a new terminal.
 
-Check the installed version any time with:
+Check the installed version, active tenant/user, and update status any time with:
 
 ```bash
-tp --version
+tp info
+```
+
+Use `tp info --no-update-check` when you need a local-only check, or
+`tp info --detailed` for install history and config diagnostics.
+For scripts that need only the version string, `tp --version` prints just that.
+
+Check whether a newer GitHub Release is available:
+
+```bash
+tp --check-update
+tp --check-version
+tp --whats-new
+tp --whats-new --url
 ```
 
 To uninstall:
@@ -131,6 +144,10 @@ tp ts get 2026-03-12       # Specific date
 | `tp query` | Query timesheets across employees/projects (`--group-by`, `--json`) |
 | `tp scrum` | Generate a daily scrum email from timesheets + GitHub (`--smart`, `--project`, `-i`, `--copy --format rich\|markdown\|plain`, `--json`, custom templates) |
 | `tp feature [FEATURE] [enable\|disable]` | Enable optional feature packs (`accounting`, `developer`) for skills and MCP |
+| `tp info [--detailed] [--no-update-check]` | Show version, active tenant/user, and update status |
+| `tp --check-update` | Check the latest GitHub Release and print update instructions |
+| `tp --check-version` | Alias for `tp --check-update` |
+| `tp --whats-new [--url]` | Show embedded Markdown release notes, or print the latest known release-notes URL |
 | `tp skills create TARGET [--global]` | Generate unified agent skill files using enabled feature packs |
 | `tp user me` | Show current user info |
 | `tp user list [QUERY]` | List users and match names/emails to EmpIDs (`--emp-id`, `--email`, `--all`, `--json`) |
@@ -321,6 +338,7 @@ Generated skills use one format for Claude, Codex, and `.agents` installs:
 - No load-time command execution syntax is emitted.
 
 The generated skills include:
+- `tp info --json` as the first health/update check
 - Quick reference for all `tp` commands
 - Workflow for entering a full week of timesheets
 - `tp project recent --json` guidance to pick the likely project first

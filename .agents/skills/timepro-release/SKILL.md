@@ -30,6 +30,29 @@ ln -sfn <version>.md release-notes/latest.md
 Patch-zero versions such as `0.2.0` are developer builds. Do not create a release
 note for patch zero.
 
+## Style — keep it simple
+
+Release notes are read by `tp` users via `tp --whats-new`, not by maintainers. Most
+won't care about internals. Match the existing notes (see `release-notes/0.2.2.md`):
+
+- A `# <version>` heading, then a short bullet list — usually 1–4 bullets.
+- One bullet per user-visible change. Say **what changed and why it matters to the
+  user**, not how it was implemented (no file names, class names, or internal mechanics).
+- Plain language, present tense, one line where possible. Skip pure refactors, test-only
+  changes, and chores that have no user-facing effect.
+- If nothing user-facing changed, the release probably doesn't need notes.
+
+Good:
+
+```markdown
+# 0.2.3
+
+- `tp skills create --global` now installs skills where your agent looks for them
+  (e.g. `~/.claude`, `~/.codex`).
+```
+
+Avoid: "Refactored `CreateCommand` to extract `ResolveBaseDir` and updated unit tests."
+
 ## Required checks
 
 Run these before dispatching the non-dry-run release:

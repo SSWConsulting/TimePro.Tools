@@ -17,10 +17,29 @@ public class GlobalConfig
     public string DefaultLocation { get; set; } = "Office";
 
     /// <summary>
+    /// Optional feature packs that affect generated skills and MCP tool registration.
+    /// </summary>
+    [JsonPropertyName("features")]
+    public Dictionary<string, FeatureConfig> Features { get; set; } = [];
+
+    /// <summary>
     /// Settings used by <c>tp scrum</c> when generating daily scrum emails.
     /// </summary>
     [JsonPropertyName("scrum")]
     public ScrumConfig Scrum { get; set; } = new();
+}
+
+public class FeatureConfig
+{
+    [JsonPropertyName("enabled")]
+    public bool Enabled { get; set; }
+
+    /// <summary>
+    /// Latest feature content version used by this local config.
+    /// Used by future skill/MCP auto-upgrade checks.
+    /// </summary>
+    [JsonPropertyName("version")]
+    public int Version { get; set; }
 }
 
 /// <summary>

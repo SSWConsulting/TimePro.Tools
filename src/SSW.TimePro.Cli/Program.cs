@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
+using SSW.TimePro.Cli.Features.Accounting;
 using SSW.TimePro.Cli.Features.Auth;
 using SSW.TimePro.Cli.Features.Bookings;
+using SSW.TimePro.Cli.Features.FeatureFlags;
 using SSW.TimePro.Cli.Features.Tenants;
 using SSW.TimePro.Cli.Features.Timesheets;
 using SSW.TimePro.Cli.Infrastructure;
@@ -58,9 +60,16 @@ using ScrumCmd = SSW.TimePro.Cli.Features.Scrum.ScrumCommand;
 using UserMe = SSW.TimePro.Cli.Features.Users.MeCommand;
 using UserList = SSW.TimePro.Cli.Features.Users.ListCommand;
 using UserGet = SSW.TimePro.Cli.Features.Users.GetCommand;
+using AccountingGuide = SSW.TimePro.Cli.Features.Accounting.GuideCommand;
+using AccountingTaxMismatches = SSW.TimePro.Cli.Features.Accounting.TaxMismatchesCommand;
+using AccountingInvoiceDiagnostics = SSW.TimePro.Cli.Features.Accounting.InvoiceDiagnosticsCommand;
+using AccountingClientDiagnostics = SSW.TimePro.Cli.Features.Accounting.ClientDiagnosticsCommand;
 
 var configService = new ConfigService();
-var tenantOverride = TenantOverrideResolver.ExtractCommandLineOptions(args);
+var featureFlags = FeatureFlagCommandLineInterceptor.ExtractCommandLineOptions(args);
+FeatureFlagCommandLineInterceptor.EnableRequestedFeatures(configService, featureFlags.EnableFeatures);
+
+var tenantOverride = TenantOverrideResolver.ExtractCommandLineOptions(featureFlags.Args);
 if (tenantOverride.Error is not null)
 {
     OutputHelper.WriteError(tenantOverride.Error);
@@ -91,6 +100,7 @@ if (overrideTenant is not null)
 var services = new ServiceCollection();
 services.AddSingleton<IConfigService>(configService);
 services.AddSingleton<ITenantProvider, DefaultTenantProvider>();
+services.AddTransient<IAccountingDiagnosticsService, AccountingDiagnosticsService>();
 services.AddHttpClient<ITimeProApiClient, TimeProApiClient>();
 
 var registrar = new TypeRegistrar(services);
@@ -120,6 +130,9 @@ app.Configure(config =>
         tenant.AddCommand<TenantListCommand>("list")
             .WithDescription("List all stored tenants");
     });
+
+    config.AddCommand<FeatureCommand>("feature")
+        .WithDescription("Enable, disable, and inspect optional feature packs");
 
     // Helper to register all timesheet subcommands on a branch
     void RegisterTimesheetCommands(IConfigurator<CommandSettings> branch)
@@ -312,6 +325,30 @@ app.Configure(config =>
     });
 
     // ───── Accounting (read-only) ─────
+
+    void RegisterAccountingCommands(IConfigurator<CommandSettings> branch)
+    {
+        branch.AddCommand<AccountingGuide>("guide")
+            .WithDescription("Show accounting diagnostic questions and command choices");
+        branch.AddCommand<AccountingTaxMismatches>("tax-mismatches")
+            .WithDescription("Find timesheet tax mismatches against invoice tax");
+        branch.AddCommand<AccountingInvoiceDiagnostics>("invoice-diagnostics")
+            .WithDescription("Diagnose one invoice's totals and related records");
+        branch.AddCommand<AccountingClientDiagnostics>("client-diagnostics")
+            .WithDescription("Diagnose one client's accounting position");
+    }
+
+    config.AddBranch("accounting", accounting =>
+    {
+        accounting.SetDescription("Accounting diagnostics (read-only)");
+        RegisterAccountingCommands(accounting);
+    });
+
+    config.AddBranch("acct", accounting =>
+    {
+        accounting.SetDescription("Accounting diagnostics (alias)");
+        RegisterAccountingCommands(accounting);
+    });
 
     // Invoice (with alias `inv`)
     void RegisterInvoiceCommands(IConfigurator<CommandSettings> branch)

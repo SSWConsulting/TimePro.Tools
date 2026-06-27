@@ -64,8 +64,136 @@ public class SkillGenerationTests
         output.Should().Contain("jq '.rows | map({clientId, clientName, firstInvoiceDate, billableTimesheetValueExGst})'");
         output.Should().Contain("billableTimesheetValueExGst");
         output.Should().Contain("--output ./Reports/client-billable-work.csv");
+        output.Should().Contain("timepro-clients-50k-revenue.csv");
+        output.Should().Contain("invoicedExGstInWindow >= 50000");
+        output.Should().Contain("timepro-tax-mismatch.csv");
+        output.Should().Contain("tp accounting tax-mismatches --query NWIND --limit 500 --json");
+        output.Should().Contain("Tax rates may arrive as `0.1` or `10` for 10%");
+        output.Should().Contain("Excel, CSV, Xero MCP, bank-feed MCP, or another system");
+        output.Should().Contain("tp accounting invoice-diagnostics <invoiceId> --json");
+        output.Should().Contain("tp accounting client-diagnostics <clientId> --rates --json");
+        output.Should().Contain("MCP exposes the same report shapes");
+        output.Should().Contain("With another MCP such as Xero");
+        output.Should().Contain("tp feature accounting enable");
         output.Should().NotContain("## Run these first");
         output.Should().NotContain("!`");
+    }
+
+    [Fact]
+    public void TenantSetup_ProducesDefaultTenantMovementSkill()
+    {
+        var model = SkillModelBuilder.BuildTenantSetup();
+        var output = SkillRenderer.Render(model);
+
+        SkillRenderer.RelativePath(model.Name)
+            .Should().Be("skills/timepro-tenant-setup/SKILL.md");
+        output.Should().Contain("name: timepro-tenant-setup");
+        output.Should().Contain("allowed-tools: Bash(tp *)");
+        output.Should().Contain("tp tenant list    # configured tenant profiles; no secret values");
+        output.Should().Contain("tp tenant set ssw-staging");
+        output.Should().Contain("tp login --tenant ssw-staging --api-url https://api.staging-sswtimepro.com");
+        output.Should().Contain("tp tenant info --tenant northwind --env staging --json");
+        output.Should().Contain("tp ts get 2026-03-12 --tenant northwind --env staging --emp-id ALEX --json");
+        output.Should().Contain("`--tenant northwind --env staging` -> `northwind-staging`");
+        output.Should().Contain("Do not use `direnv exec .` just to access tenant config");
+        output.Should().NotContain("direnv exec . tp");
+    }
+
+    [Fact]
+    public void DeveloperDiagnostics_ProducesDevOnlyDiagnosticSkill()
+    {
+        var model = SkillModelBuilder.BuildDeveloperDiagnostics();
+        var output = SkillRenderer.Render(model);
+
+        SkillRenderer.RelativePath(model.Name)
+            .Should().Be("skills/timepro-dev-diagnostics/SKILL.md");
+        output.Should().Contain("name: timepro-dev-diagnostics");
+        output.Should().Contain("allowed-tools: Bash(tp *), Bash(az monitor app-insights query *), Bash(jq *)");
+        output.Should().Contain("Local and staging can be more experimental");
+        output.Should().Contain("Production defaults to read-only");
+        output.Should().Contain("Ask the user before any non-read-only production action");
+        output.Should().Contain("tp ts get 2026-03-12 --tenant northwind --env staging --emp-id ALEX --json");
+        output.Should().Contain("tp ts suggest 2026-03-12 --tenant northwind --env staging --json");
+        output.Should().Contain("tp bk list --date 2026-03-12 --tenant northwind --env staging --json");
+        output.Should().Contain("az monitor app-insights query");
+        output.Should().Contain("do not accept `--emp-id`");
+        output.Should().Contain("timepro-dev-timesheet-diagnostics");
+        output.Should().Contain("timepro-dev-finance-diagnostics");
+    }
+
+    [Fact]
+    public void DeveloperTimesheetDiagnostics_ProducesDevOnlyTimesheetDiagnosticSkill()
+    {
+        var model = SkillModelBuilder.BuildDeveloperTimesheetDiagnostics();
+        var output = SkillRenderer.Render(model);
+
+        SkillRenderer.RelativePath(model.Name)
+            .Should().Be("skills/timepro-dev-timesheet-diagnostics/SKILL.md");
+        output.Should().Contain("name: timepro-dev-timesheet-diagnostics");
+        output.Should().Contain("allowed-tools: Bash(tp *), Bash(az monitor app-insights query *), Bash(jq *)");
+        output.Should().Contain("Suggested timesheets missing");
+        output.Should().Contain("CRM bookings missing");
+        output.Should().Contain("tp bk list --date 2026-03-12 --tenant northwind --env staging --json");
+        output.Should().Contain("tp ts suggest 2026-03-12 --tenant northwind --env staging --json");
+        output.Should().Contain("tp ts get 2026-03-12 --tenant northwind --env staging --emp-id ALEX --json");
+        output.Should().Contain("Wrong tenant profile employee");
+        output.Should().Contain("CRM employee mismatch");
+        output.Should().Contain("Refresh succeeded but no suggested rows persisted");
+    }
+
+    [Fact]
+    public void DeveloperFinanceDiagnostics_ProducesDevOnlyFinanceDiagnosticSkill()
+    {
+        var model = SkillModelBuilder.BuildDeveloperFinanceDiagnostics();
+        var output = SkillRenderer.Render(model);
+
+        SkillRenderer.RelativePath(model.Name)
+            .Should().Be("skills/timepro-dev-finance-diagnostics/SKILL.md");
+        output.Should().Contain("name: timepro-dev-finance-diagnostics");
+        output.Should().Contain("allowed-tools: Bash(tp *), Bash(az monitor app-insights query *), Bash(jq *)");
+        output.Should().Contain("invoices, credit notes, receipts, client rates, prepaid drawdown, tax");
+        output.Should().Contain("tp invoice timesheets 142 --tenant northwind --env staging --json");
+        output.Should().Contain("tp creditnote list --client NWIND --tenant northwind --env staging --json");
+        output.Should().Contain("tp rate list --client NWIND --tenant northwind --env staging --emp-id ALEX --show-expired --json");
+        output.Should().Contain("tp accounting tax-mismatches --query NWIND --tenant northwind --env staging --json");
+        output.Should().Contain("External sync status/reference");
+        output.Should().Contain("Xero MCP");
+    }
+
+    [Fact]
+    public void EnvironmentCompare_ProducesDevOnlyComparisonSkill()
+    {
+        var model = SkillModelBuilder.BuildEnvironmentCompare();
+        var output = SkillRenderer.Render(model);
+
+        SkillRenderer.RelativePath(model.Name)
+            .Should().Be("skills/timepro-env-compare/SKILL.md");
+        output.Should().Contain("name: timepro-env-compare");
+        output.Should().Contain("allowed-tools: Bash(tp *), Bash(jq *), Bash(diff *)");
+        output.Should().Contain("Production defaults to read-only");
+        output.Should().Contain("Ask the user before any non-read-only production action");
+        output.Should().Contain("tp tenant info --tenant northwind --env prod --json > /tmp/tp-prod-tenant.json");
+        output.Should().Contain("tp tenant info --tenant northwind --env staging --json > /tmp/tp-staging-tenant.json");
+        output.Should().Contain("diff -u /tmp/tp-prod-tenant.sorted.json /tmp/tp-staging-tenant.sorted.json");
+        output.Should().Contain("tp user get ALEX --tenant northwind --env prod --json");
+        output.Should().Contain("# tp ts suggest 2026-03-12 --tenant northwind --env prod --json");
+    }
+
+    [Fact]
+    public void Templates_RenderWithoutUnresolvedPlaceholders()
+    {
+        var outputs = new[]
+        {
+            SkillRenderer.Render(Timesheets()),
+            SkillRenderer.Render(SkillModelBuilder.BuildTenantSetup()),
+            SkillRenderer.Render(SkillModelBuilder.BuildAccounting(tenant: null)),
+            SkillRenderer.Render(SkillModelBuilder.BuildDeveloperDiagnostics()),
+            SkillRenderer.Render(SkillModelBuilder.BuildDeveloperTimesheetDiagnostics()),
+            SkillRenderer.Render(SkillModelBuilder.BuildDeveloperFinanceDiagnostics()),
+            SkillRenderer.Render(SkillModelBuilder.BuildEnvironmentCompare()),
+        };
+
+        outputs.Should().OnlyContain(output => !output.Contains("{{", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -87,7 +215,7 @@ public class SkillGenerationTests
         output.Should().Contain("1I776Q");
         output.Should().Contain("Northwind Traders");
         output.Should().Contain("Northwind/traders-app");
-        output.Should().NotContain("SSW.TimePRO");
+        output.Should().NotContain("/Users/jk/Developer/clients");
         output.Should().NotContain("SSWConsulting");
         output.Should().NotContain("AskUserQuestion");
     }

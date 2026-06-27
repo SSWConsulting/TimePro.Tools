@@ -19,10 +19,6 @@ public class CreateCommand : Command<CreateCommand.Settings>
         [CommandOption("--global")]
         [Description("Write to global config instead of local project")]
         public bool Global { get; set; }
-
-        [CommandOption("--accounting")]
-        [Description("Also write the accountant CLI skill (timepro-accounting-cli) alongside the timesheets skill. Opt-in; does not touch any existing HTTP-based timepro-accounting skill.")]
-        public bool Accounting { get; set; }
     }
 
     public CreateCommand(IConfigService config) => _config = config;
@@ -54,12 +50,32 @@ public class CreateCommand : Command<CreateCommand.Settings>
         var timesheets = SkillModelBuilder.BuildTimesheets(
             tenant, global, repoMapping, ghRepoSlug);
         WriteSkill(baseDir, timesheets);
+        WriteSkill(baseDir, SkillModelBuilder.BuildTenantSetup());
 
-        if (settings.Accounting)
+        var accountingEnabled = global.IsFeatureEnabled(FeatureCatalog.Accounting);
+        var developerEnabled = global.IsFeatureEnabled(FeatureCatalog.Developer);
+        var touchedFeatureVersion = false;
+
+        if (accountingEnabled)
         {
             var accounting = SkillModelBuilder.BuildAccounting(tenant);
             WriteSkill(baseDir, accounting);
+            global.TouchFeatureVersion(FeatureCatalog.Accounting);
+            touchedFeatureVersion = true;
         }
+
+        if (developerEnabled)
+        {
+            WriteSkill(baseDir, SkillModelBuilder.BuildDeveloperDiagnostics());
+            WriteSkill(baseDir, SkillModelBuilder.BuildDeveloperTimesheetDiagnostics());
+            WriteSkill(baseDir, SkillModelBuilder.BuildDeveloperFinanceDiagnostics());
+            WriteSkill(baseDir, SkillModelBuilder.BuildEnvironmentCompare());
+            global.TouchFeatureVersion(FeatureCatalog.Developer);
+            touchedFeatureVersion = true;
+        }
+
+        if (touchedFeatureVersion)
+            _config.SaveGlobalConfig(global);
 
         return 0;
     }

@@ -34,7 +34,11 @@ public class ConfigServiceTests : IDisposable
         {
             ActiveTenant = "ssw",
             WfhDays = ["Monday", "Tuesday"],
-            DefaultLocation = "Home"
+            DefaultLocation = "Home",
+            Features =
+            {
+                [FeatureCatalog.Accounting] = new FeatureConfig { Enabled = true, Version = 1 }
+            }
         };
 
         _service.SaveGlobalConfig(config);
@@ -43,6 +47,8 @@ public class ConfigServiceTests : IDisposable
         loaded.ActiveTenant.Should().Be("ssw");
         loaded.WfhDays.Should().BeEquivalentTo(["Monday", "Tuesday"]);
         loaded.DefaultLocation.Should().Be("Home");
+        loaded.IsFeatureEnabled(FeatureCatalog.Accounting).Should().BeTrue();
+        loaded.Features[FeatureCatalog.Accounting].Version.Should().Be(1);
     }
 
     [Fact]

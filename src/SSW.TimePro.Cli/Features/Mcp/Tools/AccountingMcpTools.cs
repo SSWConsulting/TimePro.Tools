@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using ModelContextProtocol.Server;
+using SSW.TimePro.Cli.Features.Accounting;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using SSW.TimePro.Cli.Shared.Models;
@@ -20,6 +21,7 @@ public class AccountingMcpTools
 {
     private readonly ITimeProApiClient _api;
     private readonly IConfigService _config;
+    private readonly IAccountingDiagnosticsService _diagnostics;
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -28,10 +30,11 @@ public class AccountingMcpTools
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
     };
 
-    public AccountingMcpTools(ITimeProApiClient api, IConfigService config)
+    public AccountingMcpTools(ITimeProApiClient api, IConfigService config, IAccountingDiagnosticsService diagnostics)
     {
         _api = api;
         _config = config;
+        _diagnostics = diagnostics;
     }
 
     private bool NotAuthed(out string error)
@@ -58,6 +61,61 @@ public class AccountingMcpTools
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .Select(id => id.Trim())
             .ToList() ?? [];
+    }
+
+    // ─── Diagnostics / reconciliation guides ───────────────────────────────
+
+    [McpServerTool]
+    [Description("Return the recommended accounting MCP interview questions and workflow. Use first when the user has an Excel, CSV, Xero MCP, or another external source to reconcile against.")]
+    public string GetAccountingMcpUseCaseGuide(
+        [Description("Optional short user goal, e.g. 'reconcile March receipts to Xero'")] string? useCase = null)
+    {
+        return JsonSerializer.Serialize(_diagnostics.GetUseCaseGuide(useCase), JsonOpts);
+    }
+
+    [McpServerTool]
+    [Description("Find non-zero allocated timesheets that appear to have 0% tax while their associated invoice has non-zero tax. Read-only accounting anomaly report.")]
+    public async Task<string> FindTimesheetTaxMismatches(
+        [Description("Optional invoice search text, such as a client id or invoice id")] string? query = null,
+        [Description("Rows to skip in the invoice list")] int skip = 0,
+        [Description("Number of invoices to scan from the paged invoice list")] int limit = 500,
+        [Description("Invoice sort field, e.g. DateCreated or DateInvoiced")] string field = "DateCreated",
+        [Description("Invoice sort direction: asc or desc")] string dir = "desc",
+        CancellationToken ct = default)
+    {
+        if (NotAuthed(out var err)) return err;
+
+        var report = await _diagnostics.FindTimesheetTaxMismatchesAsync(query, skip, limit, field, dir, ct);
+        return JsonSerializer.Serialize(report, JsonOpts);
+    }
+
+    [McpServerTool]
+    [Description("Deep read-only invoice reconciliation diagnostic. Fetches invoice header, product lines, allocated/write-off timesheets, receipts, related credit notes, and returns totals, deltas, and warnings.")]
+    public async Task<string> DiagnoseInvoiceReconciliation(
+        [Description("Invoice ID")] int invoiceId,
+        [Description("Include written-off timesheets in the evidence pack")] bool includeWriteOffs = true,
+        CancellationToken ct = default)
+    {
+        if (NotAuthed(out var err)) return err;
+
+        var report = await _diagnostics.DiagnoseInvoiceReconciliationAsync(invoiceId, includeWriteOffs, ct);
+        if (report is null)
+            return $$"""{"error":"Invoice {{invoiceId}} not found."}""";
+
+        return JsonSerializer.Serialize(report, JsonOpts);
+    }
+
+    [McpServerTool]
+    [Description("Deep read-only client accounting position diagnostic. Summarizes invoices, unpaid invoices, aged debtors, unbilled timesheets, credit notes, and optional rates for a client.")]
+    public async Task<string> DiagnoseClientAccountingPosition(
+        [Description("Client ID")] string clientId,
+        [Description("Include configured rate table evidence")] bool includeRates = false,
+        CancellationToken ct = default)
+    {
+        if (NotAuthed(out var err)) return err;
+
+        var report = await _diagnostics.DiagnoseClientAccountingPositionAsync(clientId, includeRates, ct);
+        return JsonSerializer.Serialize(report, JsonOpts);
     }
 
     // ─── Invoices ───────────────────────────────────────────────────────────

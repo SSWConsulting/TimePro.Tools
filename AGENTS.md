@@ -32,6 +32,7 @@ Each command is a class inheriting `AsyncCommand<TSettings>` from Spectre.Consol
 - Global config: `~/.config/timepro-cli/config.json`
 - Per-tenant: `~/.config/timepro-cli/tenants/{id}.json`
 - Repo mappings: `~/.config/timepro-cli/repo-mappings.json`
+- Feature packs: `config.json` stores `features.<name>.enabled` and `features.<name>.version` so skills and MCP can share one persistent setting.
 
 ### Project Files
 - `Directory.Build.props` centralizes shared .NET defaults (`net10.0`, implicit usings, nullable)
@@ -51,6 +52,8 @@ Run `tp --help` for full command list. Key commands:
 - `tp leave cancel ID --reason "..." --yes` - Cancel leave
 - `tp leave list --filter UPCOMING --json` - List leave
 - `tp leave balance --emp-id JEK` - Leave-usage signal (days since last leave + hours taken in last 12 months)
+- `tp feature accounting enable` - Enable accounting skills and accounting MCP diagnostics
+- `tp feature developer enable` - Enable developer diagnostics/environment comparison skills and timesheet/finance bug diagnostic skills
 - `tp mcp [--tenant NAME]` - Start MCP server (optional per-session tenant binding)
 
 ### Leave-aware `tp ts check`
@@ -63,7 +66,11 @@ On the `--json` path, failures emit a structured envelope to **stdout** so stdou
 
 ### MCP tools + tenant resolution
 
-Slim MCP tool set on top of the groups above includes `check_week` (leave-aware weekly coverage, shares `WeekCoverageService`) and `get_leave_balance`. The MCP host resolves the tenant in this order: `--tenant NAME` → global active tenant → the sole tenant config if exactly one exists (single-tenant installs work without `tp tenant set`). `--tenant` does NOT change the global active tenant.
+Default MCP tools cover timesheets, lookups, and leave. Accounting MCP tools are feature-gated behind `tp feature accounting enable`. Before enabling or changing MCP features, ask the user what the MCP use-case is (timesheets, accounting reconciliation, Excel/CSV comparison, Xero/other MCP composition, diagnostics, etc.) so the tool surface can be adjusted deliberately.
+
+MCP tools must not be the only implementation of TimePro behavior. Any business logic or diagnostic report exposed through MCP must be implemented as a CLI command first, with MCP delegating to the same service/report shape. Developer diagnostics are expected to be CLI/skill workflows, not dedicated MCP guide tools.
+
+The MCP host resolves the tenant in this order: `--tenant NAME` → global active tenant → the sole tenant config if exactly one exists (single-tenant installs work without `tp tenant set`). `--tenant` does NOT change the global active tenant.
 
 ## Tenants
 

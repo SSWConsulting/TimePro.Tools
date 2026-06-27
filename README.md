@@ -18,7 +18,7 @@ SSW TimePro is a time tracking and invoicing system. This CLI makes it fast to v
 - **Location Defaults** — Set WFH days so location is auto-applied when creating timesheets
 - **CSV Export** — Export timesheets for tax reports or analysis
 - **Skills Generation** — Generate agent skill files with project context and `gh` commands
-- **MCP Server** — Exposes timesheet, lookup, leave, accounting, and prepaid tools for AI agents via stdio transport
+- **MCP Server** — Exposes timesheet, lookup, and leave tools by default, with optional accounting/prepaid diagnostics via feature packs
 
 ## Prerequisites
 
@@ -130,13 +130,15 @@ tp ts get 2026-03-12       # Specific date
 | `tp map remove PATH` | Remove a repo mapping |
 | `tp query` | Query timesheets across employees/projects (`--group-by`, `--json`) |
 | `tp scrum` | Generate a daily scrum email from timesheets + GitHub (`--smart`, `--project`, `-i`, `--copy --format rich\|markdown\|plain`, `--json`, custom templates) |
-| `tp skills create TARGET [--global] [--accounting]` | Generate unified agent skill files (`--accounting` for the accountant CLI skill) |
+| `tp feature [FEATURE] [enable\|disable]` | Enable optional feature packs (`accounting`, `developer`) for skills and MCP |
+| `tp skills create TARGET [--global]` | Generate unified agent skill files using enabled feature packs |
 | `tp user me` | Show current user info |
 | `tp user list [QUERY]` | List users and match names/emails to EmpIDs (`--emp-id`, `--email`, `--all`, `--json`) |
 | `tp user get EMP_ID` | Show focused user details by EmpID (`--json`) |
 | `tp blog list` | Latest blog posts (`--mine`, `--limit N`, `--all`) |
 | `tp mcp` | Start MCP server (stdio); `--tenant NAME` binds the session to a specific tenant config without changing the global active tenant |
 | **Accountant (read-only)** | See [`docs/accounting.md`](docs/accounting.md) |
+| `tp accounting guide / tax-mismatches / invoice-diagnostics / client-diagnostics` | Accounting diagnostic reports |
 | `tp invoice list / get / lines / timesheets / receipts` | Invoices |
 | `tp receipt list / get / outstanding` | Receipts + aged debtors |
 | `tp creditnote list --client ID` | Credit notes |
@@ -307,7 +309,9 @@ Generate agent skill files for a project:
 ```bash
 tp skills create .agents                         # Generate unified skills for this project
 tp skills create .claude --global                # Generate unified skills under global config
-tp skills create .agents --accounting            # Also generate the accounting CLI skill
+
+tp feature accounting enable                     # Include accounting skills + accounting MCP diagnostics
+tp feature developer enable                      # Include developer diagnostics/compare/bug skills
 ```
 
 Generated skills use one format for Claude, Codex, and `.agents` installs:
@@ -323,6 +327,16 @@ The generated skills include:
 - `gh` commands pre-filled with the repo slug for issue/PR lookup
 - Description format guide with PR and issue number examples
 - Project context (client, project, GitHub repo) auto-detected from repo mapping
+- Tenant setup (`timepro-tenant-setup`) for switching to `ssw-staging` or using per-command `--tenant` / `--env` overrides
+
+Optional generated skills:
+- Accounting (`timepro-accounting-cli`) when `tp feature accounting enable` is set
+- Developer diagnostics (`timepro-dev-diagnostics`) when `tp feature developer enable` is set
+- Developer timesheet diagnostics (`timepro-dev-timesheet-diagnostics`) when `tp feature developer enable` is set
+- Developer finance diagnostics (`timepro-dev-finance-diagnostics`) when `tp feature developer enable` is set
+- Environment comparison (`timepro-env-compare`) when `tp feature developer enable` is set
+
+Legacy shorthand flags `--accounting`, `--developer`, and `--dev` are intercepted before command parsing, enable the matching feature, and are then stripped from the command.
 
 ### Summary & Report
 
@@ -464,15 +478,29 @@ tp blog list --limit 5 --all   # Include former employees
 
 ## MCP Server
 
-The MCP server exposes TimePro data to AI agents via stdio transport. Current tool groups include:
+The MCP server exposes TimePro data to AI agents via stdio transport. Before enabling optional MCP feature packs, ask what the user's MCP use-case is so the tool surface can be adjusted to the workflow rather than exposed by habit.
+
+Current default tool groups include:
 
 | Group | Examples |
 |-------|----------|
 | Timesheets | Get, create, update, delete, suggested timesheets, accept suggestions, list iterations, `check_week` (leave-aware weekly coverage) |
 | Lookup | Search clients, list projects, get client rate, CRM bookings, location and repo mapping |
 | Leave | List EasyLeave entries (optionally filtered by `empId`), `get_leave_balance` (days since last leave + 12-month hours) |
-| Accounting | Invoices, receipts, credit notes, products/SKUs, client rates, unbilled time, recurring invoices |
-| Reporting | Timesheet queries, current user, categories, billable types, locations, project summaries, prepaid drawdown status |
+
+Optional accounting MCP tools are enabled with:
+
+```bash
+tp feature accounting enable
+```
+
+That adds invoices, receipts, credit notes, products/SKUs, client rates, unbilled time, timesheet queries, current user/reference-code reporting, recurring invoices, prepaid drawdown status, and deeper read-only accounting diagnostics such as `GetAccountingMcpUseCaseGuide`, `FindTimesheetTaxMismatches`, `DiagnoseInvoiceReconciliation`, and `DiagnoseClientAccountingPosition`. Those diagnostics share their report logic with the CLI commands under `tp accounting ...` and are designed to compose with Excel/CSV analysis, Xero MCP, bank-feed MCP, or another external system.
+
+Developer diagnostics are CLI/skill workflows. Enable the generated developer skills with:
+
+```bash
+tp feature developer enable
+```
 
 **Tenant resolution:** the MCP server uses the active tenant (`tp tenant set`). Pass `--tenant NAME` in `args` to pin a session to a specific tenant config without changing the global active tenant. If no active tenant is set and exactly one tenant config exists, the server defaults to that single tenant — so a single-tenant install works out of the box.
 

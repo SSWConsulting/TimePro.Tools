@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="/" />
+    <EmbeddedResource Include="Features/Skills/Templates/*.md" />
   </ItemGroup>
 
   <ItemGroup>

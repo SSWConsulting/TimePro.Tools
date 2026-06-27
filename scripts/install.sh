@@ -94,8 +94,14 @@ download "$asset_url" "$tmpdir/$filename"
 info "Installing ${PACKAGE_ID} ${version} as a global tool…"
 dotnet tool update --global --add-source "$tmpdir" --version "$version" "$PACKAGE_ID"
 
-# --- 6. PATH check and next steps ----------------------------------------------
+# --- 6. Record installed version and check PATH --------------------------------
 tools_dir="${HOME}/.dotnet/tools"
+if [ -x "${tools_dir}/${TOOL_COMMAND}" ]; then
+  "${tools_dir}/${TOOL_COMMAND}" info --no-update-check >/dev/null 2>&1 || true
+elif command -v "${TOOL_COMMAND}" >/dev/null 2>&1; then
+  "${TOOL_COMMAND}" info --no-update-check >/dev/null 2>&1 || true
+fi
+
 case ":${PATH}:" in
   *":${tools_dir}:"*) ;;
   *)

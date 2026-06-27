@@ -55,7 +55,10 @@ coverage/
 .envrc.*
 
 ## Generated agent skills
-.agents/
+.agents/*
+!.agents/skills/
+!.agents/skills/timepro-release/
+!.agents/skills/timepro-release/SKILL.md
 
 ## Generated reports
 Reports/

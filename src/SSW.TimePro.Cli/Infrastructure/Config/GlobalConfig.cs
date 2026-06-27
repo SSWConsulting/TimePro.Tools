@@ -17,10 +17,35 @@ public class GlobalConfig
     public string DefaultLocation { get; set; } = "Office";
 
     /// <summary>
+    /// Tracks the installed CLI version so release notes can show what changed
+    /// since the user's previous install.
+    /// </summary>
+    [JsonPropertyName("version")]
+    public InstalledVersionConfig Version { get; set; } = new();
+
+    /// <summary>
     /// Settings used by <c>tp scrum</c> when generating daily scrum emails.
     /// </summary>
     [JsonPropertyName("scrum")]
     public ScrumConfig Scrum { get; set; } = new();
+}
+
+public class InstalledVersionConfig
+{
+    [JsonPropertyName("version")]
+    public string? Version { get; set; }
+
+    [JsonPropertyName("previousVersion")]
+    public string? PreviousVersion { get; set; }
+
+    [JsonPropertyName("installedAt")]
+    public DateTimeOffset? InstalledAt { get; set; }
+
+    [JsonPropertyName("lastUpdateCheckedAt")]
+    public DateTimeOffset? LastUpdateCheckedAt { get; set; }
+
+    [JsonPropertyName("lastUpdateCheckedVersion")]
+    public string? LastUpdateCheckedVersion { get; set; }
 }
 
 /// <summary>

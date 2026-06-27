@@ -70,8 +70,19 @@ finally {
     Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
 }
 
-# --- 5. PATH check and next steps ----------------------------------------------
+# --- 5. Record installed version and check PATH --------------------------------
 $toolsDir = Join-Path (Join-Path $HOME '.dotnet') 'tools'
+$toolPathCandidates = @(
+    (Join-Path $toolsDir $ToolName),
+    (Join-Path $toolsDir "$ToolName.exe")
+)
+$toolPath = $toolPathCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+if ($toolPath) {
+    & $toolPath info --no-update-check *> $null
+} elseif (Get-Command $ToolName -ErrorAction SilentlyContinue) {
+    & $ToolName info --no-update-check *> $null
+}
+
 $onPath = ($env:PATH -split [System.IO.Path]::PathSeparator) -contains $toolsDir
 if (-not $onPath) {
     Write-Warn "The .NET tools directory is not on your PATH: $toolsDir"

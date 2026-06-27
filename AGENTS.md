@@ -52,7 +52,7 @@ Run `tp --help` for full command list. Key commands:
 - `tp leave cancel ID --reason "..." --yes` - Cancel leave
 - `tp leave list --filter UPCOMING --json` - List leave
 - `tp leave balance --emp-id JEK` - Leave-usage signal (days since last leave + hours taken in last 12 months)
-- `tp feature accounting enable` - Enable accounting skills and accounting MCP diagnostics
+- `tp feature accounting enable` - Enable accounting skills and accounting MCP tools
 - `tp feature developer enable` - Enable developer diagnostics/environment comparison skills and timesheet/finance bug diagnostic skills
 - `tp mcp [--tenant NAME]` - Start MCP server (optional per-session tenant binding)
 

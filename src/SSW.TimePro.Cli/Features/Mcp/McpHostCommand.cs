@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
-using SSW.TimePro.Cli.Features.Accounting;
 using SSW.TimePro.Cli.Features.Mcp.Tools;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
@@ -36,7 +35,6 @@ public class McpHostCommand : AsyncCommand<McpHostCommand.Settings>
 
         builder.Services.AddSingleton<IConfigService, ConfigService>();
         builder.Services.AddSingleton<ITenantProvider, DefaultTenantProvider>();
-        builder.Services.AddTransient<IAccountingDiagnosticsService, AccountingDiagnosticsService>();
         builder.Services.AddHttpClient<ITimeProApiClient, TimeProApiClient>();
 
         var mcpServer = builder.Services

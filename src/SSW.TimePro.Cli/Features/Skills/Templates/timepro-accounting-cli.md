@@ -119,14 +119,12 @@ If product-only invoices are in scope, page `tp invoice list` and group by `clie
 Use this when checking for timesheet tax drift after invoice allocation.
 
 ```bash
-tp accounting tax-mismatches --query NWIND --limit 500 --json \
-  | jq -r '
-      .rows
-      | (["invoiceId","clientId","invoiceDate","invoiceTaxPct","invoiceSalesTaxAmt","timeId","empId","projectId","categoryId","billableId","timesheetDate","amountExGst","timesheetTaxPct","timesheetSalesTaxAmt"],
-         (.[] | [.invoiceId,.clientId,.invoiceDate,.invoiceTaxPct,.invoiceSalesTaxAmt,.timeId,.empId,.projectId,.categoryId,.billableId,.timesheetDate,.amountExGst,.timesheetTaxPct,.timesheetSalesTaxAmt]))
-      | @csv' \
-  > /tmp/timepro-tax-mismatch.csv
+tp accounting guide --use-case "0% tax timesheets on taxable invoice" --json
 ```
+
+If the guide matches the investigation, use the `timepro-accounting-tax-mismatch`
+skill. It composes read-only `tp invoice ...` evidence into
+`/tmp/timepro-tax-mismatch.csv` without requiring a dedicated diagnostic command.
 
 ### Aged debtors for one client
 ```bash
@@ -208,15 +206,16 @@ When another MCP is available, use it for the external side and keep TimePro evi
 3. Compare normalized records: ids/references, dates, ex-GST, GST, inc-GST, paid, outstanding, and status.
 4. Report unmatched records in both directions, not just amount deltas.
 
-### Accounting diagnostics
-Prefer the composed CLI diagnostics before manually stitching primitives:
+### Guide-backed diagnostics
+Prefer the accounting guide before manually stitching primitives:
 
 - `tp accounting guide --json` asks the right setup questions for Excel, CSV, Xero MCP, bank MCP, or another external source.
-- `tp accounting tax-mismatches --json` reports non-zero allocated timesheets that appear to have 0% tax while their invoice has non-zero tax.
-- `tp accounting invoice-diagnostics <invoiceId> --json` returns invoice header, lines, timesheets, write-offs, receipts, related credit notes, calculated totals, deltas, and warnings.
-- `tp accounting client-diagnostics <clientId> --rates --json` returns client-level invoices, unpaid invoices, aged debtors, unbilled time, credit notes, optional rates, deltas, and warnings.
+- `timepro-accounting-tax-mismatch` composes invoice and allocated-timesheet evidence for 0% tax drift checks.
+- `timepro-accounting-invoice-diagnostics` assembles an invoice evidence pack from header, lines, allocated/write-off timesheets, receipts, and credit notes.
+- `timepro-accounting-client-diagnostics` assembles client-level invoice, debt, unbilled, credit note, rate, and external comparison evidence.
 
-If using `tp mcp` with accounting enabled, MCP exposes the same report shapes through matching diagnostic tools.
+If using `tp mcp` with accounting enabled, MCP exposes primitive read-only tools.
+Use skills or guide-backed markdown to compose multi-step diagnostics locally.
 
 Enable this MCP surface once with:
 

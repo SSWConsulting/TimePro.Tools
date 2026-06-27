@@ -38,6 +38,17 @@ public class ConfigServiceTests : IDisposable
             Features =
             {
                 [FeatureCatalog.Accounting] = new FeatureConfig { Enabled = true, Version = 1 }
+            },
+            Skills =
+            {
+                ["timepro-timesheets"] = new SkillInstallConfig
+                {
+                    Version = 1,
+                    IgnoredVersion = 2,
+                    InstalledAt = DateTimeOffset.Parse("2026-06-27T00:00:00Z"),
+                    Path = "/tmp/.agents/skills/timepro-timesheets/SKILL.md",
+                    Global = false
+                }
             }
         };
 
@@ -49,6 +60,11 @@ public class ConfigServiceTests : IDisposable
         loaded.DefaultLocation.Should().Be("Home");
         loaded.IsFeatureEnabled(FeatureCatalog.Accounting).Should().BeTrue();
         loaded.Features[FeatureCatalog.Accounting].Version.Should().Be(1);
+        loaded.Skills["timepro-timesheets"].Version.Should().Be(1);
+        loaded.Skills["timepro-timesheets"].IgnoredVersion.Should().Be(2);
+        loaded.Skills["timepro-timesheets"].InstalledAt.Should().Be(DateTimeOffset.Parse("2026-06-27T00:00:00Z"));
+        loaded.Skills["timepro-timesheets"].Path.Should().Be("/tmp/.agents/skills/timepro-timesheets/SKILL.md");
+        loaded.Skills["timepro-timesheets"].Global.Should().BeFalse();
     }
 
     [Fact]

@@ -155,7 +155,8 @@ tp ts get 2026-03-12       # Specific date
 | `tp blog list` | Latest blog posts (`--mine`, `--limit N`, `--all`) |
 | `tp mcp` | Start MCP server (stdio); `--tenant NAME` binds the session to a specific tenant config without changing the global active tenant |
 | **Accountant (read-only)** | See [`docs/accounting.md`](docs/accounting.md) |
-| `tp accounting guide / tax-mismatches / invoice-diagnostics / client-diagnostics` | Accounting diagnostic reports |
+| `tp accounting guide` | Accounting AI guide for choosing read-only evidence packs and specialized skills |
+| `tp dev guide` | Developer AI guide for choosing bug reproduction and verification evidence |
 | `tp invoice list / get / lines / timesheets / receipts` | Invoices |
 | `tp receipt list / get / outstanding` | Receipts + aged debtors |
 | `tp creditnote list --client ID` | Credit notes |
@@ -512,7 +513,7 @@ Optional accounting MCP tools are enabled with:
 tp feature accounting enable
 ```
 
-That adds invoices, receipts, credit notes, products/SKUs, client rates, unbilled time, timesheet queries, current user/reference-code reporting, recurring invoices, prepaid drawdown status, and deeper read-only accounting diagnostics such as `GetAccountingMcpUseCaseGuide`, `FindTimesheetTaxMismatches`, `DiagnoseInvoiceReconciliation`, and `DiagnoseClientAccountingPosition`. Those diagnostics share their report logic with the CLI commands under `tp accounting ...` and are designed to compose with Excel/CSV analysis, Xero MCP, bank-feed MCP, or another external system.
+That adds invoices, receipts, credit notes, products/SKUs, client rates, unbilled time, timesheet queries, current user/reference-code reporting, recurring invoices, and prepaid drawdown status. More complex accounting diagnostics live in guide-backed Markdown skills so teams can extend the collection without adding a dedicated command for every report.
 
 Developer diagnostics are CLI/skill workflows. Enable the generated developer skills with:
 

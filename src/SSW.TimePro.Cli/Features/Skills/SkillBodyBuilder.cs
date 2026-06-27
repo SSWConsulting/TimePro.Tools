@@ -60,6 +60,15 @@ public static class SkillBodyBuilder
                 ["CURRENT_CONFIGURATION"] = BuildAccountingCurrentConfiguration(tenant),
             });
 
+    public static string BuildAccountingTaxMismatchBody() =>
+        SkillTemplateRenderer.Render("timepro-accounting-tax-mismatch.md");
+
+    public static string BuildAccountingInvoiceDiagnosticsBody() =>
+        SkillTemplateRenderer.Render("timepro-accounting-invoice-diagnostics.md");
+
+    public static string BuildAccountingClientDiagnosticsBody() =>
+        SkillTemplateRenderer.Render("timepro-accounting-client-diagnostics.md");
+
     public static string BuildTenantSetupBody() =>
         SkillTemplateRenderer.Render("timepro-tenant-setup.md");
 

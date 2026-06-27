@@ -23,6 +23,13 @@ public class GlobalConfig
     public Dictionary<string, FeatureConfig> Features { get; set; } = [];
 
     /// <summary>
+    /// Generated skill versions installed by <c>tp skills create</c>.
+    /// Used by <c>tp info</c> to flag locally stale skills.
+    /// </summary>
+    [JsonPropertyName("skills")]
+    public Dictionary<string, SkillInstallConfig> Skills { get; set; } = [];
+
+    /// <summary>
     /// Tracks the installed CLI version so release notes can show what changed
     /// since the user's previous install.
     /// </summary>
@@ -47,6 +54,24 @@ public class FeatureConfig
     /// </summary>
     [JsonPropertyName("version")]
     public int Version { get; set; }
+}
+
+public class SkillInstallConfig
+{
+    [JsonPropertyName("version")]
+    public int Version { get; set; }
+
+    [JsonPropertyName("ignoredVersion")]
+    public int? IgnoredVersion { get; set; }
+
+    [JsonPropertyName("installedAt")]
+    public DateTimeOffset? InstalledAt { get; set; }
+
+    [JsonPropertyName("path")]
+    public string? Path { get; set; }
+
+    [JsonPropertyName("global")]
+    public bool Global { get; set; }
 }
 
 public class InstalledVersionConfig

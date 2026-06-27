@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using SSW.TimePro.Cli.Features.Skills;
 using SSW.TimePro.Cli.Features.Updates;
 using SSW.TimePro.Cli.Infrastructure;
 using SSW.TimePro.Cli.Infrastructure.Config;
@@ -42,6 +43,7 @@ public class InfoCommand : AsyncCommand<InfoCommand.Settings>
         var activeTenant = _config.LoadActiveTenantConfig();
         var tenants = _config.ListTenants();
         var repoMappings = _config.LoadRepoMappings();
+        var skillStatuses = SkillVersionService.GetStatuses(global);
 
         UpdateCheckResult? updateCheck = null;
         if (!settings.NoUpdateCheck)
@@ -69,7 +71,8 @@ public class InfoCommand : AsyncCommand<InfoCommand.Settings>
                 DefaultLocation: global.DefaultLocation,
                 WfhDays: global.WfhDays),
             Tenant: activeTenant?.ToSummary(),
-            Update: BuildUpdateSummary(updateCheck, global.Version));
+            Update: BuildUpdateSummary(updateCheck, global.Version),
+            Skills: SkillInfoSummary.From(skillStatuses));
 
         if (settings.Json)
         {
@@ -145,6 +148,7 @@ public class InfoCommand : AsyncCommand<InfoCommand.Settings>
         table.AddRow("[bold]Last checked[/]", Markup.Escape(FormatLastCheck(info)));
         table.AddRow("[bold]Tenant[/]", Markup.Escape(info.Config.ActiveTenant ?? "none"));
         table.AddRow("[bold]Employee[/]", Markup.Escape(FormatEmployee(info.Tenant)));
+        table.AddRow("[bold]Skills[/]", Markup.Escape(FormatSkillStatus(info.Skills)));
 
         if (detailed)
         {
@@ -162,6 +166,16 @@ public class InfoCommand : AsyncCommand<InfoCommand.Settings>
             table.AddRow("[bold]WFH days[/]", Markup.Escape(info.Config.WfhDays.Count == 0
                 ? "none"
                 : string.Join(", ", info.Config.WfhDays)));
+
+            foreach (var skill in info.Skills.Items)
+            {
+                var state = skill.IsOutOfDate
+                    ? $"out of date ({skill.InstalledVersion} -> {skill.LatestVersion})"
+                    : skill.IsIgnored
+                        ? $"ignored ({skill.InstalledVersion}; latest {skill.LatestVersion})"
+                        : $"current ({skill.InstalledVersion})";
+                table.AddRow($"[bold]Skill {Markup.Escape(skill.Name)}[/]", Markup.Escape(state));
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(info.Update.ReleaseUrl) && (detailed || info.Update.UpdateAvailable))
@@ -182,6 +196,31 @@ public class InfoCommand : AsyncCommand<InfoCommand.Settings>
             AnsiConsole.MarkupLine($"macOS/Linux: [grey]{Markup.Escape(info.Update.InstallMacLinux!)}[/]");
             AnsiConsole.MarkupLine($"Windows:     [grey]{Markup.Escape(info.Update.InstallWindows!)}[/]");
         }
+
+        if (info.Skills.OutOfDateCount > 0)
+        {
+            var first = info.Skills.Items.First(s => s.IsOutOfDate);
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine("[yellow]Generated skills are out of date.[/]");
+            AnsiConsole.MarkupLine($"[grey]Update:[/] {Markup.Escape(UpdateCommandFor(first))}");
+            AnsiConsole.MarkupLine($"[grey]Ignore current version:[/] tp skills ignore-version {Markup.Escape(first.Name)}");
+        }
+    }
+
+    private static string UpdateCommandFor(SkillVersionStatus skill)
+    {
+        if (skill.Global)
+            return "tp skills create . --global";
+
+        if (!string.IsNullOrWhiteSpace(skill.Path))
+        {
+            var marker = $"{Path.DirectorySeparatorChar}skills{Path.DirectorySeparatorChar}";
+            var index = skill.Path.IndexOf(marker, StringComparison.Ordinal);
+            if (index > 0)
+                return $"tp skills create {skill.Path[..index]}";
+        }
+
+        return "tp skills create .agents";
     }
 
     private static string FormatDate(DateTimeOffset? value) =>
@@ -207,6 +246,19 @@ public class InfoCommand : AsyncCommand<InfoCommand.Settings>
         var empId = string.IsNullOrWhiteSpace(tenant.EmployeeId) ? "unknown" : tenant.EmployeeId;
         return $"{name} ({empId})";
     }
+
+    private static string FormatSkillStatus(SkillInfoSummary skills)
+    {
+        if (skills.InstalledCount == 0)
+            return "not installed/tracked";
+
+        if (skills.OutOfDateCount > 0)
+            return $"{skills.OutOfDateCount} out of date";
+
+        return skills.IgnoredCount > 0
+            ? $"up-to-date ({skills.IgnoredCount} ignored)"
+            : "up-to-date";
+    }
 }
 
 public sealed record CliInfoSummary(
@@ -215,14 +267,16 @@ public sealed record CliInfoSummary(
     InstalledVersionSummary InstalledVersion,
     ConfigSummary Config,
     TenantConfigSummary? Tenant,
-    UpdateSummary Update);
+    UpdateSummary Update,
+    SkillInfoSummary Skills);
 
 public sealed record CliInfoBriefSummary(
     string Version,
     string? ActiveTenant,
     string? EmployeeId,
     string? EmployeeName,
-    UpdateSummary Update)
+    UpdateSummary Update,
+    SkillInfoSummary Skills)
 {
     public static CliInfoBriefSummary From(CliInfoSummary summary) =>
         new(
@@ -230,7 +284,8 @@ public sealed record CliInfoBriefSummary(
             ActiveTenant: summary.Config.ActiveTenant,
             EmployeeId: summary.Tenant?.EmployeeId,
             EmployeeName: summary.Tenant?.EmployeeName,
-            Update: summary.Update);
+            Update: summary.Update,
+            Skills: summary.Skills);
 }
 
 public sealed record InstalledVersionSummary(
@@ -257,3 +312,17 @@ public sealed record UpdateSummary(
     string? ErrorMessage,
     string? InstallMacLinux,
     string? InstallWindows);
+
+public sealed record SkillInfoSummary(
+    int InstalledCount,
+    int OutOfDateCount,
+    int IgnoredCount,
+    IReadOnlyList<SkillVersionStatus> Items)
+{
+    public static SkillInfoSummary From(IReadOnlyList<SkillVersionStatus> statuses) =>
+        new(
+            statuses.Count,
+            statuses.Count(s => s.IsOutOfDate),
+            statuses.Count(s => s.IsIgnored),
+            statuses);
+}

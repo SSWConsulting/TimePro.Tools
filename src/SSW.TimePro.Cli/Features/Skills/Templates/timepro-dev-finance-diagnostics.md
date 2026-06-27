@@ -22,6 +22,8 @@ Ask for the smallest anchor first:
 For a scenario like non-zero timesheets with 0% tax on an invoice that has non-zero tax, gather invoice and line evidence first:
 
 ```bash
+tp dev guide --use-case "0% tax timesheets on taxable invoice" --json
+tp accounting guide --use-case "0% tax timesheets on taxable invoice" --json
 tp invoice list --query NWIND --tenant northwind --env staging --limit 20 --json
 tp invoice get 142 --tenant northwind --env staging --json
 tp invoice lines 142 --tenant northwind --env staging --json
@@ -46,11 +48,11 @@ Bug-focused checks:
 - Did rate lookup use the active rate for the timesheet date, not a future or expired rate?
 - Do invoice header totals agree with line items and allocated timesheets?
 
-For a deeper read-only evidence pack, use the CLI diagnostics:
+For a deeper read-only evidence pack, use the guide-backed accounting skills:
 
 ```bash
-tp accounting tax-mismatches --query NWIND --tenant northwind --env staging --json
-tp accounting invoice-diagnostics 142 --tenant northwind --env staging --json
+# Use timepro-accounting-tax-mismatch for the tax scan.
+# Use timepro-accounting-invoice-diagnostics for one invoice evidence pack.
 ```
 
 ## Client rate and billing status bugs
@@ -119,7 +121,7 @@ Verify the changed boundary, then rerun the exact diagnostic commands:
 tp invoice get 142 --tenant northwind --env staging --json
 tp invoice timesheets 142 --tenant northwind --env staging --json
 tp rate get --client NWIND --tenant northwind --env staging --date 2026-03-12 --json
-tp accounting invoice-diagnostics 142 --tenant northwind --env staging --json
+tp accounting guide --use-case "verify invoice tax fix" --json
 ```
 
 Report whether the issue is data, CLI request shaping, API calculation, read-model mapping, external sync, or environment configuration. Include exact commands and keep accounting conclusions separate from bug evidence.

@@ -203,12 +203,13 @@ If product-only invoices are in scope, page `tp invoice list` and group by
 Use this when checking for timesheet tax drift after invoice allocation.
 
 ```bash
-tp accounting tax-mismatches --query NWIND --json
+tp accounting guide --use-case "0% tax timesheets on taxable invoice" --json
 ```
 
-Use `--skip`, `--limit`, `--field`, and `--dir` to control the invoice scan
-window. The MCP tool `FindTimesheetTaxMismatches` returns the same report shape
-and delegates to the same diagnostics service.
+If the guide matches the investigation, use the generated
+`timepro-accounting-tax-mismatch` skill. It composes read-only invoice and
+allocated-timesheet commands into a CSV report without requiring a dedicated
+diagnostic command.
 
 ### 9. Credit-note audit
 
@@ -252,9 +253,6 @@ drawdown, aged debtors, invoice diagnosis, or another workflow.
 
 Accounting tool names (complete list):
 
-- Diagnostics: `GetAccountingMcpUseCaseGuide`,
-  `FindTimesheetTaxMismatches`, `DiagnoseInvoiceReconciliation`,
-  `DiagnoseClientAccountingPosition`
 - Invoices: `ListInvoices`, `GetInvoice`, `GetInvoiceLines`,
   `GetInvoiceTimesheets`, `GetInvoiceReceipts`, `GetInvoicesByClient`,
   `GetUnpaidInvoicesByClient`
@@ -271,12 +269,12 @@ Accounting tool names (complete list):
   `ListBillableTypes`, `ListLocations`, `GetProjectsSummary`
 
 MCP tools should mirror CLI behavior. If a report contains business logic,
-prefer the matching CLI command first:
+prefer a CLI command or guide-backed skill first:
 
 - `tp accounting guide --json`
-- `tp accounting tax-mismatches --json`
-- `tp accounting invoice-diagnostics <invoiceId> --json`
-- `tp accounting client-diagnostics <clientId> --rates --json`
+- `timepro-accounting-tax-mismatch`
+- `timepro-accounting-invoice-diagnostics`
+- `timepro-accounting-client-diagnostics`
 
 The timesheet-side tools (`GetTimesheets`, `SearchClients`,
 `GetProjectsForClient`, `GetClientRate`, `GetCrmBookings`, `ListIterations`,

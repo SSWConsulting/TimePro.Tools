@@ -47,40 +47,46 @@ public class CreateCommand : Command<CreateCommand.Settings>
             ghRepoSlug = ghPath.TrimEnd('/');
         }
 
+        var installedAt = DateTimeOffset.UtcNow;
+
+        void WriteAndTrack(SkillContentModel model)
+        {
+            var outputFile = WriteSkill(baseDir, model);
+            SkillVersionService.RecordInstall(global, model, outputFile, settings.Global, installedAt);
+        }
+
         var timesheets = SkillModelBuilder.BuildTimesheets(
             tenant, global, repoMapping, ghRepoSlug);
-        WriteSkill(baseDir, timesheets);
-        WriteSkill(baseDir, SkillModelBuilder.BuildTenantSetup());
+        WriteAndTrack(timesheets);
+        WriteAndTrack(SkillModelBuilder.BuildTenantSetup());
 
         var accountingEnabled = global.IsFeatureEnabled(FeatureCatalog.Accounting);
         var developerEnabled = global.IsFeatureEnabled(FeatureCatalog.Developer);
-        var touchedFeatureVersion = false;
 
         if (accountingEnabled)
         {
-            var accounting = SkillModelBuilder.BuildAccounting(tenant);
-            WriteSkill(baseDir, accounting);
+            WriteAndTrack(SkillModelBuilder.BuildAccounting(tenant));
+            WriteAndTrack(SkillModelBuilder.BuildAccountingTaxMismatch());
+            WriteAndTrack(SkillModelBuilder.BuildAccountingInvoiceDiagnostics());
+            WriteAndTrack(SkillModelBuilder.BuildAccountingClientDiagnostics());
             global.TouchFeatureVersion(FeatureCatalog.Accounting);
-            touchedFeatureVersion = true;
         }
 
         if (developerEnabled)
         {
-            WriteSkill(baseDir, SkillModelBuilder.BuildDeveloperDiagnostics());
-            WriteSkill(baseDir, SkillModelBuilder.BuildDeveloperTimesheetDiagnostics());
-            WriteSkill(baseDir, SkillModelBuilder.BuildDeveloperFinanceDiagnostics());
-            WriteSkill(baseDir, SkillModelBuilder.BuildEnvironmentCompare());
+            WriteAndTrack(SkillModelBuilder.BuildDeveloperDiagnostics());
+            WriteAndTrack(SkillModelBuilder.BuildDeveloperTimesheetDiagnostics());
+            WriteAndTrack(SkillModelBuilder.BuildDeveloperFinanceDiagnostics());
+            WriteAndTrack(SkillModelBuilder.BuildEnvironmentCompare());
             global.TouchFeatureVersion(FeatureCatalog.Developer);
-            touchedFeatureVersion = true;
         }
 
-        if (touchedFeatureVersion)
-            _config.SaveGlobalConfig(global);
+        _config.SaveGlobalConfig(global);
 
         return 0;
     }
 
-    private static void WriteSkill(string baseDir, SkillContentModel model)
+    private static string WriteSkill(string baseDir, SkillContentModel model)
     {
         var relativePath = SkillRenderer.RelativePath(model.Name);
         var outputFile = Path.Combine(baseDir, relativePath);
@@ -88,5 +94,6 @@ public class CreateCommand : Command<CreateCommand.Settings>
         Directory.CreateDirectory(Path.GetDirectoryName(outputFile)!);
         File.WriteAllText(outputFile, SkillRenderer.Render(model));
         OutputHelper.WriteSuccess($"Skill file written to {outputFile}");
+        return outputFile;
     }
 }

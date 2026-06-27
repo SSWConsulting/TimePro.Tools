@@ -11,6 +11,13 @@ Use this skill to reproduce bugs, gather evidence, verify fixes, and decide when
 - Prefer `--tenant <name> --env <env>` on each command so diagnostics do not mutate the active tenant.
 
 ## Select the target
+Start with the developer guide when the request is a bug report rather than a
+specific command failure:
+
+```bash
+tp dev guide --use-case "suggested timesheets missing for ALEX on 2026-03-12" --json
+```
+
 ```bash
 tp tenant info --tenant northwind --env staging --json
 tp tenant info --tenant northwind --env prod --json

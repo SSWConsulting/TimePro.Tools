@@ -116,7 +116,7 @@ The accounting skill keeps:
 - instruction-only read-only accounting workflows
 - client billable-work threshold report guidance, including the `.rows` JSON envelope shape
 - deeper reconciliation diagnostics for Excel, CSV, Xero MCP, bank-feed MCP, or another external source
-- guidance for CLI diagnostics such as `tp accounting tax-mismatches`, `tp accounting invoice-diagnostics`, and `tp accounting client-diagnostics`; MCP tools mirror these report shapes when enabled
+- guidance to check `tp accounting guide` first, then use specialized markdown skills such as `timepro-accounting-tax-mismatch`, `timepro-accounting-invoice-diagnostics`, and `timepro-accounting-client-diagnostics`
 - no prefetch/run-these-first commands
 
 The developer diagnostics skill keeps:

@@ -52,6 +52,7 @@ using MapList = SSW.TimePro.Cli.Features.RepoMap.ListCommand;
 using MapRemove = SSW.TimePro.Cli.Features.RepoMap.RemoveCommand;
 using MapDetect = SSW.TimePro.Cli.Features.RepoMap.DetectCommand;
 using SkillsCreate = SSW.TimePro.Cli.Features.Skills.CreateCommand;
+using SkillsIgnoreVersion = SSW.TimePro.Cli.Features.Skills.IgnoreVersionCommand;
 using BlogList = SSW.TimePro.Cli.Features.Blogs.ListCommand;
 using IterationList = SSW.TimePro.Cli.Features.Iterations.ListCommand;
 using SummaryCmd = SSW.TimePro.Cli.Features.Summary.SummaryCommand;
@@ -63,9 +64,7 @@ using UserMe = SSW.TimePro.Cli.Features.Users.MeCommand;
 using UserList = SSW.TimePro.Cli.Features.Users.ListCommand;
 using UserGet = SSW.TimePro.Cli.Features.Users.GetCommand;
 using AccountingGuide = SSW.TimePro.Cli.Features.Accounting.GuideCommand;
-using AccountingTaxMismatches = SSW.TimePro.Cli.Features.Accounting.TaxMismatchesCommand;
-using AccountingInvoiceDiagnostics = SSW.TimePro.Cli.Features.Accounting.InvoiceDiagnosticsCommand;
-using AccountingClientDiagnostics = SSW.TimePro.Cli.Features.Accounting.ClientDiagnosticsCommand;
+using DeveloperGuide = SSW.TimePro.Cli.Features.Developer.GuideCommand;
 
 var configService = new ConfigService();
 var featureFlags = FeatureFlagCommandLineInterceptor.ExtractCommandLineOptions(args);
@@ -108,7 +107,6 @@ if (overrideTenant is not null)
 var services = new ServiceCollection();
 services.AddSingleton<IConfigService>(configService);
 services.AddSingleton<ITenantProvider, DefaultTenantProvider>();
-services.AddTransient<IAccountingDiagnosticsService, AccountingDiagnosticsService>();
 services.AddHttpClient<ITimeProApiClient, TimeProApiClient>();
 
 var registrar = new TypeRegistrar(services);
@@ -330,6 +328,8 @@ app.Configure(config =>
         skills.SetDescription("Agent skill file management");
         skills.AddCommand<SkillsCreate>("create")
             .WithDescription("Generate agent skill files");
+        skills.AddCommand<SkillsIgnoreVersion>("ignore-version")
+            .WithDescription("Ignore the current bundled version for a generated skill");
     });
 
     // ───── Accounting (read-only) ─────
@@ -337,25 +337,37 @@ app.Configure(config =>
     void RegisterAccountingCommands(IConfigurator<CommandSettings> branch)
     {
         branch.AddCommand<AccountingGuide>("guide")
-            .WithDescription("Show accounting diagnostic questions and command choices");
-        branch.AddCommand<AccountingTaxMismatches>("tax-mismatches")
-            .WithDescription("Find timesheet tax mismatches against invoice tax");
-        branch.AddCommand<AccountingInvoiceDiagnostics>("invoice-diagnostics")
-            .WithDescription("Diagnose one invoice's totals and related records");
-        branch.AddCommand<AccountingClientDiagnostics>("client-diagnostics")
-            .WithDescription("Diagnose one client's accounting position");
+            .WithDescription("Show accounting AI guide questions, commands, MCP tools, and specialized skills");
     }
 
     config.AddBranch("accounting", accounting =>
     {
-        accounting.SetDescription("Accounting diagnostics (read-only)");
+        accounting.SetDescription("Accounting guide (read-only)");
         RegisterAccountingCommands(accounting);
     });
 
     config.AddBranch("acct", accounting =>
     {
-        accounting.SetDescription("Accounting diagnostics (alias)");
+        accounting.SetDescription("Accounting guide (alias)");
         RegisterAccountingCommands(accounting);
+    });
+
+    void RegisterDeveloperCommands(IConfigurator<CommandSettings> branch)
+    {
+        branch.AddCommand<DeveloperGuide>("guide")
+            .WithDescription("Show developer AI guide questions, commands, telemetry follow-up, and specialized skills");
+    }
+
+    config.AddBranch("developer", dev =>
+    {
+        dev.SetDescription("Developer diagnostics guide");
+        RegisterDeveloperCommands(dev);
+    });
+
+    config.AddBranch("dev", dev =>
+    {
+        dev.SetDescription("Developer diagnostics guide (alias)");
+        RegisterDeveloperCommands(dev);
     });
 
     // Invoice (with alias `inv`)

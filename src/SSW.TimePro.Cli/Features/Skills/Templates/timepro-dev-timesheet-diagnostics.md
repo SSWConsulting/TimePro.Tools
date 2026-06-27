@@ -20,6 +20,12 @@ Ask for these before running broad checks:
 4. Whether staging/local writes are allowed.
 5. What proves the bug or fix: CLI JSON, UI state, App Insights, or environment diff.
 
+For an initial evidence plan, ask the developer guide first:
+
+```bash
+tp dev guide --use-case "suggested timesheets missing for ALEX on 2026-03-12" --json
+```
+
 ## Suggested timesheets missing
 First prove the selected tenant-profile employee. `tp ts suggest` currently uses the employee stored in the tenant profile; it does not accept `--emp-id`.
 

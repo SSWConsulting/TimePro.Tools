@@ -11,17 +11,30 @@ public static class SkillModelBuilder
 {
     public const string TimesheetsName = "timepro-timesheets";
     public const string AccountingName = "timepro-accounting-cli";
+    public const string AccountingTaxMismatchName = "timepro-accounting-tax-mismatch";
+    public const string AccountingInvoiceDiagnosticsName = "timepro-accounting-invoice-diagnostics";
+    public const string AccountingClientDiagnosticsName = "timepro-accounting-client-diagnostics";
     public const string TenantSetupName = "timepro-tenant-setup";
     public const string DeveloperDiagnosticsName = "timepro-dev-diagnostics";
     public const string DeveloperTimesheetDiagnosticsName = "timepro-dev-timesheet-diagnostics";
     public const string DeveloperFinanceDiagnosticsName = "timepro-dev-finance-diagnostics";
     public const string EnvironmentCompareName = "timepro-env-compare";
+    public const int CurrentSkillVersion = 1;
 
     private const string TimesheetsDescription =
         "Manage SSW TimePro timesheets with the tp CLI — view/accept/create entries, repo mappings, bookings, leave, and daily scrum. Use when entering, fixing, or reviewing timesheets.";
 
     private const string AccountingDescription =
         "Explore SSW TimePro financial data via the tp CLI (read-only) — invoices with line items, billed timesheets, credit notes, receipts, sale products, client rates, aged debtors, unbilled time, recurring invoices, prepaid drawdowns and client billable-work threshold reports. Use for accountant-style questions. For raw HTTP/curl access (when tp isn't installed), use the timepro-accounting skill instead.";
+
+    private const string AccountingTaxMismatchDescription =
+        "Guide for finding non-zero TimePro timesheets with 0% tax on non-zero-tax invoices using read-only tp CLI evidence, jq/Python shaping, and CSV output.";
+
+    private const string AccountingInvoiceDiagnosticsDescription =
+        "Guide for assembling a read-only TimePro invoice evidence pack from invoice header, product lines, allocated/write-off timesheets, receipts, and credit notes.";
+
+    private const string AccountingClientDiagnosticsDescription =
+        "Guide for diagnosing a TimePro client's accounting position using invoices, unpaid invoices, aged debtors, unbilled time, credit notes, rates, and external comparison evidence.";
 
     private const string TenantSetupDescription =
         "Set up and switch TimePro tenant profiles with the tp CLI, including switching the active session to ssw-staging and using process-local --tenant/--env overrides without changing the active tenant.";
@@ -38,6 +51,23 @@ public static class SkillModelBuilder
     private const string EnvironmentCompareDescription =
         "Compare TimePro tenant and environment behaviour for consistency across local, staging, and production using read-only tp CLI evidence, normalized JSON diffs, and clear production safety boundaries.";
 
+    public static IReadOnlyList<SkillDefinition> Catalog { get; } =
+    [
+        new(TimesheetsName, CurrentSkillVersion, null),
+        new(TenantSetupName, CurrentSkillVersion, null),
+        new(AccountingName, CurrentSkillVersion, FeatureCatalog.Accounting),
+        new(AccountingTaxMismatchName, CurrentSkillVersion, FeatureCatalog.Accounting),
+        new(AccountingInvoiceDiagnosticsName, CurrentSkillVersion, FeatureCatalog.Accounting),
+        new(AccountingClientDiagnosticsName, CurrentSkillVersion, FeatureCatalog.Accounting),
+        new(DeveloperDiagnosticsName, CurrentSkillVersion, FeatureCatalog.Developer),
+        new(DeveloperTimesheetDiagnosticsName, CurrentSkillVersion, FeatureCatalog.Developer),
+        new(DeveloperFinanceDiagnosticsName, CurrentSkillVersion, FeatureCatalog.Developer),
+        new(EnvironmentCompareName, CurrentSkillVersion, FeatureCatalog.Developer),
+    ];
+
+    public static SkillDefinition? FindDefinition(string name) =>
+        Catalog.FirstOrDefault(skill => skill.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
     /// <summary>
     /// Builds the timesheets skill model. Deterministic read-only commands are
     /// rendered as a portable "run these first" block by <see cref="SkillRenderer"/>.
@@ -53,6 +83,7 @@ public static class SkillModelBuilder
 
         return new SkillContentModel(
             Name: TimesheetsName,
+            Version: CurrentSkillVersion,
             Description: TimesheetsDescription,
             AllowedTools: ["Bash(tp *)", "Bash(sl *)"],
             Prefetch: SkillBodyBuilder.TimesheetsPrefetch,
@@ -66,14 +97,43 @@ public static class SkillModelBuilder
     public static SkillContentModel BuildAccounting(TenantConfig? tenant) =>
         new(
             Name: AccountingName,
+            Version: CurrentSkillVersion,
             Description: AccountingDescription,
             AllowedTools: ["Bash(tp *)"],
             Prefetch: [],
             Body: SkillBodyBuilder.BuildAccountingBody(tenant));
 
+    public static SkillContentModel BuildAccountingTaxMismatch() =>
+        new(
+            Name: AccountingTaxMismatchName,
+            Version: CurrentSkillVersion,
+            Description: AccountingTaxMismatchDescription,
+            AllowedTools: ["Bash(tp *)", "Bash(jq *)", "Bash(python3 *)"],
+            Prefetch: [],
+            Body: SkillBodyBuilder.BuildAccountingTaxMismatchBody());
+
+    public static SkillContentModel BuildAccountingInvoiceDiagnostics() =>
+        new(
+            Name: AccountingInvoiceDiagnosticsName,
+            Version: CurrentSkillVersion,
+            Description: AccountingInvoiceDiagnosticsDescription,
+            AllowedTools: ["Bash(tp *)", "Bash(jq *)", "Bash(python3 *)"],
+            Prefetch: [],
+            Body: SkillBodyBuilder.BuildAccountingInvoiceDiagnosticsBody());
+
+    public static SkillContentModel BuildAccountingClientDiagnostics() =>
+        new(
+            Name: AccountingClientDiagnosticsName,
+            Version: CurrentSkillVersion,
+            Description: AccountingClientDiagnosticsDescription,
+            AllowedTools: ["Bash(tp *)", "Bash(jq *)", "Bash(python3 *)"],
+            Prefetch: [],
+            Body: SkillBodyBuilder.BuildAccountingClientDiagnosticsBody());
+
     public static SkillContentModel BuildTenantSetup() =>
         new(
             Name: TenantSetupName,
+            Version: CurrentSkillVersion,
             Description: TenantSetupDescription,
             AllowedTools: ["Bash(tp *)"],
             Prefetch: SkillBodyBuilder.TenantSetupPrefetch,
@@ -82,6 +142,7 @@ public static class SkillModelBuilder
     public static SkillContentModel BuildDeveloperDiagnostics() =>
         new(
             Name: DeveloperDiagnosticsName,
+            Version: CurrentSkillVersion,
             Description: DeveloperDiagnosticsDescription,
             AllowedTools: ["Bash(tp *)", "Bash(az monitor app-insights query *)", "Bash(jq *)"],
             Prefetch: SkillBodyBuilder.DeveloperDiagnosticsPrefetch,
@@ -90,6 +151,7 @@ public static class SkillModelBuilder
     public static SkillContentModel BuildDeveloperTimesheetDiagnostics() =>
         new(
             Name: DeveloperTimesheetDiagnosticsName,
+            Version: CurrentSkillVersion,
             Description: DeveloperTimesheetDiagnosticsDescription,
             AllowedTools: ["Bash(tp *)", "Bash(az monitor app-insights query *)", "Bash(jq *)"],
             Prefetch: SkillBodyBuilder.DeveloperDiagnosticsPrefetch,
@@ -98,6 +160,7 @@ public static class SkillModelBuilder
     public static SkillContentModel BuildDeveloperFinanceDiagnostics() =>
         new(
             Name: DeveloperFinanceDiagnosticsName,
+            Version: CurrentSkillVersion,
             Description: DeveloperFinanceDiagnosticsDescription,
             AllowedTools: ["Bash(tp *)", "Bash(az monitor app-insights query *)", "Bash(jq *)"],
             Prefetch: SkillBodyBuilder.DeveloperDiagnosticsPrefetch,
@@ -106,6 +169,7 @@ public static class SkillModelBuilder
     public static SkillContentModel BuildEnvironmentCompare() =>
         new(
             Name: EnvironmentCompareName,
+            Version: CurrentSkillVersion,
             Description: EnvironmentCompareDescription,
             AllowedTools: ["Bash(tp *)", "Bash(jq *)", "Bash(diff *)"],
             Prefetch: SkillBodyBuilder.EnvironmentComparePrefetch,

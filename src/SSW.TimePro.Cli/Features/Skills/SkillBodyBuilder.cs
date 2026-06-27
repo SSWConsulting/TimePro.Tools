@@ -15,6 +15,7 @@ public static class SkillBodyBuilder
     /// </summary>
     public static IReadOnlyList<PrefetchCommand> TimesheetsPrefetch { get; } =
     [
+        new("tp info --json", "CLI health, active tenant, user, and update status"),
         new("tp project recent --json", "ranked likely projects + repo paths (start here)"),
         new("tp ts get --week --json", "current week's entries + suggestions"),
         new("tp bk list --week --json", "CRM bookings for the week"),
@@ -37,12 +38,16 @@ public static class SkillBodyBuilder
         sb.AppendLine("## Setup");
         sb.AppendLine("The `tp` CLI manages SSW TimePro timesheets. Always use `--json` for");
         sb.AppendLine("machine-readable output when parsing results programmatically.");
+        sb.AppendLine("Prefer `tp info --json` over `tp --version`; it includes version, tenant, user,");
+        sb.AppendLine("and update status so you can tell the user when a newer release is available.");
         sb.AppendLine();
 
         // ───────── Start here: pick the project ─────────
         sb.AppendLine("## Start here: pick the project");
-        sb.AppendLine("Begin by surfacing the user's likely projects rather than guessing:");
+        sb.AppendLine("Begin by checking CLI health, then surface the user's likely projects rather");
+        sb.AppendLine("than guessing:");
         sb.AppendLine("```bash");
+        sb.AppendLine("tp info --json              # version, tenant, user, update status");
         sb.AppendLine("tp project recent --json    # ranked: booked > suggested > recent > leave");
         sb.AppendLine("```");
         sb.AppendLine("This returns a small candidate list with repo paths and flags any booked");
@@ -56,6 +61,9 @@ public static class SkillBodyBuilder
         // ───────── Quick Reference ─────────
         sb.AppendLine("## Quick Reference");
         sb.AppendLine("```bash");
+        sb.AppendLine("# Tool health");
+        sb.AppendLine("tp info --json                   # prefer this over tp --version");
+        sb.AppendLine();
         sb.AppendLine("# Pick the project to work on");
         sb.AppendLine("tp project recent --json         # ranked likely projects + repo paths");
         sb.AppendLine();
@@ -404,6 +412,8 @@ public static class SkillBodyBuilder
         sb.AppendLine("This skill reuses the tenant config already configured for `tp`. If `tp login`");
         sb.AppendLine("has been run (check `~/.config/timepro-cli/tenants/`), nothing else is needed.");
         sb.AppendLine("Otherwise run `tp login --tenant <id>` first.");
+        sb.AppendLine("Start with `tp info --json`; prefer it over `tp --version` because it includes");
+        sb.AppendLine("the active tenant, user, and update status.");
         sb.AppendLine();
         sb.AppendLine("> **Note**: The sibling skill `timepro-accounting` (without the `-cli` suffix)");
         sb.AppendLine("> hits the same API via raw `curl`. Keep it for environments where `tp` isn't");
@@ -415,6 +425,9 @@ public static class SkillBodyBuilder
         sb.AppendLine("All commands accept `--json` for machine output.");
         sb.AppendLine();
         sb.AppendLine("```bash");
+        sb.AppendLine("# Tool health");
+        sb.AppendLine("tp info --json");
+        sb.AppendLine();
         sb.AppendLine("# Invoices");
         sb.AppendLine("tp invoice list --limit 50 --json");
         sb.AppendLine("tp invoice list --query Northwind --field DateCreated --dir desc --json");

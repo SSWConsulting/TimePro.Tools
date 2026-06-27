@@ -8,10 +8,10 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>tp</ToolCommandName>
     <PackageId>SSW.TimePro.Cli</PackageId>
-    <!-- Major.minor only. The release workflow appends the patch (GitHub run number),
-         e.g. 0.1.42, via -p:Version=. Local builds default to <VersionPrefix>.0 (e.g. 0.1.0). -->
-    <VersionPrefix>0.1</VersionPrefix>
-    <!-- Give local builds a full three-part version (0.1.0) rather than the bare "0.1"
+    <!-- Major.minor only. The release workflow appends the patch from the latest
+         GitHub Release for this prefix, e.g. 0.2.7, via -p:Version=. Local builds default to <VersionPrefix>.0. -->
+    <VersionPrefix>0.2</VersionPrefix>
+    <!-- Give local builds a full three-part version (0.2.0) rather than the bare "0.2"
          MSBuild would otherwise use. A CI -p:Version= takes precedence over this. -->
     <Version Condition="'$(Version)' == ''">$(VersionPrefix).0</Version>
     <Authors>SSW</Authors>
@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="/" />
+    <EmbeddedResource Include="../../release-notes/*.md" LogicalName="release-notes/%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

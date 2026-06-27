@@ -1,8 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using SSW.TimePro.Cli.Features.Auth;
 using SSW.TimePro.Cli.Features.Bookings;
+using SSW.TimePro.Cli.Features.Info;
 using SSW.TimePro.Cli.Features.Tenants;
 using SSW.TimePro.Cli.Features.Timesheets;
+using SSW.TimePro.Cli.Features.Updates;
 using SSW.TimePro.Cli.Infrastructure;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
@@ -66,6 +68,11 @@ if (tenantOverride.Error is not null)
     OutputHelper.WriteError(tenantOverride.Error);
     return 1;
 }
+
+VersionStateService.RecordInstalledVersion(configService, BuildInfo.Version, DateTimeOffset.UtcNow);
+
+if (AppMetadataCommandLine.IsMetadataRequest(tenantOverride.Args))
+    return await AppMetadataCommandLine.ExecuteAsync(tenantOverride.Args, configService, CancellationToken.None);
 
 var isHelpOrVersionRequest = tenantOverride.Args.Any(arg => arg is "--help" or "-h" or "--version");
 TenantConfig? overrideTenant = null;
@@ -454,6 +461,8 @@ app.Configure(config =>
     });
 
     // Summary & Report (top-level)
+    config.AddCommand<InfoCommand>("info")
+        .WithDescription("Show CLI version, tenant, user, config, and update status");
     config.AddCommand<SummaryCmd>("summary")
         .WithDescription("Project hours breakdown for a period");
     config.AddCommand<ReportCmd>("report")

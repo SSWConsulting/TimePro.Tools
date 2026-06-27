@@ -42,6 +42,7 @@ public class SkillGenerationTests
         output.Should().Contain("## Run these first");
         output.Should().Contain("Run these read-only commands before you start, and read their output:");
         output.Should().Contain("```bash");
+        output.Should().Contain("tp info --json    # CLI health, active tenant, user, and update status");
         output.Should().Contain("tp project recent --json    # ranked likely projects + repo paths (start here)");
         output.Should().Contain("tp ts get --week --json    # current week's entries + suggestions");
         output.Should().Contain("tp bk list --week --json    # CRM bookings for the week");
@@ -60,6 +61,7 @@ public class SkillGenerationTests
         output.Should().Contain("name: timepro-accounting-cli");
         output.Should().Contain("allowed-tools: Bash(tp *)");
         output.Should().Contain("# TimePro Accounting (CLI)");
+        output.Should().Contain("Start with `tp info --json`; prefer it over `tp --version`");
         output.Should().Contain("tp client billable-work --from 2025-06-26 --to 2026-06-26 --threshold 50000 --json");
         output.Should().Contain("jq '.rows | map({clientId, clientName, firstInvoiceDate, billableTimesheetValueExGst})'");
         output.Should().Contain("billableTimesheetValueExGst");

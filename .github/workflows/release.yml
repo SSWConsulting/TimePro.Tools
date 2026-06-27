@@ -3,13 +3,15 @@ name: Release (NuGet)
 # Manually-triggered release of the `tp` .NET global tool.
 #
 # Versioning: major.minor comes from <VersionPrefix> in
-# src/SSW.TimePro.Cli/SSW.TimePro.Cli.csproj; the patch is this workflow's
-# GitHub run number (github.run_number), giving e.g. 0.1.42. Bump major/minor by
-# editing <VersionPrefix>. Note: every run of this workflow (including dry runs)
-# advances run_number, so release patch numbers can have small gaps.
+# src/SSW.TimePro.Cli/SSW.TimePro.Cli.csproj; the patch is one higher than the
+# latest GitHub Release for that major.minor line, giving e.g. 0.2.7. Bump
+# major/minor by editing <VersionPrefix>.
 #
 # A dry run (default) builds, tests, audits, and packs, uploading the .nupkg as a
 # build artifact. Set dry_run=false to also create a GitHub Release.
+#
+# Every release must have release-notes/<version>.md. That file is used as the
+# GitHub Release body and is embedded in the packaged CLI for `tp --whats-new`.
 #
 # NOTE: Publishing to nuget.org is intentionally DISABLED for now. The push step
 # below is commented out; re-enable it (and add the NUGET_API_KEY secret) when the
@@ -50,18 +52,39 @@ jobs:
 
       - name: Compute version
         id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          # Match only the real element (anchored on its closing tag) and take the
-          # first hit, so a comment that mentions the <VersionPrefix> token can't leak
-          # extra lines into $base.
-          base="$(grep -oP '(?<=<VersionPrefix>)[^<]+(?=</VersionPrefix>)' "$PROJECT" | head -n1)"
+          # Match only the real element and take the first hit, so a comment
+          # that mentions the <VersionPrefix> token can't leak extra lines into
+          # $base. Keep this portable so the same extraction works locally.
+          base="$(sed -n 's:.*<VersionPrefix>\([^<]*\)</VersionPrefix>.*:\1:p' "$PROJECT" | head -n1)"
           if [[ -z "$base" ]]; then
             echo "::error::Could not read <VersionPrefix> from $PROJECT" >&2
             exit 1
           fi
-          version="${base}.${{ github.run_number }}"
+
+          escaped_base="$(printf '%s' "$base" | sed 's/\./\\./g')"
+          latest_patch="$(gh release list --limit 100 --json tagName --jq '.[].tagName' \
+            | sed -En "s/^v${escaped_base}\.([0-9]+)$/\1/p" \
+            | sort -n \
+            | tail -n1)"
+
+          if [[ -z "$latest_patch" ]]; then
+            latest_patch=0
+          fi
+
+          version="${base}.$((latest_patch + 1))"
+          notes_file="release-notes/${version}.md"
+
+          if [[ ! -f "$notes_file" ]]; then
+            echo "::error::Missing $notes_file. Create the release note before running a release." >&2
+            exit 1
+          fi
+
           echo "value=$version" >> "$GITHUB_OUTPUT"
-          echo "Resolved version: $version (tag v$version)"
+          echo "notes_file=$notes_file" >> "$GITHUB_OUTPUT"
+          echo "Resolved version: $version (tag v$version, notes $notes_file)"
 
       - name: Build
         run: |
@@ -100,12 +123,15 @@ jobs:
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG already exists; updating assets."
+            gh release edit "$TAG" \
+              --title "$TAG" \
+              --notes-file "${{ steps.version.outputs.notes_file }}"
             gh release upload "$TAG" "$PACKAGE_OUTPUT"/*.nupkg --clobber
           else
             gh release create "$TAG" "$PACKAGE_OUTPUT"/*.nupkg \
               --title "$TAG" \
               --target "${{ github.sha }}" \
-              --generate-notes
+              --notes-file "${{ steps.version.outputs.notes_file }}"
           fi
 
       # --- Publish to nuget.org (DISABLED) ---------------------------------------

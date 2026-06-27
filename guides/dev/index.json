@@ -5,7 +5,7 @@
       "file": "suggested-timesheets-missing.md",
       "title": "Suggested timesheets missing",
       "description": "Diagnose missing or stale suggested timesheets, including tenant-profile employee, CRM booking input, leave, saved rows, and refresh behavior.",
-      "keywords": ["suggested", "suggestions", "suggested timesheets", "ts suggest", "missing suggestions", "refresh suggestions"],
+      "keywords": ["suggested", "suggestions", "suggested timesheets", "ts suggest", "missing suggestions", "refresh suggestions", "no suggestions available", "no bookings", "update suggested timesheet"],
       "commands": [
         "tp dev guide --use-case \"suggested timesheets missing\" --json",
         "tp tenant info --tenant <name> --env <env> --json",

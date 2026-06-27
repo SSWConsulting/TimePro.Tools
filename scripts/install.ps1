@@ -13,8 +13,6 @@
 .EXAMPLE
   irm https://raw.githubusercontent.com/SSWConsulting/TimePro.Tools/main/scripts/install.ps1 | iex
 
-.NOTES
-  Set the GITHUB_TOKEN environment variable to raise the GitHub API rate limit (optional).
 #>
 [CmdletBinding()]
 param()
@@ -40,7 +38,6 @@ if (-not ((& dotnet --list-sdks) | Where-Object { $_ -match '^10\.' })) {
 # --- 2. Resolve the latest release's .nupkg asset ------------------------------
 Write-Info "Looking up the latest release of $Repo…"
 $headers = @{ 'User-Agent' = 'timepro-install'; 'Accept' = 'application/vnd.github+json' }
-if ($env:GITHUB_TOKEN) { $headers['Authorization'] = "Bearer $($env:GITHUB_TOKEN)" }
 
 $release = Invoke-RestMethod -Uri $ApiUrl -Headers $headers
 $asset = $release.assets | Where-Object { $_.name -like '*.nupkg' } | Select-Object -First 1

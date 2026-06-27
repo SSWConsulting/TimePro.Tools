@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Text;
 using FluentAssertions;
 using SSW.TimePro.Cli.Features.Updates;
@@ -34,32 +33,6 @@ public class GitHubReleaseClientTests
     }
 
     [Fact]
-    public async Task GetLatestReleaseAsync_UsesGhTokenWhenGitHubTokenIsMissing()
-    {
-        var previousGitHubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
-        var previousGhToken = Environment.GetEnvironmentVariable("GH_TOKEN");
-
-        try
-        {
-            Environment.SetEnvironmentVariable("GITHUB_TOKEN", "");
-            Environment.SetEnvironmentVariable("GH_TOKEN", "test-gh-token");
-
-            var handler = new StubHttpMessageHandler(_ => JsonResponse(
-                """{"tag_name":"v0.2.7","html_url":"https://example.test/release"}"""));
-            var client = new GitHubReleaseClient(new HttpClient(handler));
-
-            await client.GetLatestReleaseAsync(CancellationToken.None);
-
-            handler.LastAuthorization.Should().Be(new AuthenticationHeaderValue("Bearer", "test-gh-token"));
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("GITHUB_TOKEN", previousGitHubToken);
-            Environment.SetEnvironmentVariable("GH_TOKEN", previousGhToken);
-        }
-    }
-
-    [Fact]
     public async Task GetLatestReleaseAsync_ThrowsForUnsuccessfulResponse()
     {
         var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.Forbidden));
@@ -88,8 +61,6 @@ public class GitHubReleaseClientTests
         public string? LastRequestUri { get; private set; }
         public string? LastAccept { get; private set; }
         public string? LastUserAgent { get; private set; }
-        public AuthenticationHeaderValue? LastAuthorization { get; private set; }
-
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
@@ -97,7 +68,6 @@ public class GitHubReleaseClientTests
             LastRequestUri = request.RequestUri?.ToString();
             LastAccept = string.Join(",", request.Headers.Accept);
             LastUserAgent = request.Headers.UserAgent.ToString();
-            LastAuthorization = request.Headers.Authorization;
 
             return Task.FromResult(_respond(request));
         }

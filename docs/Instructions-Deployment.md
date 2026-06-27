@@ -24,8 +24,7 @@ irm https://raw.githubusercontent.com/SSWConsulting/TimePro.Tools/main/scripts/i
 ```
 
 Both scripts are self-contained — they only need the .NET 10 SDK and a network
-connection. Set `GITHUB_TOKEN` to raise the GitHub API rate limit if needed. To
-remove the tool: `dotnet tool uninstall -g SSW.TimePro.Cli`.
+connection. To remove the tool: `dotnet tool uninstall -g SSW.TimePro.Cli`.
 
 > The script installs from a **published GitHub Release**. If no non-dry-run
 > release exists yet, cut one first (see [Release via GitHub Actions](#release-via-github-actions)).

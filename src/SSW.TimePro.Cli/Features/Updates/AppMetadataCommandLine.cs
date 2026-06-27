@@ -16,8 +16,16 @@ public static class AppMetadataCommandLine
             "--url"
         };
 
+    private static readonly HashSet<string> MetadataRequestOptions =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "--check-update",
+            "--check-version",
+            "--whats-new"
+        };
+
     public static bool IsMetadataRequest(string[] args) =>
-        args.Any(arg => KnownOptions.Contains(arg));
+        args.FirstOrDefault() is { } firstArg && MetadataRequestOptions.Contains(firstArg);
 
     public static async Task<int> ExecuteAsync(
         string[] args,

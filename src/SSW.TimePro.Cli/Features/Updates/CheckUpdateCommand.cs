@@ -5,7 +5,7 @@ using Spectre.Console.Cli;
 namespace SSW.TimePro.Cli.Features.Updates;
 
 [Description("Check the latest GitHub Release and print update instructions")]
-public sealed class CheckUpdateCommand : AsyncCommand<CommandSettings>
+public sealed class CheckUpdateCommand : AsyncCommand<CheckUpdateCommand.Settings>
 {
     private readonly IConfigService _config;
 
@@ -14,9 +14,13 @@ public sealed class CheckUpdateCommand : AsyncCommand<CommandSettings>
         _config = config;
     }
 
+    public sealed class Settings : CommandSettings
+    {
+    }
+
     protected override Task<int> ExecuteAsync(
         CommandContext context,
-        CommandSettings settings,
+        Settings settings,
         CancellationToken cancellationToken) =>
         AppMetadataCommandLine.ExecuteAsync(["--check-update"], _config, cancellationToken);
 }

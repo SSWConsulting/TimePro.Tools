@@ -104,26 +104,10 @@ scripts/security/nuget-audit.sh
 
 ## Production Release Discipline
 
-Treat this as a production tool, not a hobby project. Release work must never
-outrun the actual fix.
-
-- If a user asks for a bug fix and deployment, first commit and push the
-  behavioral fix, tests, and any required docs to `main`. A release-notes-only
-  commit is not a fix.
-- Before dispatching any release workflow, prove that `origin/main` contains the
-  fix commit(s) with `git log --oneline <previous-release-tag>..origin/main`.
-  The range must show the real user-visible change, not only release metadata.
-- Do not deploy from a dirty tree, uncommitted files, or an unpushed detached
-  `HEAD`. If working detached, push the exact intended commit to `main` and
-  verify `git rev-parse HEAD` matches `git rev-parse origin/main` before
-  releasing.
-- Run `dotnet test SSW.TimePro.Timesheets.Cli.slnx` and
-  `scripts/security/nuget-audit.sh` after the final code changes and before any
-  release dispatch. If only docs/skills changed and no deployment is requested,
-  state that no release was made.
-- If the user says not to release, do not create a version tag, GitHub Release,
-  package publish, or release workflow run. Commit/push the requested source
-  changes only.
+Before creating any new version, read `release-notes/AGENTS.md` and follow it.
+Always verify the versioned release note and `release-notes/latest.md` are
+correct on `main` for the full previous-release-tag-to-`origin/main` range
+before dispatching the release workflow.
 
 ## Optional Git Hook
 

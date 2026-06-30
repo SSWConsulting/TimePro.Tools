@@ -63,6 +63,7 @@ tp leave list --filter UPCOMING --json
 tp leave create --start 2026-03-30 --end 2026-03-30 --type 1 \
   --note "Reason" --approved-by "approver@northwind.example" \
   --cc "notify1@northwind.example,notify2@northwind.example" --yes
+# Leave create uses --timezone first, then the TimePro profile timezone, then the machine timezone.
 tp leave cancel <ID> --reason "Plans changed" --yes
 ```
 

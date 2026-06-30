@@ -51,6 +51,10 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
         [Description("End time override (HH:mm, default: 18:00)")]
         public string? EndTime { get; set; }
 
+        [CommandOption("--timezone <TIMEZONE_ID>")]
+        [Description("Timezone override (IANA or Windows ID); takes priority over the TimePro user profile timezone")]
+        public string? TimeZoneId { get; set; }
+
         [CommandOption("--yes")]
         [Description("Skip confirmation")]
         public bool Yes { get; set; }
@@ -89,31 +93,25 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
 
         try
         {
-            // Parse dates with timezone offset
-            if (!DateTimeOffset.TryParse(settings.Start, out var startDate))
+            var settingsDetails = string.IsNullOrWhiteSpace(settings.TimeZoneId)
+                ? await _api.GetEmployeeSettingsAsync(cancellationToken)
+                : null;
+            if (!LeaveRequestParser.TryResolveRequestTimeZone(settings.TimeZoneId, settingsDetails, out var requestTimeZone, out var timeZoneError))
             {
-                // Support plain yyyy-MM-dd by adding local timezone offset
-                if (!DateOnly.TryParse(settings.Start, out var startDateOnly))
-                {
-                    OutputHelper.WriteError($"Invalid start date: '{settings.Start}'. Use yyyy-MM-dd format.");
-                    return 1;
-                }
-                startDate = new DateTimeOffset(startDateOnly.ToDateTime(TimeOnly.MinValue), TimeZoneInfo.Local.GetUtcOffset(DateTime.Now));
+                WriteValidationError(settings.Json, timeZoneError ?? "Invalid leave request timezone");
+                return 1;
             }
 
-            if (!DateTimeOffset.TryParse(settings.End, out var endDate))
+            if (!LeaveRequestParser.TryParseDateRange(
+                    settings.Start,
+                    settings.End,
+                    requestTimeZone,
+                    out var startDate,
+                    out var endDate,
+                    out var dateError))
             {
-                if (!DateOnly.TryParse(settings.End, out var endDateOnly))
-                {
-                    OutputHelper.WriteError($"Invalid end date: '{settings.End}'. Use yyyy-MM-dd format.");
-                    return 1;
-                }
-                endDate = new DateTimeOffset(endDateOnly.ToDateTime(new TimeOnly(23, 59, 0)), TimeZoneInfo.Local.GetUtcOffset(DateTime.Now));
-            }
-            else if (endDate.TimeOfDay == TimeSpan.Zero)
-            {
-                // If end date was parsed but has no time component, set to 23:59
-                endDate = new DateTimeOffset(endDate.Date.AddHours(23).AddMinutes(59), endDate.Offset);
+                WriteValidationError(settings.Json, dateError ?? "Invalid leave date range");
+                return 1;
             }
 
             if (IsWeekend(startDate) || IsWeekend(endDate))
@@ -135,16 +133,9 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
             }
 
             var allDay = !settings.HalfDay;
-            var userStartTime = settings.StartTime ?? "09:00:00";
-            var userEndTime = settings.EndTime ?? "18:00:00";
-
-            // Normalize time format to HH:mm:ss
-            if (userStartTime.Length == 5) userStartTime += ":00";
-            if (userEndTime.Length == 5) userEndTime += ":00";
-
-            var optionalEmps = string.IsNullOrEmpty(settings.OptionalEmp)
-                ? []
-                : settings.OptionalEmp.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+            var userStartTime = LeaveRequestParser.NormalizeTime(settings.StartTime, LeaveRequestParser.DefaultStartTime);
+            var userEndTime = LeaveRequestParser.NormalizeTime(settings.EndTime, LeaveRequestParser.DefaultEndTime);
+            var optionalEmps = LeaveRequestParser.ParseOptionalEmployees(settings.OptionalEmp);
 
             if (!settings.Yes && !settings.Json)
             {

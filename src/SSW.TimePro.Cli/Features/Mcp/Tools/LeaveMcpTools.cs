@@ -1,8 +1,10 @@
 using System.ComponentModel;
 using System.Text.Json;
 using ModelContextProtocol.Server;
+using SSW.TimePro.Cli.Features.Leave;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
+using SSW.TimePro.Cli.Shared.Models;
 
 namespace SSW.TimePro.Cli.Features.Mcp.Tools;
 
@@ -73,9 +75,80 @@ public class LeaveMcpTools
         }, JsonOpts);
     }
 
+    [McpServerTool]
+    [Description("Create an EasyLeave request for the current user. An explicit timezone override takes priority; otherwise uses the TimePro profile timezone first, then the MCP host machine timezone as the browser-equivalent fallback.")]
+    public async Task<string> CreateLeave(
+        [Description("Start date (yyyy-MM-dd)")] string start,
+        [Description("End date (yyyy-MM-dd)")] string end,
+        [Description("Leave type ID or active leave type name")] string type,
+        [Description("Leave note/reason")] string note,
+        [Description("Approver's email address")] string? approvedBy = null,
+        [Description("Comma-separated list of emails to notify")] string? cc = null,
+        [Description("Request partial-day leave; start and end must be the same day")] bool halfDay = false,
+        [Description("Start time override (HH:mm, default 09:00)")] string? startTime = null,
+        [Description("End time override (HH:mm, default 18:00)")] string? endTime = null,
+        [Description("Timezone override (IANA or Windows ID); takes priority over the TimePro user profile timezone")] string? timeZoneId = null,
+        CancellationToken ct = default)
+    {
+        var tenant = _config.LoadActiveTenantConfig();
+        if (tenant?.EmployeeId is null)
+            return """{"error": "Not logged in. Run 'tp login --tenant <id>' first."}""";
+
+        if (string.IsNullOrWhiteSpace(note))
+            return JsonSerializer.Serialize(new { error = "note is required: a reason/description is mandatory for leave" }, JsonOpts);
+
+        var settings = string.IsNullOrWhiteSpace(timeZoneId)
+            ? await _api.GetEmployeeSettingsAsync(ct)
+            : null;
+        if (!LeaveRequestParser.TryResolveRequestTimeZone(timeZoneId, settings, out var requestTimeZone, out var timeZoneError))
+            return JsonSerializer.Serialize(new { error = timeZoneError ?? "Invalid leave request timezone" }, JsonOpts);
+
+        if (!LeaveRequestParser.TryParseDateRange(start, end, requestTimeZone, out var startDate, out var endDate, out var dateError))
+            return JsonSerializer.Serialize(new { error = dateError ?? "Invalid leave date range" }, JsonOpts);
+
+        if (IsWeekend(startDate) || IsWeekend(endDate))
+            return JsonSerializer.Serialize(new { error = "Leave start and end dates must be weekdays" }, JsonOpts);
+
+        var leaveTypeId = await ResolveLeaveTypeAsync(type, ct);
+        if (leaveTypeId is null)
+            return JsonSerializer.Serialize(new { error = $"Unknown leave type: '{type}'." }, JsonOpts);
+
+        var request = new CreateLeaveRequest
+        {
+            RequestedEmpId = tenant.EmployeeId,
+            StartDate = startDate.ToString("o"),
+            EndDate = endDate.ToString("o"),
+            LeaveTypeId = leaveTypeId.Value,
+            Note = note.Trim(),
+            UserStartTime = LeaveRequestParser.NormalizeTime(startTime, LeaveRequestParser.DefaultStartTime),
+            UserEndTime = LeaveRequestParser.NormalizeTime(endTime, LeaveRequestParser.DefaultEndTime),
+            AllDay = !halfDay,
+            OptionalEmp = LeaveRequestParser.ParseOptionalEmployees(cc),
+            ApprovedBy = approvedBy,
+            TimeLessOverride = null
+        };
+
+        await _api.CreateLeaveAsync(request, ct);
+        return JsonSerializer.Serialize(new { success = true }, JsonOpts);
+    }
+
     private static string? ResolveEmpId(string? empId, string? employeeId)
     {
         var requestedEmpId = !string.IsNullOrWhiteSpace(empId) ? empId : employeeId;
         return string.IsNullOrWhiteSpace(requestedEmpId) ? null : requestedEmpId.Trim();
     }
+
+    private async Task<int?> ResolveLeaveTypeAsync(string typeInput, CancellationToken ct)
+    {
+        if (int.TryParse(typeInput, out var id))
+            return id;
+
+        var types = await _api.GetLeaveTypesAsync(ct);
+        var match = types.FirstOrDefault(t =>
+            t.Name.Equals(typeInput, StringComparison.OrdinalIgnoreCase));
+        return match?.Id;
+    }
+
+    private static bool IsWeekend(DateTimeOffset date) =>
+        date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
 }

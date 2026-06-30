@@ -243,6 +243,9 @@ Leave create options:
 - `--cc` comma-separated list of emails to notify
 - `--half-day` for partial day requests (start and end date must be the same)
 - `--start-time` / `--end-time` override defaults (09:00/18:00)
+- `--timezone` overrides the request timezone with an IANA or Windows timezone ID
+
+Leave create uses `--timezone` first when supplied, then the TimePro user profile timezone when it is set. If neither is set, the CLI/MCP host uses the machine timezone as the browser-equivalent fallback; agents can control that by choosing the environment used to launch `tp`.
 
 ### Week View
 
@@ -547,7 +550,7 @@ Current default tool groups include:
 |-------|----------|
 | Timesheets | Get, create, update, delete, suggested timesheets, accept suggestions, list iterations, `check_week` (leave-aware weekly coverage) |
 | Lookup | Search clients, list projects, get client rate, CRM bookings, location and repo mapping |
-| Leave | List EasyLeave entries (optionally filtered by `empId`), `get_leave_balance` (days since last leave + 12-month hours) |
+| Leave | List EasyLeave entries (optionally filtered by `empId`), create EasyLeave requests using timezone override/profile/machine fallback, `get_leave_balance` (days since last leave + 12-month hours) |
 
 Optional accounting MCP tools are enabled with:
 

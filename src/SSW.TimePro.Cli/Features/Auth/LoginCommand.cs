@@ -50,7 +50,11 @@ public class LoginCommand : AsyncCommand<LoginCommand.Settings>
         };
 
         if (!string.IsNullOrEmpty(settings.ApiUrl))
-            tenant.ApiUrl = settings.ApiUrl;
+        {
+            tenant.ApiUrl = ApiUrlNormalizer.Normalize(settings.ApiUrl, out var apiUrlNote);
+            if (apiUrlNote is not null)
+                AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(apiUrlNote)}[/]");
+        }
 
         // Prompt for token if not provided
         var token = settings.Token;

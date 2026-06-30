@@ -8,6 +8,33 @@ allowed-tools: Bash(git *), Bash(gh *), Bash(dotnet *), Bash(scripts/security/nu
 
 Use this skill when preparing a new `tp` CLI release.
 
+## Production gate
+
+This is a production release workflow. Do not treat publishing as a follow-up
+chore after a local experiment.
+
+Before creating release notes or dispatching a release, verify all of the
+following:
+
+1. The user has explicitly asked for a release. If they say not to release, stop
+   after source changes, tests, commit, and push.
+2. The behavioral fix or user-visible change is already committed and pushed to
+   `main`. A release-notes-only commit does not count.
+3. `git status --short` is clean except for intentional release-note edits while
+   preparing the release.
+4. `git log --oneline <previous-release-tag>..origin/main` shows the actual
+   fix/change commit(s), not just release metadata.
+5. If working from a detached `HEAD`, push the exact intended commit to `main`
+   and verify:
+
+```bash
+git fetch origin
+test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+```
+
+If any gate fails, do not dispatch the release workflow. Fix the source control
+state first and tell the user what was blocked.
+
 ## Release note first
 
 1. Read `src/SSW.TimePro.Cli/SSW.TimePro.Cli.csproj` and get `<VersionPrefix>`.

@@ -12,7 +12,7 @@ SSW TimePro is a time tracking and invoicing system. This CLI makes it fast to v
 - **Timesheet CRUD** — Create, update, delete timesheets with rate checking and lock detection
 - **Suggested Timesheets** — View and accept suggested timesheets to keep accuracy stats high
 - **CRM Bookings** — See your appointments from the CRM calendar
-- **Leave Management** — Create, list, and cancel EasyLeave requests
+- **Leave Management** — Create, list, update, and cancel EasyLeave requests
 - **Repo Mapping** — Map git repos to clients/projects; auto-detects via path or remote URL, with git worktree support; optional `--issues-repo` for projects whose issues live in a different GitHub repo than the code
 - **Daily Scrum** — Generate an SSW-format daily scrum email from timesheets, CRM bookings and GitHub activity, with AutoScrum-inspired `--smart` selection, overridable per-tenant/client templates, rich-text / markdown / plain clipboard support and an interactive copy mode
 - **Location Defaults** — Set WFH days so location is auto-applied when creating timesheets
@@ -129,7 +129,8 @@ tp ts get 2026-03-12       # Specific date
 | `tp bk list` | List CRM bookings/appointments |
 | `tp leave list` | List leave entries (`--filter UPCOMING\|PAST`) |
 | `tp leave balance` | Show leave-usage signal (`--emp-id`): days since last leave + hours taken in last 12 months |
-| `tp leave create` | Create a leave request (see options below) |
+| `tp leave create` | Create a leave request (see options and `--dry-run` below) |
+| `tp leave update ID` | Update a leave request while preserving unspecified API-returned fields; supports `--dry-run` |
 | `tp leave cancel ID` | Cancel a leave request (`--reason`) |
 | `tp cl search QUERY` | Search for clients |
 | `tp proj list --client ID` | List projects for a client |
@@ -171,7 +172,7 @@ tp ts get 2026-03-12       # Specific date
 | `tp recurring list / get` | Recurring invoice templates |
 | `tp prepaid summary / status INVOICE_ID` | Prepaid drawdown totals / PDF report |
 
-All read commands support `--json` for machine-readable output. All write commands support `--yes` to skip confirmation prompts.
+All read commands support `--json` for machine-readable output. All write commands support `--yes` to skip confirmation prompts. Leave create and update also support `--dry-run`, which validates and returns the proposed request without writing it.
 
 **`--json` error contract:** on failure, the command emits a structured envelope to **stdout** so stdout stays valid JSON even when an API call fails — `{"error":{"code":<int|null>,"message":"...","detail":<string|null>}}` (all keys always present) — and exits non-zero. Human-readable error/warning text always goes to **stderr**, so it never corrupts the JSON stream.
 
@@ -233,6 +234,14 @@ tp leave create --start 2026-03-30 --end 2026-03-30 --type "Annual Leave" \
   --approved-by "approver@northwind.example" \
   --cc "notify1@northwind.example,notify2@northwind.example" --yes
 
+# Move an existing request; omitted API-returned fields are preserved
+tp leave update <ID> --start 2026-04-01 --end 2026-04-01 \
+  --note "Updated travel date" --yes
+
+# Validate the same update and inspect the complete payload without applying it
+tp leave update <ID> --start 2026-04-01 --end 2026-04-01 \
+  --note "Updated travel date" --dry-run --json
+
 # Cancel a leave request
 tp leave cancel <ID> --reason "Plans changed" --yes
 ```
@@ -246,6 +255,16 @@ Leave create options:
 - `--timezone` overrides the request timezone with an IANA or Windows timezone ID
 
 Leave create uses `--timezone` first when supplied, then the TimePro user profile timezone when it is set. If neither is set, the CLI/MCP host uses the machine timezone as the browser-equivalent fallback; agents can control that by choosing the environment used to launch `tp`.
+
+Leave update accepts the same date, type, note, approver, CC, day-mode, workday-time,
+and timezone fields. It reads the current request first and preserves every API-returned
+field that was not explicitly changed. Stored workday times are preserved when TimePro
+returns them; older list responses omit them, so update falls back to the current profile
+times and then 09:00-18:00. Use `--start-time` and `--end-time` when those values must be
+explicit. Use `--clear-approved-by` or `--clear-cc` to remove those values, and
+`--half-day` / `--full-day` to change the day mode. Both create and update support
+`--dry-run`; combine it with `--json` to inspect the exact API payload without creating
+or changing leave.
 
 ### Week View
 
@@ -550,7 +569,7 @@ Current default tool groups include:
 |-------|----------|
 | Timesheets | Get, create, update, delete, suggested timesheets, accept suggestions, list iterations, `check_week` (leave-aware weekly coverage) |
 | Lookup | Search clients, list projects, get client rate, CRM bookings, location and repo mapping |
-| Leave | List EasyLeave entries (optionally filtered by `empId`), create EasyLeave requests using timezone override/profile/machine fallback, `get_leave_balance` (days since last leave + 12-month hours) |
+| Leave | List EasyLeave entries (optionally filtered by `empId`), create and safely update EasyLeave requests with dry-run previews, `get_leave_balance` (days since last leave + 12-month hours) |
 
 Optional accounting MCP tools are enabled with:
 
@@ -588,6 +607,7 @@ Then ask Claude things like:
 - "Create a timesheet for today — I worked on the Northwind Traders app"
 - "Accept the suggested timesheet for Monday"
 - "What's my billing rate for Northwind?"
+- "Move my upcoming leave to Wednesday and keep its other details"
 
 ### VS Code (Copilot / Continue)
 
@@ -655,7 +675,7 @@ TimePro.Tools/
 │   │   ├── Tenants/                  # set, info, list
 │   │   ├── Timesheets/              # get, create, update, delete, suggest, accept, export, check, copy
 │   │   ├── Bookings/                # list
-│   │   ├── Leave/                   # list, create, cancel
+│   │   ├── Leave/                   # list, create, update, cancel
 │   │   ├── Clients/                 # search, outstanding, billable-work
 │   │   ├── Projects/                # list
 │   │   ├── Iterations/              # list

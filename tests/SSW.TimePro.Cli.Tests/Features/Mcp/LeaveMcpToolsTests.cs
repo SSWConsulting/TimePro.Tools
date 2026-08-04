@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FluentAssertions;
 using NSubstitute;
+using SSW.TimePro.Cli.Features.Leave;
 using SSW.TimePro.Cli.Features.Mcp.Tools;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
@@ -32,7 +33,7 @@ public class LeaveMcpToolsTests
         api.GetEmployeeSettingsAsync(Arg.Any<CancellationToken>())
             .Returns(new EmployeeSettings { TimezoneId = timeZoneId });
         var expectedOffset = FormatOffset(timeZone.GetUtcOffset(new DateTime(2026, 3, 30, 0, 0, 0)));
-        var tools = new LeaveMcpTools(api, config);
+        var tools = CreateTools(api, config);
 
         var json = await tools.CreateLeave(
             start: "2026-03-30",
@@ -70,7 +71,7 @@ public class LeaveMcpToolsTests
             .Returns(Task.CompletedTask);
 
         var expectedOffset = FormatOffset(TimeZoneInfo.Local.GetUtcOffset(new DateTime(2026, 3, 30, 0, 0, 0)));
-        var tools = new LeaveMcpTools(api, config);
+        var tools = CreateTools(api, config);
 
         var json = await tools.CreateLeave(
             start: "2026-03-30",
@@ -105,7 +106,7 @@ public class LeaveMcpToolsTests
 
         var (timeZoneId, timeZone) = FindTimeZone("Pacific/Auckland", "New Zealand Standard Time", "UTC");
         var expectedOffset = FormatOffset(timeZone.GetUtcOffset(new DateTime(2026, 3, 30, 0, 0, 0)));
-        var tools = new LeaveMcpTools(api, config);
+        var tools = CreateTools(api, config);
 
         var json = await tools.CreateLeave(
             start: "2026-03-30",
@@ -138,7 +139,7 @@ public class LeaveMcpToolsTests
             EmployeeId = "TST"
         });
 
-        var tools = new LeaveMcpTools(api, config);
+        var tools = CreateTools(api, config);
 
         var json = await tools.CreateLeave(
             start: "2026-03-30",
@@ -153,6 +154,119 @@ public class LeaveMcpToolsTests
             .Should()
             .NotContain(call => call.GetMethodInfo().Name == nameof(ITimeProApiClient.CreateLeaveAsync));
     }
+
+    [Fact]
+    public async Task CreateLeave_WhenDryRun_ReturnsPayloadWithoutCallingApi()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        var config = Substitute.For<IConfigService>();
+        config.LoadActiveTenantConfig().Returns(new TenantConfig
+        {
+            TenantId = "test",
+            ApiUrl = "https://timepro.example",
+            ApiKey = "test-api-key",
+            EmployeeId = "TST"
+        });
+        api.GetEmployeeSettingsAsync(Arg.Any<CancellationToken>())
+            .Returns(new EmployeeSettings { TimezoneId = "UTC" });
+        var tools = CreateTools(api, config);
+
+        var json = await tools.CreateLeave(
+            start: "2026-03-30",
+            end: "2026-03-30",
+            type: "1",
+            note: "Annual leave",
+            dryRun: true,
+            ct: TestContext.Current.CancellationToken);
+
+        using var doc = JsonDocument.Parse(json);
+        doc.RootElement.GetProperty("dryRun").GetBoolean().Should().BeTrue();
+        doc.RootElement.GetProperty("request").GetProperty("note").GetString().Should().Be("Annual leave");
+        api.ReceivedCalls()
+            .Should()
+            .NotContain(call => call.GetMethodInfo().Name == nameof(ITimeProApiClient.CreateLeaveAsync));
+    }
+
+    [Fact]
+    public async Task UpdateLeave_WhenChangingNote_PreservesExistingFields()
+    {
+        const string leaveId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+        var api = Substitute.For<ITimeProApiClient>();
+        var config = Substitute.For<IConfigService>();
+        config.LoadActiveTenantConfig().Returns(new TenantConfig
+        {
+            TenantId = "test",
+            ApiUrl = "https://timepro.example",
+            ApiKey = "test-api-key",
+            EmployeeId = "TST"
+        });
+        api.GetLeaveAsync("UPCOMING", 1, 100, "TST", Arg.Any<CancellationToken>())
+            .Returns(new LeaveListResponse
+            {
+                Leaves = new PaginatedList<LeaveEntry>
+                {
+                    PageNumber = 1,
+                    PageSize = 100,
+                    TotalItems = 1,
+                    TotalPages = 1,
+                    Items =
+                    [
+                        new LeaveEntry
+                        {
+                            Id = leaveId,
+                            RequestedEmpId = "TST",
+                            StartDate = "2026-03-30T00:00:00+10:00",
+                            EndDate = "2026-03-30T23:59:00+10:00",
+                            UserStartTime = "07:30",
+                            UserEndTime = "16:00",
+                            Note = "Original plans",
+                            ApprovedBy = "approver@northwind.example",
+                            OptionalEmp = ["notify@northwind.example"],
+                            LeaveType = new LeaveTypeInfo { Id = 1, Name = "Annual Leave", IsActive = true },
+                            AllDay = true
+                        }
+                    ]
+                }
+            });
+        api.GetEmployeeSettingsAsync(Arg.Any<CancellationToken>())
+            .Returns(new EmployeeSettings { StartTime = "09:00", EndTime = "18:00", TimezoneId = "UTC" });
+        UpdateLeaveRequest? request = null;
+        api.UpdateLeaveAsync(Arg.Do<UpdateLeaveRequest>(value => request = value), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+        var tools = CreateTools(api, config);
+
+        var json = await tools.UpdateLeave(
+            id: leaveId,
+            note: "Updated plans",
+            ct: TestContext.Current.CancellationToken);
+
+        using var doc = JsonDocument.Parse(json);
+        doc.RootElement.GetProperty("success").GetBoolean().Should().BeTrue();
+        request.Should().NotBeNull();
+        request!.Note.Should().Be("Updated plans");
+        request.OptionalEmp.Should().Equal("notify@northwind.example");
+        request.ApprovedBy.Should().Be("approver@northwind.example");
+        request.LeaveTypeId.Should().Be(1);
+        request.UserStartTime.Should().Be("07:30:00");
+        request.UserEndTime.Should().Be("16:00:00");
+
+        api.ClearReceivedCalls();
+        var dryRunJson = await tools.UpdateLeave(
+            id: leaveId,
+            note: "Another update",
+            dryRun: true,
+            ct: TestContext.Current.CancellationToken);
+
+        using var dryRunDoc = JsonDocument.Parse(dryRunJson);
+        dryRunDoc.RootElement.GetProperty("dryRun").GetBoolean().Should().BeTrue();
+        dryRunDoc.RootElement.GetProperty("request").GetProperty("note").GetString().Should().Be("Another update");
+        api.ReceivedCalls()
+            .Should()
+            .NotContain(call => call.GetMethodInfo().Name == nameof(ITimeProApiClient.UpdateLeaveAsync));
+    }
+
+    private static LeaveMcpTools CreateTools(ITimeProApiClient api, IConfigService config) =>
+        new(api, config, new LeaveCreateService(api), new LeaveUpdateService(api));
 
     private static (string id, TimeZoneInfo timeZone) FindTimeZone(params string[] ids)
     {

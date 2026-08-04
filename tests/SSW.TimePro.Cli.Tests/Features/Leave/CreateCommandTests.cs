@@ -132,6 +132,29 @@ public class CreateCommandTests
     }
 
     [Fact]
+    public async Task Create_WhenDryRun_ValidatesWithoutCallingCreateApi()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        api.GetEmployeeSettingsAsync(Arg.Any<CancellationToken>())
+            .Returns(new EmployeeSettings { TimezoneId = "UTC" });
+        var app = CreateApp(api);
+
+        var exitCode = await app.RunAsync([
+            "create",
+            "--start", "2026-03-30",
+            "--end", "2026-03-30",
+            "--type", "1",
+            "--note", "Annual leave",
+            "--dry-run",
+            "--json"
+        ], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(0);
+        api.ShouldNotHaveReceived(nameof(ITimeProApiClient.CreateLeaveAsync));
+        await api.Received(1).GetEmployeeSettingsAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Create_WhenDateTimeHasNoOffset_UsesProfileTimezone()
     {
         var api = Substitute.For<ITimeProApiClient>();
@@ -245,6 +268,7 @@ public class CreateCommandTests
         var services = new ServiceCollection();
         services.AddSingleton(api);
         services.AddSingleton(tenantProvider);
+        services.AddSingleton<SSW.TimePro.Cli.Features.Leave.LeaveCreateService>();
 
         var app = new CommandApp(new TypeRegistrar(services));
         app.Configure(config =>

@@ -48,7 +48,8 @@ Run `tp --help` for full command list. Key commands:
 - `tp ts create ...` - Create timesheet
 - `tp ts check --week --json` - Leave-aware weekly coverage check (see below)
 - `tp project recent` - Surface projects recently logged against (likely picks for new entries)
-- `tp leave create --start 2026-03-30 --end 2026-03-30 --type 1 --note "..." --approved-by "email" --cc "e1,e2" --yes` - Create leave
+- `tp leave create --start 2026-03-30 --end 2026-03-30 --type 1 --note "..." --approved-by "email" --cc "e1,e2" --yes` - Create leave (`--dry-run --json` validates without writing)
+- `tp leave update ID --start 2026-04-01 --end 2026-04-01 --note "..." --yes` - Update leave while preserving omitted API-returned fields (`--dry-run --json` previews the full payload)
 - `tp leave cancel ID --reason "..." --yes` - Cancel leave
 - `tp leave list --filter UPCOMING --json` - List leave
 - `tp leave balance --emp-id JEK` - Leave-usage signal (days since last leave + hours taken in last 12 months)
@@ -82,9 +83,22 @@ The leave create endpoint (`POST /api/leave/`) requires these fields in the requ
 - **Required**: `RequestedEmpId`, `StartDate` (DateTimeOffset), `EndDate` (DateTimeOffset), `LeaveTypeId`, `UserStartTime`, `UserEndTime`, `AllDay`
 - **Optional**: `Note`, `OptionalEmp` (CC emails), `ApprovedBy` (email), `TimeLessOverride`
 
+The leave update endpoint (`PUT /api/leave/`) uses the same full payload plus `Id`.
+It is a replacement operation, not a patch. All CLI and MCP updates must go through
+`LeaveUpdateService`, which reads the existing request and preserves omitted API-returned fields
+before calling `UpdateLeaveAsync`.
+
+Older leave-list responses omit `UserStartTime` and `UserEndTime`. Updates preserve
+those values when returned; otherwise they use the current employee profile values and
+then the 09:00-18:00 defaults. Callers can pass explicit workday times when required.
+
+CLI and MCP leave create/update surfaces support dry-run. Dry-run performs the same
+validation and payload preparation, returns the proposed request, and must not call
+`CreateLeaveAsync` or `UpdateLeaveAsync`.
+
 The cancel endpoint (`PUT /api/leave/{id}/cancel`) requires `LeaveId` (Guid) and `CancellationReason` in the request body.
 
-The list endpoint (`GET /api/leave/`) returns per-entry `daysAway`, `updatedAt`, `timeLessOverride`, `cancellationReason` (all bound on `LeaveEntry`) plus a top-level `cancelledCount` on the list envelope. These surface in `tp leave list --json`.
+The list endpoint (`GET /api/leave/`) returns per-entry `daysAway`, `updatedAt`, `optionalEmp`, `timeLessOverride`, `cancellationReason` (all bound on `LeaveEntry`) plus a top-level `cancelledCount` on the list envelope. These surface in `tp leave list --json`.
 
 ## Testing
 

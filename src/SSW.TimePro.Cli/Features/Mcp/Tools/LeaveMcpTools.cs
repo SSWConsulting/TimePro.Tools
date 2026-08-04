@@ -4,7 +4,6 @@ using ModelContextProtocol.Server;
 using SSW.TimePro.Cli.Features.Leave;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
-using SSW.TimePro.Cli.Shared.Models;
 
 namespace SSW.TimePro.Cli.Features.Mcp.Tools;
 
@@ -13,6 +12,8 @@ public class LeaveMcpTools
 {
     private readonly ITimeProApiClient _api;
     private readonly IConfigService _config;
+    private readonly LeaveCreateService _leaveCreateService;
+    private readonly LeaveUpdateService _leaveUpdateService;
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -20,10 +21,16 @@ public class LeaveMcpTools
         WriteIndented = true
     };
 
-    public LeaveMcpTools(ITimeProApiClient api, IConfigService config)
+    public LeaveMcpTools(
+        ITimeProApiClient api,
+        IConfigService config,
+        LeaveCreateService leaveCreateService,
+        LeaveUpdateService leaveUpdateService)
     {
         _api = api;
         _config = config;
+        _leaveCreateService = leaveCreateService;
+        _leaveUpdateService = leaveUpdateService;
     }
 
     [McpServerTool]
@@ -76,7 +83,7 @@ public class LeaveMcpTools
     }
 
     [McpServerTool]
-    [Description("Create an EasyLeave request for the current user. An explicit timezone override takes priority; otherwise uses the TimePro profile timezone first, then the MCP host machine timezone as the browser-equivalent fallback.")]
+    [Description("Create a leave request for the current user. An explicit timezone override takes priority; otherwise uses the TimePro profile timezone first, then the MCP host machine timezone as the browser-equivalent fallback.")]
     public async Task<string> CreateLeave(
         [Description("Start date (yyyy-MM-dd)")] string start,
         [Description("End date (yyyy-MM-dd)")] string end,
@@ -88,48 +95,108 @@ public class LeaveMcpTools
         [Description("Start time override (HH:mm, default 09:00)")] string? startTime = null,
         [Description("End time override (HH:mm, default 18:00)")] string? endTime = null,
         [Description("Timezone override (IANA or Windows ID); takes priority over the TimePro user profile timezone")] string? timeZoneId = null,
+        [Description("Validate and return the proposed request without creating leave")] bool dryRun = false,
         CancellationToken ct = default)
     {
         var tenant = _config.LoadActiveTenantConfig();
-        if (tenant?.EmployeeId is null)
+        if (string.IsNullOrWhiteSpace(tenant?.EmployeeId))
             return """{"error": "Not logged in. Run 'tp login --tenant <id>' first."}""";
 
-        if (string.IsNullOrWhiteSpace(note))
-            return JsonSerializer.Serialize(new { error = "note is required: a reason/description is mandatory for leave" }, JsonOpts);
-
-        var settings = string.IsNullOrWhiteSpace(timeZoneId)
-            ? await _api.GetEmployeeSettingsAsync(ct)
-            : null;
-        if (!LeaveRequestParser.TryResolveRequestTimeZone(timeZoneId, settings, out var requestTimeZone, out var timeZoneError))
-            return JsonSerializer.Serialize(new { error = timeZoneError ?? "Invalid leave request timezone" }, JsonOpts);
-
-        if (!LeaveRequestParser.TryParseDateRange(start, end, requestTimeZone, out var startDate, out var endDate, out var dateError))
-            return JsonSerializer.Serialize(new { error = dateError ?? "Invalid leave date range" }, JsonOpts);
-
-        if (IsWeekend(startDate) || IsWeekend(endDate))
-            return JsonSerializer.Serialize(new { error = "Leave start and end dates must be weekdays" }, JsonOpts);
-
-        var leaveTypeId = await ResolveLeaveTypeAsync(type, ct);
-        if (leaveTypeId is null)
-            return JsonSerializer.Serialize(new { error = $"Unknown leave type: '{type}'." }, JsonOpts);
-
-        var request = new CreateLeaveRequest
+        try
         {
-            RequestedEmpId = tenant.EmployeeId,
-            StartDate = startDate.ToString("o"),
-            EndDate = endDate.ToString("o"),
-            LeaveTypeId = leaveTypeId.Value,
-            Note = note.Trim(),
-            UserStartTime = LeaveRequestParser.NormalizeTime(startTime, LeaveRequestParser.DefaultStartTime),
-            UserEndTime = LeaveRequestParser.NormalizeTime(endTime, LeaveRequestParser.DefaultEndTime),
-            AllDay = !halfDay,
-            OptionalEmp = LeaveRequestParser.ParseOptionalEmployees(cc),
-            ApprovedBy = approvedBy,
-            TimeLessOverride = null
-        };
+            var plan = await _leaveCreateService.PrepareAsync(
+                tenant.EmployeeId,
+                new LeaveCreateOptions(
+                    Start: start,
+                    End: end,
+                    Type: type,
+                    Note: note,
+                    ApprovedBy: approvedBy,
+                    Cc: cc,
+                    HalfDay: halfDay,
+                    StartTime: startTime,
+                    EndTime: endTime,
+                    TimeZoneId: timeZoneId),
+                ct);
 
-        await _api.CreateLeaveAsync(request, ct);
-        return JsonSerializer.Serialize(new { success = true }, JsonOpts);
+            if (dryRun)
+                return JsonSerializer.Serialize(new { dryRun = true, request = plan.Request }, JsonOpts);
+
+            await _leaveCreateService.ApplyAsync(plan, ct);
+            return JsonSerializer.Serialize(new { success = true }, JsonOpts);
+        }
+        catch (LeaveCreateValidationException ex)
+        {
+            return JsonSerializer.Serialize(new { error = ex.Message }, JsonOpts);
+        }
+    }
+
+    [McpServerTool]
+    [Description("Update an existing leave request for the current user. Unspecified API-returned fields are preserved. List leave entries first to obtain the leave ID.")]
+    public async Task<string> UpdateLeave(
+        [Description("Leave entry ID (GUID)")] string id,
+        [Description("New start date (yyyy-MM-dd); omit to preserve")] string? start = null,
+        [Description("New end date (yyyy-MM-dd); omit to preserve")] string? end = null,
+        [Description("New leave type ID or active leave type name; omit to preserve")] string? type = null,
+        [Description("New leave note/reason; omit to preserve")] string? note = null,
+        [Description("New approver email; omit to preserve")] string? approvedBy = null,
+        [Description("Remove the current approver")] bool clearApprovedBy = false,
+        [Description("Comma-separated CC recipients; omit to preserve")] string? cc = null,
+        [Description("Remove all current CC recipients")] bool clearCc = false,
+        [Description("true for partial-day, false for full-day, omit to preserve")] bool? halfDay = null,
+        [Description("Employee workday start time (HH:mm); omit to preserve it when returned, otherwise use the profile value")] string? startTime = null,
+        [Description("Employee workday end time (HH:mm); omit to preserve it when returned, otherwise use the profile value")] string? endTime = null,
+        [Description("Timezone for changed dates (IANA or Windows ID)")] string? timeZoneId = null,
+        [Description("Validate and return the proposed update without applying it")] bool dryRun = false,
+        CancellationToken ct = default)
+    {
+        var tenant = _config.LoadActiveTenantConfig();
+        if (string.IsNullOrWhiteSpace(tenant?.EmployeeId))
+            return """{"error": "Not logged in. Run 'tp login --tenant <id>' first."}""";
+
+        try
+        {
+            var plan = await _leaveUpdateService.PrepareAsync(
+                id,
+                tenant.EmployeeId,
+                new LeaveUpdateOptions(
+                    Start: start,
+                    End: end,
+                    Type: type,
+                    Note: note,
+                    ApprovedBy: approvedBy,
+                    ClearApprovedBy: clearApprovedBy,
+                    Cc: cc,
+                    ClearCc: clearCc,
+                    AllDay: halfDay is null ? null : !halfDay.Value,
+                    StartTime: startTime,
+                    EndTime: endTime,
+                    TimeZoneId: timeZoneId),
+                ct);
+
+            if (dryRun)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    dryRun = true,
+                    leaveId = plan.Request.Id,
+                    changes = plan.Changes,
+                    request = plan.Request
+                }, JsonOpts);
+            }
+
+            await _leaveUpdateService.ApplyAsync(plan, ct);
+            return JsonSerializer.Serialize(new
+            {
+                success = true,
+                leaveId = plan.Request.Id,
+                changes = plan.Changes
+            }, JsonOpts);
+        }
+        catch (LeaveUpdateValidationException ex)
+        {
+            return JsonSerializer.Serialize(new { error = ex.Message }, JsonOpts);
+        }
     }
 
     private static string? ResolveEmpId(string? empId, string? employeeId)
@@ -137,18 +204,4 @@ public class LeaveMcpTools
         var requestedEmpId = !string.IsNullOrWhiteSpace(empId) ? empId : employeeId;
         return string.IsNullOrWhiteSpace(requestedEmpId) ? null : requestedEmpId.Trim();
     }
-
-    private async Task<int?> ResolveLeaveTypeAsync(string typeInput, CancellationToken ct)
-    {
-        if (int.TryParse(typeInput, out var id))
-            return id;
-
-        var types = await _api.GetLeaveTypesAsync(ct);
-        var match = types.FirstOrDefault(t =>
-            t.Name.Equals(typeInput, StringComparison.OrdinalIgnoreCase));
-        return match?.Id;
-    }
-
-    private static bool IsWeekend(DateTimeOffset date) =>
-        date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
 }

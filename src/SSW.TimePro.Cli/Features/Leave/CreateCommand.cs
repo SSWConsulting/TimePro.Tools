@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Output;
-using SSW.TimePro.Cli.Shared.Models;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -10,7 +9,7 @@ namespace SSW.TimePro.Cli.Features.Leave;
 [Description("Create a leave request")]
 public class CreateCommand : AsyncCommand<CreateCommand.Settings>
 {
-    private readonly ITimeProApiClient _api;
+    private readonly LeaveCreateService _createService;
     private readonly ITenantProvider _tenantProvider;
 
     public class Settings : CommandSettings
@@ -59,120 +58,66 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
         [Description("Skip confirmation")]
         public bool Yes { get; set; }
 
+        [CommandOption("--dry-run")]
+        [Description("Validate and preview the request without creating leave")]
+        public bool DryRun { get; set; }
+
         [CommandOption("--json")]
         [Description("Output as JSON")]
         public bool Json { get; set; }
     }
 
-    public CreateCommand(ITimeProApiClient api, ITenantProvider tenantProvider)
+    public CreateCommand(LeaveCreateService createService, ITenantProvider tenantProvider)
     {
-        _api = api;
+        _createService = createService;
         _tenantProvider = tenantProvider;
     }
 
     protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(settings.Start) || string.IsNullOrEmpty(settings.End) || string.IsNullOrEmpty(settings.Type))
-        {
-            OutputHelper.WriteError("--start, --end, and --type are required");
-            return 1;
-        }
-
-        if (string.IsNullOrWhiteSpace(settings.Note))
-        {
-            WriteValidationError(settings.Json, "--note is required: a reason/description is mandatory for leave");
-            return 1;
-        }
-
         var tenant = _tenantProvider.GetCurrentTenant();
         if (tenant is null || string.IsNullOrEmpty(tenant.EmployeeId))
         {
-            OutputHelper.WriteError("No active tenant or employee ID configured. Run 'tp login --tenant <id>' first.");
+            WriteValidationError(
+                settings.Json,
+                "No active tenant or employee ID configured. Run 'tp login --tenant <id>' first.");
             return 1;
         }
 
         try
         {
-            var settingsDetails = string.IsNullOrWhiteSpace(settings.TimeZoneId)
-                ? await _api.GetEmployeeSettingsAsync(cancellationToken)
-                : null;
-            if (!LeaveRequestParser.TryResolveRequestTimeZone(settings.TimeZoneId, settingsDetails, out var requestTimeZone, out var timeZoneError))
+            var plan = await _createService.PrepareAsync(
+                tenant.EmployeeId,
+                new LeaveCreateOptions(
+                    Start: settings.Start,
+                    End: settings.End,
+                    Type: settings.Type,
+                    Note: settings.Note,
+                    ApprovedBy: settings.ApprovedBy,
+                    Cc: settings.OptionalEmp,
+                    HalfDay: settings.HalfDay,
+                    StartTime: settings.StartTime,
+                    EndTime: settings.EndTime,
+                    TimeZoneId: settings.TimeZoneId),
+                cancellationToken);
+
+            if (!settings.Json && (!settings.Yes || settings.DryRun))
             {
-                WriteValidationError(settings.Json, timeZoneError ?? "Invalid leave request timezone");
-                return 1;
-            }
-
-            if (!LeaveRequestParser.TryParseDateRange(
-                    settings.Start,
-                    settings.End,
-                    requestTimeZone,
-                    out var startDate,
-                    out var endDate,
-                    out var dateError))
-            {
-                WriteValidationError(settings.Json, dateError ?? "Invalid leave date range");
-                return 1;
-            }
-
-            if (IsWeekend(startDate) || IsWeekend(endDate))
-            {
-                // LeaveCommandValidator rejects weekend boundaries; surface it before the API call.
-                WriteValidationError(settings.Json, "Leave start and end dates must be weekdays");
-                return 1;
-            }
-
-            // Resolve type ID
-            var leaveTypeId = await ResolveLeaveTypeAsync(settings.Type);
-            if (leaveTypeId is null)
-            {
-                OutputHelper.WriteError($"Unknown leave type: '{settings.Type}'. Use 'tp leave types' or a numeric ID.");
-                var types = await _api.GetLeaveTypesAsync(CancellationToken.None);
-                foreach (var t in types.Where(t => t.IsActive))
-                    AnsiConsole.MarkupLine($"  {t.Id}: {Markup.Escape(t.Name)}");
-                return 1;
-            }
-
-            var allDay = !settings.HalfDay;
-            var userStartTime = LeaveRequestParser.NormalizeTime(settings.StartTime, LeaveRequestParser.DefaultStartTime);
-            var userEndTime = LeaveRequestParser.NormalizeTime(settings.EndTime, LeaveRequestParser.DefaultEndTime);
-            var optionalEmps = LeaveRequestParser.ParseOptionalEmployees(settings.OptionalEmp);
-
-            if (!settings.Yes && !settings.Json)
-            {
-                AnsiConsole.MarkupLine("[bold]Creating leave request:[/]");
-                AnsiConsole.MarkupLine($"  Employee: {tenant.EmployeeId}");
-                AnsiConsole.MarkupLine($"  Start:    {startDate:yyyy-MM-dd}");
-                AnsiConsole.MarkupLine($"  End:      {endDate:yyyy-MM-dd}");
-                AnsiConsole.MarkupLine($"  Type:     {settings.Type}");
-                AnsiConsole.MarkupLine($"  All day:  {allDay}");
-                if (!string.IsNullOrEmpty(settings.Note))
-                    AnsiConsole.MarkupLine($"  Note:     {Markup.Escape(settings.Note)}");
-                if (!string.IsNullOrEmpty(settings.ApprovedBy))
-                    AnsiConsole.MarkupLine($"  Approved by: {Markup.Escape(settings.ApprovedBy)}");
-                if (optionalEmps.Count > 0)
-                    AnsiConsole.MarkupLine($"  CC:       {Markup.Escape(string.Join(", ", optionalEmps))}");
-                AnsiConsole.WriteLine();
-
-                if (!AnsiConsole.Confirm("Submit this leave request?"))
+                RenderPreview(plan, settings.DryRun);
+                if (!settings.Yes && !settings.DryRun && !AnsiConsole.Confirm("Submit this leave request?"))
                     return 1;
             }
 
-            var request = new CreateLeaveRequest
+            if (settings.DryRun)
             {
-                RequestedEmpId = tenant.EmployeeId,
-                StartDate = startDate.ToString("o"),
-                EndDate = endDate.ToString("o"),
-                LeaveTypeId = leaveTypeId.Value,
-                Note = settings.Note.Trim(),
-                UserStartTime = userStartTime,
-                UserEndTime = userEndTime,
-                AllDay = allDay,
-                OptionalEmp = optionalEmps,
-                ApprovedBy = settings.ApprovedBy,
-                TimeLessOverride = null
-            };
+                if (settings.Json)
+                    OutputHelper.WriteJson(new { dryRun = true, request = plan.Request });
+                else
+                    OutputHelper.WriteInfo("Dry run: request validated; no leave request was created");
+                return 0;
+            }
 
-            await _api.CreateLeaveAsync(request, CancellationToken.None);
+            await _createService.ApplyAsync(plan, cancellationToken);
 
             if (settings.Json)
                 OutputHelper.WriteJson(new { success = true });
@@ -180,6 +125,11 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
                 OutputHelper.WriteSuccess("Leave request created");
 
             return 0;
+        }
+        catch (LeaveCreateValidationException ex)
+        {
+            WriteValidationError(settings.Json, ex.Message);
+            return 1;
         }
         catch (ApiException ex)
         {
@@ -193,24 +143,29 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
         }
     }
 
+    private static void RenderPreview(LeaveCreatePlan plan, bool dryRun)
+    {
+        var request = plan.Request;
+        AnsiConsole.MarkupLine(dryRun
+            ? "[bold]Proposed leave request (dry run):[/]"
+            : "[bold]Creating leave request:[/]");
+        AnsiConsole.MarkupLine($"  Employee: {Markup.Escape(request.RequestedEmpId)}");
+        AnsiConsole.MarkupLine($"  Start:    {Markup.Escape(request.StartDate)}");
+        AnsiConsole.MarkupLine($"  End:      {Markup.Escape(request.EndDate)}");
+        AnsiConsole.MarkupLine($"  Type:     {request.LeaveTypeId} ({Markup.Escape(plan.TypeLabel)})");
+        AnsiConsole.MarkupLine($"  Note:     {Markup.Escape(request.Note ?? "")}");
+        AnsiConsole.MarkupLine($"  Workday:  {Markup.Escape(request.UserStartTime)}-{Markup.Escape(request.UserEndTime)}");
+        AnsiConsole.MarkupLine($"  All day:  {request.AllDay}");
+        AnsiConsole.MarkupLine($"  CC:       {Markup.Escape(string.Join(", ", request.OptionalEmp))}");
+        AnsiConsole.MarkupLine($"  Approved by: {Markup.Escape(request.ApprovedBy ?? "")}");
+        AnsiConsole.MarkupLine($"  Time-less override: {(request.TimeLessOverride?.ToString() ?? "")}");
+        AnsiConsole.WriteLine();
+    }
+
     private static void WriteValidationError(bool json, string message)
     {
         if (json)
             OutputHelper.WriteJsonError(message);
         OutputHelper.WriteError(message);
-    }
-
-    private static bool IsWeekend(DateTimeOffset date) =>
-        date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-
-    private async Task<int?> ResolveLeaveTypeAsync(string typeInput)
-    {
-        if (int.TryParse(typeInput, out var id))
-            return id;
-
-        var types = await _api.GetLeaveTypesAsync(CancellationToken.None);
-        var match = types.FirstOrDefault(t =>
-            t.Name.Equals(typeInput, StringComparison.OrdinalIgnoreCase));
-        return match?.Id;
     }
 }

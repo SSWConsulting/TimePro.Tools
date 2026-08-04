@@ -26,6 +26,7 @@ using RateCreate = SSW.TimePro.Cli.Features.Rates.CreateCommand;
 using RateUpdate = SSW.TimePro.Cli.Features.Rates.UpdateCommand;
 using LeaveList = SSW.TimePro.Cli.Features.Leave.ListCommand;
 using LeaveCreate = SSW.TimePro.Cli.Features.Leave.CreateCommand;
+using LeaveUpdate = SSW.TimePro.Cli.Features.Leave.UpdateCommand;
 using LeaveCancel = SSW.TimePro.Cli.Features.Leave.CancelCommand;
 using LeaveBalance = SSW.TimePro.Cli.Features.Leave.BalanceCommand;
 using InvList = SSW.TimePro.Cli.Features.Invoices.ListCommand;
@@ -110,6 +111,8 @@ var services = new ServiceCollection();
 services.AddSingleton<IConfigService>(configService);
 services.AddSingleton<ITenantProvider, DefaultTenantProvider>();
 services.AddHttpClient<ITimeProApiClient, TimeProApiClient>();
+services.AddSingleton<SSW.TimePro.Cli.Features.Leave.LeaveCreateService>();
+services.AddSingleton<SSW.TimePro.Cli.Features.Leave.LeaveUpdateService>();
 
 var registrar = new TypeRegistrar(services);
 
@@ -206,6 +209,8 @@ app.Configure(config =>
             .WithDescription("List leave entries");
         branch.AddCommand<LeaveCreate>("create")
             .WithDescription("Create a leave request");
+        branch.AddCommand<LeaveUpdate>("update")
+            .WithDescription("Update an existing leave request");
         branch.AddCommand<LeaveCancel>("cancel")
             .WithDescription("Cancel a leave request");
         branch.AddCommand<LeaveBalance>("balance")

@@ -31,7 +31,10 @@ public class LeaveEntry
 
     public string? Note { get; set; }
     public string? ApprovedBy { get; set; }
+    public List<string> OptionalEmp { get; set; } = [];
     public string? RequestedEmpId { get; set; }
+    public string? UserStartTime { get; set; }
+    public string? UserEndTime { get; set; }
 
     /// <summary>Number of working days this leave spans (API field "daysAway").</summary>
     public decimal DaysAway { get; set; }

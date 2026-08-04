@@ -41,6 +41,7 @@ public class LeaveListTests : TestBase
         first.Id.Should().Be("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
         first.RequestedEmpId.Should().Be("TST");
         first.Note.Should().Be("Annual leave for personal matters");
+        first.OptionalEmp.Should().Equal("colleague@test.com");
         first.LeaveType!.Name.Should().Be("Annual Leave");
     }
 
@@ -329,6 +330,53 @@ public class LeaveCreateTests : TestBase
         var act = () => ApiClient.CreateLeaveAsync(request, CancellationToken.None);
         var ex = await act.Should().ThrowAsync<ApiException>()
             .Where(e => e.StatusCode == 400);
+    }
+}
+
+public class LeaveUpdateTests : TestBase
+{
+    [Fact]
+    public async Task UpdateLeave_WithValidRequest_SendsCompletePayload()
+    {
+        const string leaveId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+        WireMock.Given(
+            Request.Create()
+                .WithPath("/api/leave/")
+                .UsingPut()
+        ).RespondWith(
+            Response.Create()
+                .WithStatusCode(204)
+        );
+
+        var request = new UpdateLeaveRequest
+        {
+            Id = leaveId,
+            RequestedEmpId = "TST",
+            StartDate = "2026-03-30T00:00:00+10:00",
+            EndDate = "2026-03-30T23:59:00+10:00",
+            LeaveTypeId = 1,
+            Note = "Updated plans",
+            UserStartTime = "09:00:00",
+            UserEndTime = "18:00:00",
+            AllDay = true,
+            OptionalEmp = ["colleague@test.com"],
+            ApprovedBy = "approver@test.com",
+            TimeLessOverride = 1.5m
+        };
+
+        await ApiClient.UpdateLeaveAsync(request, CancellationToken.None);
+
+        var entry = WireMock.LogEntries.Should().ContainSingle().Subject;
+        var message = entry.RequestMessage!;
+        message.Method.Should().Be("PUT");
+        message.Path.Should().Be("/api/leave/");
+        var body = JsonDocument.Parse(message.Body!);
+        var root = body.RootElement;
+        root.GetProperty("Id").GetString().Should().Be(leaveId);
+        root.GetProperty("RequestedEmpId").GetString().Should().Be("TST");
+        root.GetProperty("Note").GetString().Should().Be("Updated plans");
+        root.GetProperty("OptionalEmp").GetArrayLength().Should().Be(1);
+        root.GetProperty("TimeLessOverride").GetDecimal().Should().Be(1.5m);
     }
 }
 

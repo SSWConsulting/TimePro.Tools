@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using SSW.TimePro.Cli.Shared.Models;
@@ -47,6 +48,11 @@ public interface ITimeProApiClient
     Task CreateLeaveAsync(CreateLeaveRequest request, CancellationToken ct = default);
     Task UpdateLeaveAsync(UpdateLeaveRequest request, CancellationToken ct = default);
     Task CancelLeaveAsync(string leaveId, CancelLeaveRequest request, CancellationToken ct = default);
+
+    // Leave balances (Xero CSV sync). Import is leave-admin only server-side and replaces
+    // stored balances; status is a cheap read used to decide whether a re-import is due.
+    Task<LeaveBalanceStatus?> GetLeaveBalanceStatusAsync(CancellationToken ct = default);
+    Task<ImportLeaveBalancesResult?> ImportLeaveBalancesAsync(string csvContent, CancellationToken ct = default);
     Task<byte[]> ExportTimesheetsCsvAsync(DateOnly? startDate, DateOnly? endDate, CancellationToken ct = default);
     Task<List<BlogEntry>> GetBlogsAsync(bool includeFormerEmployees = false, CancellationToken ct = default);
     Task<List<ProjectSummaryItem>> GetProjectsSummaryAsync(string employeeId, DateOnly startDate, DateOnly endDate, CancellationToken ct = default);
@@ -382,6 +388,20 @@ public class TimeProApiClient : ITimeProApiClient
     public async Task CancelLeaveAsync(string leaveId, CancelLeaveRequest request, CancellationToken ct = default)
     {
         await PutAsync($"/api/leave/{Uri.EscapeDataString(leaveId)}/cancel", request, ct);
+    }
+
+    public async Task<LeaveBalanceStatus?> GetLeaveBalanceStatusAsync(CancellationToken ct = default)
+    {
+        return await GetAsync<LeaveBalanceStatus>("/api/leave/balances/status", ct);
+    }
+
+    public async Task<ImportLeaveBalancesResult?> ImportLeaveBalancesAsync(
+        string csvContent, CancellationToken ct = default)
+    {
+        // The endpoint reads the request body as the raw Xero CSV export, so this must not go
+        // through the JSON helpers — JsonContent would send an escaped string literal.
+        return await PostRawAsync<ImportLeaveBalancesResult>(
+            "/api/leave/balances/import", csvContent, "text/csv", ct);
     }
 
     // ───────────────────────── Export ─────────────────────────
@@ -800,6 +820,28 @@ public class TimeProApiClient : ITimeProApiClient
             return default;
 
         return System.Text.Json.JsonSerializer.Deserialize<T>(content, ReadJsonOptions);
+    }
+
+    /// <summary>
+    /// POSTs a body verbatim under an explicit content type, for endpoints that read the raw
+    /// request stream rather than a JSON payload (currently the Xero leave balance CSV import).
+    /// </summary>
+    private async Task<T?> PostRawAsync<T>(string relativeUrl, string content, string contentType, CancellationToken ct)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, relativeUrl)
+        {
+            Content = new StringContent(content, Encoding.UTF8, contentType)
+        };
+        ConfigureRequest(request);
+
+        using var response = await _http.SendAsync(request, ct);
+        await EnsureSuccessAsync(response, ct);
+
+        var body = await response.Content.ReadAsStringAsync(ct);
+        if (string.IsNullOrWhiteSpace(body))
+            return default;
+
+        return JsonSerializer.Deserialize<T>(body, ReadJsonOptions);
     }
 
     private async Task PutAsync(string relativeUrl, object body, CancellationToken ct)

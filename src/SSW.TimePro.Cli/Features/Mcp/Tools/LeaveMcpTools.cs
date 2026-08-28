@@ -14,6 +14,7 @@ public class LeaveMcpTools
     private readonly IConfigService _config;
     private readonly LeaveCreateService _leaveCreateService;
     private readonly LeaveUpdateService _leaveUpdateService;
+    private readonly LeaveBalanceImportService _leaveBalanceImportService;
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -25,12 +26,14 @@ public class LeaveMcpTools
         ITimeProApiClient api,
         IConfigService config,
         LeaveCreateService leaveCreateService,
-        LeaveUpdateService leaveUpdateService)
+        LeaveUpdateService leaveUpdateService,
+        LeaveBalanceImportService leaveBalanceImportService)
     {
         _api = api;
         _config = config;
         _leaveCreateService = leaveCreateService;
         _leaveUpdateService = leaveUpdateService;
+        _leaveBalanceImportService = leaveBalanceImportService;
     }
 
     [McpServerTool]
@@ -194,6 +197,53 @@ public class LeaveMcpTools
             }, JsonOpts);
         }
         catch (LeaveUpdateValidationException ex)
+        {
+            return JsonSerializer.Serialize(new { error = ex.Message }, JsonOpts);
+        }
+    }
+
+    [McpServerTool]
+    [Description("Report when TimePro's leave balances were last imported from Xero, how many employees have a stored balance, and whether the data is stale. Read-only. Check this before importing so you can tell the user whether a re-import is actually needed.")]
+    public async Task<string> GetLeaveBalanceStatus(CancellationToken ct = default)
+    {
+        if (_config.LoadActiveTenantConfig() is null)
+            return """{"error": "Not logged in. Run 'tp login --tenant <id>' first."}""";
+
+        var status = await _api.GetLeaveBalanceStatusAsync(ct);
+        if (status is null)
+            return JsonSerializer.Serialize(new { imported = false }, JsonOpts);
+
+        return JsonSerializer.Serialize(status, JsonOpts);
+    }
+
+    [McpServerTool]
+    [Description(
+        "Import leave balances for EVERY employee from a Xero 'Leave Balances' CSV export, replacing the balances currently stored in TimePro. "
+        + "Requires leave admin rights; other accounts get a permission error. There is no dry run and no undo, so confirm with the user before calling this. "
+        + "Pass the path to the CSV file on this machine - do not paste the file contents. "
+        + "Call GetLeaveBalanceStatus first to check whether an import is due. "
+        + "Report the returned unmatchedEmployees (rows skipped because the Xero name matched no TimePro employee, or matched several) and warnings back to the user - the import succeeds despite them.")]
+    public async Task<string> ImportLeaveBalances(
+        [Description("Path to the Xero 'Leave Balances' CSV export on this machine")] string csvPath,
+        CancellationToken ct = default)
+    {
+        if (_config.LoadActiveTenantConfig() is null)
+            return """{"error": "Not logged in. Run 'tp login --tenant <id>' first."}""";
+
+        try
+        {
+            var result = await _leaveBalanceImportService.ImportAsync(csvPath, ct);
+            return JsonSerializer.Serialize(new
+            {
+                success = true,
+                result.AsAtDate,
+                result.Created,
+                result.Updated,
+                result.UnmatchedEmployees,
+                result.Warnings
+            }, JsonOpts);
+        }
+        catch (LeaveBalanceImportValidationException ex)
         {
             return JsonSerializer.Serialize(new { error = ex.Message }, JsonOpts);
         }

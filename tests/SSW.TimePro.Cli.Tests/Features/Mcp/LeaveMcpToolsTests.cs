@@ -265,8 +265,116 @@ public class LeaveMcpToolsTests
             .NotContain(call => call.GetMethodInfo().Name == nameof(ITimeProApiClient.UpdateLeaveAsync));
     }
 
+    [Fact]
+    public async Task ImportLeaveBalances_WithCsvPath_SendsFileContentsAndReportsSkippedRows()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        var config = Substitute.For<IConfigService>();
+        config.LoadActiveTenantConfig().Returns(new TenantConfig
+        {
+            TenantId = "test",
+            ApiUrl = "https://timepro.example",
+            ApiKey = "test-api-key",
+            EmployeeId = "TST"
+        });
+
+        const string csv = "Employee,Leave Type,Units\nJane Doe,Annual Leave,76.00\n";
+        string? sent = null;
+        api.ImportLeaveBalancesAsync(Arg.Do<string>(value => sent = value), Arg.Any<CancellationToken>())
+            .Returns(new ImportLeaveBalancesResult
+            {
+                AsAtDate = new DateOnly(2026, 8, 1),
+                Created = 1,
+                Updated = 2,
+                UnmatchedEmployees = ["Nobody Here"],
+                Warnings = ["Jane Doe has an unusually large balance"]
+            });
+
+        var path = Path.Combine(Path.GetTempPath(), $"tp-mcp-balances-{Guid.NewGuid():N}.csv");
+        await File.WriteAllTextAsync(path, csv, TestContext.Current.CancellationToken);
+
+        try
+        {
+            var tools = CreateTools(api, config);
+            var json = await tools.ImportLeaveBalances(path, TestContext.Current.CancellationToken);
+
+            sent.Should().Be(csv);
+            using var doc = JsonDocument.Parse(json);
+            doc.RootElement.GetProperty("success").GetBoolean().Should().BeTrue();
+            doc.RootElement.GetProperty("created").GetInt32().Should().Be(1);
+            doc.RootElement.GetProperty("updated").GetInt32().Should().Be(2);
+            // Skipped rows must reach the agent so it can tell the user who was missed.
+            doc.RootElement.GetProperty("unmatchedEmployees").EnumerateArray()
+                .Select(e => e.GetString()).Should().Equal("Nobody Here");
+            doc.RootElement.GetProperty("warnings").GetArrayLength().Should().Be(1);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task ImportLeaveBalances_WhenFileMissing_ReturnsErrorWithoutCallingApi()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        var config = Substitute.For<IConfigService>();
+        config.LoadActiveTenantConfig().Returns(new TenantConfig
+        {
+            TenantId = "test",
+            ApiUrl = "https://timepro.example",
+            ApiKey = "test-api-key",
+            EmployeeId = "TST"
+        });
+        var tools = CreateTools(api, config);
+
+        var json = await tools.ImportLeaveBalances(
+            Path.Combine(Path.GetTempPath(), $"tp-missing-{Guid.NewGuid():N}.csv"),
+            TestContext.Current.CancellationToken);
+
+        using var doc = JsonDocument.Parse(json);
+        doc.RootElement.GetProperty("error").GetString().Should().StartWith("File not found");
+        await api.DidNotReceive().ImportLeaveBalancesAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ImportLeaveBalances_WhenNotLoggedIn_ReturnsErrorWithoutCallingApi()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        var config = Substitute.For<IConfigService>();
+        config.LoadActiveTenantConfig().Returns((TenantConfig?)null);
+        var tools = CreateTools(api, config);
+
+        var json = await tools.ImportLeaveBalances("balances.csv", TestContext.Current.CancellationToken);
+
+        using var doc = JsonDocument.Parse(json);
+        doc.RootElement.GetProperty("error").GetString().Should().Contain("Not logged in");
+        await api.DidNotReceive().ImportLeaveBalancesAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetLeaveBalanceStatus_WhenNothingImported_ReportsNotImported()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        var config = Substitute.For<IConfigService>();
+        config.LoadActiveTenantConfig().Returns(new TenantConfig
+        {
+            TenantId = "test",
+            ApiUrl = "https://timepro.example",
+            ApiKey = "test-api-key",
+            EmployeeId = "TST"
+        });
+        api.GetLeaveBalanceStatusAsync(Arg.Any<CancellationToken>()).Returns((LeaveBalanceStatus?)null);
+        var tools = CreateTools(api, config);
+
+        var json = await tools.GetLeaveBalanceStatus(TestContext.Current.CancellationToken);
+
+        using var doc = JsonDocument.Parse(json);
+        doc.RootElement.GetProperty("imported").GetBoolean().Should().BeFalse();
+    }
+
     private static LeaveMcpTools CreateTools(ITimeProApiClient api, IConfigService config) =>
-        new(api, config, new LeaveCreateService(api), new LeaveUpdateService(api));
+        new(api, config, new LeaveCreateService(api), new LeaveUpdateService(api), new LeaveBalanceImportService(api));
 
     private static (string id, TimeZoneInfo timeZone) FindTimeZone(params string[] ids)
     {

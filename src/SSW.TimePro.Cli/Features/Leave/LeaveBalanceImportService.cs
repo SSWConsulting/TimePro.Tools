@@ -50,7 +50,7 @@ public sealed class LeaveBalanceImportService
             throw new LeaveBalanceImportValidationException($"'{fullPath}' is a directory. Provide the path to the CSV file itself.");
 
         if (!File.Exists(fullPath))
-            throw new LeaveBalanceImportValidationException($"File not found: {fullPath}");
+            throw new LeaveBalanceImportValidationException($"File not found: {Describe(fullPath, csvPath)}");
 
         var length = new FileInfo(fullPath).Length;
         if (length == 0)
@@ -109,6 +109,19 @@ public sealed class LeaveBalanceImportService
             throw new LeaveBalanceImportValidationException(
                 $"TimePro could not read the CSV: {DescribeUnprocessable(ex.ResponseBody)}");
         }
+    }
+
+    /// <summary>
+    /// Names the resolved path, and the original alongside it when the two differ. A shell that
+    /// strips backslashes turns an absolute Windows path into a drive-relative one that resolves
+    /// somewhere unexpected, which is impossible to spot from the resolved path alone.
+    /// </summary>
+    private static string Describe(string fullPath, string originalPath)
+    {
+        var trimmedOriginal = originalPath.Trim();
+        return string.Equals(fullPath, trimmedOriginal, StringComparison.Ordinal)
+            ? fullPath
+            : $"{fullPath} (resolved from '{trimmedOriginal}')";
     }
 
     /// <summary>

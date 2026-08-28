@@ -57,6 +57,21 @@ public class LeaveBalanceImportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Import_WhenRelativePathResolvesElsewhere_ReportsBothPaths()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        var service = new LeaveBalanceImportService(api);
+
+        // A shell that strips backslashes turns "C:\Users\me\x.csv" into a drive-relative
+        // "C:Usersmex.csv", which silently resolves against the working directory.
+        var act = () => service.ImportAsync("Usersmexero.csv", TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<LeaveBalanceImportValidationException>())
+            .WithMessage("*resolved from 'Usersmexero.csv'*");
+        api.ShouldNotHaveReceived(nameof(ITimeProApiClient.ImportLeaveBalancesAsync));
+    }
+
+    [Fact]
     public async Task Import_WhenPathIsDirectory_DoesNotCallApi()
     {
         var api = Substitute.For<ITimeProApiClient>();

@@ -218,11 +218,9 @@ public class LeaveMcpTools
 
     [McpServerTool]
     [Description(
-        "Import leave balances for EVERY employee from a Xero 'Leave Balances' CSV export, replacing the balances currently stored in TimePro. "
-        + "Requires leave admin rights; other accounts get a permission error. There is no dry run and no undo, so confirm with the user before calling this. "
-        + "Pass the path to the CSV file on this machine - do not paste the file contents. "
-        + "Call GetLeaveBalanceStatus first to check whether an import is due. "
-        + "Report the returned unmatchedEmployees (rows skipped because the Xero name matched no TimePro employee, or matched several) and warnings back to the user - the import succeeds despite them.")]
+        "Import leave balances for EVERY employee from a Xero 'Leave Balances' CSV export, replacing what TimePro currently stores. "
+        + "No dry run and no undo, so confirm with the user first. Pass the path to the CSV file, not its contents. "
+        + "Always report the returned unmatchedEmployees (rows skipped) and warnings - the import succeeds despite them.")]
     public async Task<string> ImportLeaveBalances(
         [Description("Path to the Xero 'Leave Balances' CSV export on this machine")] string csvPath,
         CancellationToken ct = default)

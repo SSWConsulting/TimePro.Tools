@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FluentAssertions;
+using ModelContextProtocol.Server;
 using NSubstitute;
 using SSW.TimePro.Cli.Features.Leave;
 using SSW.TimePro.Cli.Features.Mcp.Tools;
@@ -12,6 +13,19 @@ namespace SSW.TimePro.Cli.Tests.Features.Mcp;
 
 public class LeaveMcpToolsTests
 {
+    [Fact]
+    public void GetLeaveBalanceStatus_IsMarkedReadOnly()
+    {
+        var attribute = typeof(LeaveMcpTools)
+            .GetMethod(nameof(LeaveMcpTools.GetLeaveBalanceStatus))!
+            .GetCustomAttributes(typeof(McpServerToolAttribute), inherit: false)
+            .Cast<McpServerToolAttribute>()
+            .Single();
+
+        attribute.ReadOnly.Should().BeTrue();
+        attribute.Destructive.Should().BeFalse();
+    }
+
     [Fact]
     public async Task CreateLeave_WhenProfileTimezoneAvailable_SendsDateOffsetsFromProfileTimezone()
     {

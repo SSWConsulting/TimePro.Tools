@@ -68,7 +68,7 @@ public class AccountingMcpTools
 
     // ─── Leave balance import ───────────────────────────────────────────────
 
-    [McpServerTool]
+    [McpServerTool(Destructive = true, Idempotent = true, ReadOnly = false)]
     [Description(
         "Import leave balances for EVERY employee from a Xero 'Leave Balances' CSV export, replacing what TimePro currently stores. "
         + "No dry run and no undo, so confirm with the user first. Pass the path to the CSV file, not its contents. "
@@ -95,6 +95,14 @@ public class AccountingMcpTools
         catch (LeaveBalanceImportValidationException ex)
         {
             return JsonSerializer.Serialize(new { error = ex.Message }, JsonOpts);
+        }
+        catch (LeaveBalanceImportUncertainException ex)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                error = ex.Message,
+                mayHaveBeenApplied = true
+            }, JsonOpts);
         }
     }
 

@@ -8,6 +8,9 @@ namespace SSW.TimePro.Cli.Features.Leave;
 
 public sealed class LeaveBalanceImportValidationException(string message) : Exception(message);
 
+public sealed class LeaveBalanceImportUncertainException(string message, Exception? innerException = null)
+    : Exception(message, innerException);
+
 /// <summary>
 /// Reads a Xero "Leave Balances" CSV export from disk and imports it into TimePro.
 ///
@@ -17,6 +20,14 @@ public sealed class LeaveBalanceImportValidationException(string message) : Exce
 /// </summary>
 public sealed class LeaveBalanceImportService
 {
+    private const string UncertainImportMessage =
+        "The import request was sent and may have been applied, but TimePro did not return a complete result. "
+        + "Run 'tp leave balances status' before retrying.";
+
+    private static readonly Encoding StrictUtf8 = new UTF8Encoding(
+        encoderShouldEmitUTF8Identifier: false,
+        throwOnInvalidBytes: true);
+
     /// <summary>
     /// Guard against a caller pointing at the wrong file entirely (a database dump, a video).
     /// A real Xero balance export for a company of any plausible size is far below this.
@@ -66,7 +77,12 @@ public sealed class LeaveBalanceImportService
         string content;
         try
         {
-            content = File.ReadAllText(fullPath, Encoding.UTF8);
+            content = File.ReadAllText(fullPath, StrictUtf8);
+        }
+        catch (DecoderFallbackException)
+        {
+            throw new LeaveBalanceImportValidationException(
+                $"'{fullPath}' is not valid UTF-8. Export the Xero leave balances report as a UTF-8 CSV and try again.");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -95,11 +111,22 @@ public sealed class LeaveBalanceImportService
 
         try
         {
-            return await _api.ImportLeaveBalancesAsync(csv, ct)
-                ?? throw new LeaveBalanceImportValidationException(
-                    "TimePro accepted the import but returned no result. Run 'tp leave balances status' to confirm what was stored.");
+            var result = await _api.ImportLeaveBalancesAsync(csv, ct);
+            if (result is null || result.AsAtDate == default)
+                throw new LeaveBalanceImportUncertainException(UncertainImportMessage);
+
+            // System.Text.Json can replace collection initializers with null when the API sends
+            // explicit nulls. Normalize here so every CLI/MCP caller receives the same safe shape.
+            result.Warnings ??= [];
+            result.UnmatchedEmployees ??= [];
+            return result;
         }
-        catch (ApiException ex) when (ex.StatusCode is 401 or 403)
+        catch (ApiException ex) when (ex.StatusCode == 401)
+        {
+            throw new LeaveBalanceImportValidationException(
+                "TimePro authentication failed. Run 'tp login --tenant <id>' again.");
+        }
+        catch (ApiException ex) when (ex.StatusCode == 403)
         {
             throw new LeaveBalanceImportValidationException(
                 "Importing leave balances requires leave admin rights in TimePro, and this account does not have them.");
@@ -109,6 +136,14 @@ public sealed class LeaveBalanceImportService
             // The endpoint returns the CSV parser's own message as a bare JSON string.
             throw new LeaveBalanceImportValidationException(
                 $"TimePro could not read the CSV: {DescribeUnprocessable(ex.ResponseBody)}");
+        }
+        catch (LeaveBalanceImportUncertainException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new LeaveBalanceImportUncertainException(UncertainImportMessage, ex);
         }
     }
 

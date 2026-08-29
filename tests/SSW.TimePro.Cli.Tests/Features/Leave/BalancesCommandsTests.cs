@@ -37,6 +37,39 @@ public class BalancesCommandsTests : IDisposable
     }
 
     [Fact]
+    public async Task Import_WhenApiReturnsNullCollections_StillSucceeds()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        api.ImportLeaveBalancesAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new ImportLeaveBalancesResult
+            {
+                AsAtDate = new DateOnly(2026, 8, 1),
+                UnmatchedEmployees = null!,
+                Warnings = null!
+            });
+        var app = CreateApp(api);
+        var path = WriteFile("balances.csv", ValidCsv);
+
+        var exitCode = await app.RunAsync(["import", path, "--json"], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Import_WhenSubmissionOutcomeIsUncertain_ReturnsFailureExitCode()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        api.ImportLeaveBalancesAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns<Task<ImportLeaveBalancesResult?>>(_ => throw new HttpRequestException("Connection dropped"));
+        var app = CreateApp(api);
+        var path = WriteFile("balances.csv", ValidCsv);
+
+        var exitCode = await app.RunAsync(["import", path, "--json"], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(1);
+    }
+
+    [Fact]
     public async Task Import_WhenFileMissing_FailsBeforeCallingApi()
     {
         var api = Substitute.For<ITimeProApiClient>();

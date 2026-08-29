@@ -199,7 +199,7 @@ public class LeaveMcpTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(ReadOnly = true, Destructive = false)]
     [Description("Report when TimePro's leave balances were last imported from Xero, how many employees have a stored balance, and whether the data is stale. Read-only. Check this before importing so you can tell the user whether a re-import is actually needed.")]
     public async Task<string> GetLeaveBalanceStatus(CancellationToken ct = default)
     {

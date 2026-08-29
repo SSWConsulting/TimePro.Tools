@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FluentAssertions;
+using ModelContextProtocol.Server;
 using NSubstitute;
 using SSW.TimePro.Cli.Features.Leave;
 using SSW.TimePro.Cli.Features.Mcp.Tools;
@@ -18,6 +19,20 @@ public class AccountingMcpToolsTests
         typeof(LeaveMcpTools).GetMethod(nameof(LeaveMcpTools.GetLeaveBalanceStatus)).Should().NotBeNull();
         typeof(LeaveMcpTools).GetMethod(nameof(AccountingMcpTools.ImportLeaveBalances)).Should().BeNull();
         typeof(AccountingMcpTools).GetMethod(nameof(AccountingMcpTools.ImportLeaveBalances)).Should().NotBeNull();
+    }
+
+    [Fact]
+    public void ImportLeaveBalances_IsMarkedDestructiveAndIdempotent()
+    {
+        var attribute = typeof(AccountingMcpTools)
+            .GetMethod(nameof(AccountingMcpTools.ImportLeaveBalances))!
+            .GetCustomAttributes(typeof(McpServerToolAttribute), inherit: false)
+            .Cast<McpServerToolAttribute>()
+            .Single();
+
+        attribute.Destructive.Should().BeTrue();
+        attribute.Idempotent.Should().BeTrue();
+        attribute.ReadOnly.Should().BeFalse();
     }
 
     [Fact]
@@ -88,6 +103,32 @@ public class AccountingMcpToolsTests
         using var doc = JsonDocument.Parse(json);
         doc.RootElement.GetProperty("error").GetString().Should().Contain("Not logged in");
         await api.DidNotReceive().ImportLeaveBalancesAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ImportLeaveBalances_WhenSubmissionOutcomeIsUncertain_ReturnsSafeRetryGuidance()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        api.ImportLeaveBalancesAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns<Task<ImportLeaveBalancesResult?>>(_ => throw new HttpRequestException("Connection dropped"));
+        var tools = CreateTools(api, CreateConfig());
+        var path = Path.Combine(Path.GetTempPath(), $"tp-mcp-balances-{Guid.NewGuid():N}.csv");
+        await File.WriteAllTextAsync(path, "Employee,Leave Type,Units\nJane Doe,Annual Leave,76.00\n",
+            TestContext.Current.CancellationToken);
+
+        try
+        {
+            var json = await tools.ImportLeaveBalances(path, TestContext.Current.CancellationToken);
+
+            using var doc = JsonDocument.Parse(json);
+            doc.RootElement.GetProperty("mayHaveBeenApplied").GetBoolean().Should().BeTrue();
+            doc.RootElement.GetProperty("error").GetString()
+                .Should().Contain("tp leave balances status").And.Contain("before retrying");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     private static IConfigService CreateConfig()

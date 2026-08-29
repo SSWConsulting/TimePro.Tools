@@ -44,6 +44,26 @@ public class LeaveBalanceImportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Import_WhenApiReturnsNullCollections_NormalizesThemToEmpty()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        api.ImportLeaveBalancesAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new ImportLeaveBalancesResult
+            {
+                AsAtDate = new DateOnly(2026, 8, 1),
+                UnmatchedEmployees = null!,
+                Warnings = null!
+            });
+        var service = new LeaveBalanceImportService(api);
+        var path = WriteFile("balances.csv", ValidCsv);
+
+        var result = await service.ImportAsync(path, TestContext.Current.CancellationToken);
+
+        result.UnmatchedEmployees.Should().BeEmpty();
+        result.Warnings.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task Import_WhenFileMissing_DoesNotCallApi()
     {
         var api = Substitute.For<ITimeProApiClient>();
@@ -128,6 +148,41 @@ public class LeaveBalanceImportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Import_WhenFileIsNotUtf8_ExplainsHowToExportIt()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        var service = new LeaveBalanceImportService(api);
+        var path = Path.Combine(_tempDir, "windows-1252.csv");
+        File.WriteAllBytes(path,
+        [
+            .. Encoding.ASCII.GetBytes("Employee,Leave Type,Units\nJos"),
+            0xE9,
+            .. Encoding.ASCII.GetBytes(",Annual Leave,76.00\n")
+        ]);
+
+        var act = () => service.ImportAsync(path, TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<LeaveBalanceImportValidationException>())
+            .WithMessage("*not valid UTF-8*Export*UTF-8 CSV*");
+        api.ShouldNotHaveReceived(nameof(ITimeProApiClient.ImportLeaveBalancesAsync));
+    }
+
+    [Fact]
+    public async Task Import_WhenApiReturnsUnauthorized_DirectsUserToLogin()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        api.ImportLeaveBalancesAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns<Task<ImportLeaveBalancesResult?>>(_ => throw new ApiException(401, "Unauthorized", null));
+        var service = new LeaveBalanceImportService(api);
+        var path = WriteFile("balances.csv", ValidCsv);
+
+        var act = () => service.ImportAsync(path, TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<LeaveBalanceImportValidationException>())
+            .WithMessage("*authentication failed*tp login*");
+    }
+
+    [Fact]
     public async Task Import_WhenApiReturnsForbidden_ExplainsAdminRequirement()
     {
         var api = Substitute.For<ITimeProApiClient>();
@@ -159,7 +214,7 @@ public class LeaveBalanceImportServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Import_WhenApiFailsForAnotherReason_LeavesApiExceptionUnwrapped()
+    public async Task Import_WhenApiFailsAfterSubmission_WarnsBeforeRetrying()
     {
         var api = Substitute.For<ITimeProApiClient>();
         api.ImportLeaveBalancesAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -169,8 +224,24 @@ public class LeaveBalanceImportServiceTests : IDisposable
 
         var act = () => service.ImportAsync(path, TestContext.Current.CancellationToken);
 
-        // 5xx should reach the caller as-is so the response body stays diagnosable.
-        await act.Should().ThrowAsync<ApiException>();
+        var exception = await act.Should().ThrowAsync<LeaveBalanceImportUncertainException>();
+        exception.WithMessage("*may have been applied*tp leave balances status*before retrying*");
+        exception.Which.InnerException.Should().BeOfType<ApiException>();
+    }
+
+    [Fact]
+    public async Task Import_WhenSuccessResponseIsIncomplete_WarnsBeforeRetrying()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        api.ImportLeaveBalancesAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new ImportLeaveBalancesResult());
+        var service = new LeaveBalanceImportService(api);
+        var path = WriteFile("balances.csv", ValidCsv);
+
+        var act = () => service.ImportAsync(path, TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<LeaveBalanceImportUncertainException>())
+            .WithMessage("*may have been applied*tp leave balances status*before retrying*");
     }
 
     [Theory]

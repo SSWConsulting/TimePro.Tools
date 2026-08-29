@@ -75,14 +75,15 @@ public class BalancesImportCommand : AsyncCommand<BalancesImportCommand.Settings
                 table.AddRow("[bold]Updated[/]", r.Updated.ToString());
                 AnsiConsole.Write(table);
 
-                foreach (var warning in r.Warnings)
+                foreach (var warning in r.Warnings ?? [])
                     OutputHelper.WriteWarning(warning);
 
-                if (r.UnmatchedEmployees.Count > 0)
+                var unmatchedEmployees = r.UnmatchedEmployees ?? [];
+                if (unmatchedEmployees.Count > 0)
                 {
                     OutputHelper.WriteWarning(
-                        $"{r.UnmatchedEmployees.Count} row(s) were skipped because the name did not match exactly one TimePro employee:");
-                    foreach (var name in r.UnmatchedEmployees)
+                        $"{unmatchedEmployees.Count} row(s) were skipped because the name did not match exactly one TimePro employee:");
+                    foreach (var name in unmatchedEmployees)
                         AnsiConsole.MarkupLine($"  - {Markup.Escape(name)}");
                 }
 
@@ -92,6 +93,11 @@ public class BalancesImportCommand : AsyncCommand<BalancesImportCommand.Settings
             return 0;
         }
         catch (LeaveBalanceImportValidationException ex)
+        {
+            WriteError(settings.Json, ex.Message);
+            return 1;
+        }
+        catch (LeaveBalanceImportUncertainException ex)
         {
             WriteError(settings.Json, ex.Message);
             return 1;

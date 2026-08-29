@@ -56,29 +56,6 @@ public class LeaveBalanceImportServiceTests : IDisposable
         api.ShouldNotHaveReceived(nameof(ITimeProApiClient.ImportLeaveBalancesAsync));
     }
 
-    [Theory]
-    [InlineData("~/Downloads/LeaveBalances.csv")]
-    [InlineData(@"~\Downloads\LeaveBalances.csv")]
-    public void ExpandHomeDirectory_WithTildePrefix_UsesCurrentUserProfile(string path)
-    {
-        var expected = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            "Downloads",
-            "LeaveBalances.csv");
-
-        var expanded = LeaveBalanceImportService.ExpandHomeDirectory(path);
-
-        expanded.Should().Be(expected);
-    }
-
-    [Theory]
-    [InlineData("~northwind/LeaveBalances.csv")]
-    [InlineData("exports/~/LeaveBalances.csv")]
-    public void ExpandHomeDirectory_WhenTildeIsNotTheFirstSegment_LeavesPathUnchanged(string path)
-    {
-        LeaveBalanceImportService.ExpandHomeDirectory(path).Should().Be(path);
-    }
-
     [Fact]
     public async Task Import_WhenRelativePathResolvesElsewhere_ReportsBothPaths()
     {

@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using SSW.TimePro.Cli.Infrastructure.Output;
+using SSW.TimePro.Cli.Infrastructure.Paths;
 using Spectre.Console.Cli;
 
 namespace SSW.TimePro.Cli.Features.RepoMap;
@@ -52,15 +53,12 @@ public class SetCommand : Command<SetCommand.Settings>
         }
 
         var mappings = _config.LoadRepoMappings();
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        string Expand(string p) => p.StartsWith("~")
-            ? home + p.AsSpan(1).ToString()
-            : p;
-        var normalizedInput = Expand(settings.Path);
+        var normalizedInput = PathExpander.ExpandHomeDirectory(settings.Path);
 
         // Match by expanded path so "~/foo" and "/Users/me/foo" dedupe.
         var existing = mappings.FirstOrDefault(m =>
-            Expand(m.PathPattern).Equals(normalizedInput, StringComparison.OrdinalIgnoreCase));
+            PathExpander.ExpandHomeDirectory(m.PathPattern)
+                .Equals(normalizedInput, StringComparison.OrdinalIgnoreCase));
 
         if (existing is not null)
         {

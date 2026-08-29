@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using SSW.TimePro.Cli.Infrastructure.Output;
+using SSW.TimePro.Cli.Infrastructure.Paths;
 using Spectre.Console.Cli;
 
 namespace SSW.TimePro.Cli.Features.RepoMap;
@@ -22,11 +23,11 @@ public class RemoveCommand : Command<RemoveCommand.Settings>
     protected override int Execute(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         var mappings = _config.LoadRepoMappings();
-        var normalizedPath = settings.Path.Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+        var normalizedPath = PathExpander.ExpandHomeDirectory(settings.Path);
 
         var removed = mappings.RemoveAll(m =>
-            m.PathPattern.Equals(settings.Path, StringComparison.OrdinalIgnoreCase) ||
-            m.PathPattern.Equals(normalizedPath, StringComparison.OrdinalIgnoreCase));
+            PathExpander.ExpandHomeDirectory(m.PathPattern)
+                .Equals(normalizedPath, StringComparison.OrdinalIgnoreCase));
 
         if (removed == 0)
         {

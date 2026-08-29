@@ -3,6 +3,7 @@ using System.Text.Json;
 using ModelContextProtocol.Server;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
+using SSW.TimePro.Cli.Infrastructure.Paths;
 
 namespace SSW.TimePro.Cli.Features.Mcp.Tools;
 
@@ -100,8 +101,7 @@ public class LookupMcpTools
         RepoMappingEntry? match = null;
         if (repoPath is not null)
         {
-            var normalized = repoPath.Replace("~",
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+            var normalized = PathExpander.ExpandHomeDirectory(repoPath);
             match = RepoDetector.Detect(normalized, mappings);
         }
 

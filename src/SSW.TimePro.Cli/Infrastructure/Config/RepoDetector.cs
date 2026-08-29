@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using SSW.TimePro.Cli.Infrastructure.Paths;
 
 namespace SSW.TimePro.Cli.Infrastructure.Config;
 
@@ -17,8 +18,6 @@ public static class RepoDetector
     /// </summary>
     public static RepoMappingEntry? Detect(string directory, List<RepoMappingEntry> mappings)
     {
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-
         // Collect candidate paths: cwd + main worktree
         var candidatePaths = new List<string> { directory };
         var mainRepoPath = ResolveMainRepoPath(directory);
@@ -34,7 +33,7 @@ public static class RepoDetector
 
         foreach (var m in mappings)
         {
-            var score = ScoreMapping(m, candidatePaths, remoteUrl, home);
+            var score = ScoreMapping(m, candidatePaths, remoteUrl);
             if (score > bestScore)
             {
                 bestScore = score;
@@ -46,14 +45,14 @@ public static class RepoDetector
     }
 
     private static int ScoreMapping(
-        RepoMappingEntry mapping, List<string> paths, string? remoteUrl, string home)
+        RepoMappingEntry mapping, List<string> paths, string? remoteUrl)
     {
         int bestScore = -1;
 
         // Check path-based matching
         if (!string.IsNullOrEmpty(mapping.PathPattern))
         {
-            var pattern = mapping.PathPattern.Replace("~", home);
+            var pattern = PathExpander.ExpandHomeDirectory(mapping.PathPattern);
 
             foreach (var path in paths)
             {

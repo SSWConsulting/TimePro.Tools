@@ -53,6 +53,8 @@ Run `tp --help` for full command list. Key commands:
 - `tp leave cancel ID --reason "..." --yes` - Cancel leave
 - `tp leave list --filter UPCOMING --json` - List leave
 - `tp leave balance --emp-id JEK` - Leave-usage signal (days since last leave + hours taken in last 12 months)
+- `tp leave balances status` - When leave balances were last imported from Xero, and whether they are stale
+- `tp leave balances import ./LeaveBalances.csv --yes` - Import company-wide leave balances from a Xero CSV export (leave admins only)
 - `tp feature accounting enable` - Enable accounting skills and accounting MCP tools
 - `tp feature developer enable` - Enable developer diagnostics/environment comparison skills and timesheet/finance bug diagnostic skills
 - `tp mcp [--tenant NAME]` - Start MCP server (optional per-session tenant binding)
@@ -97,6 +99,33 @@ validation and payload preparation, returns the proposed request, and must not c
 `CreateLeaveAsync` or `UpdateLeaveAsync`.
 
 The cancel endpoint (`PUT /api/leave/{id}/cancel`) requires `LeaveId` (Guid) and `CancellationReason` in the request body.
+
+## Leave Balances (Xero CSV Sync)
+
+`POST /api/leave/balances/import` takes the raw Xero "Leave Balances" CSV export as the
+request body with content type `text/csv`. It is **not** a JSON endpoint and **not** a
+multipart upload, so it must go through `PostRawAsync`, never the `PostAsync`/`PutAsync`
+JSON helpers - `JsonContent` would send an escaped string literal and the server-side
+parser would reject it. `LeaveBalancesApiTests` asserts the body and content type for
+exactly this reason.
+
+The endpoint is leave-admin only (`403` otherwise) and returns `422` with the CSV parser's
+message as a bare JSON string when the file cannot be read. Both are translated into
+readable messages by `LeaveBalanceImportService`, which owns file reading and validation
+for the CLI and MCP alike. Import replaces stored balances for every matched employee;
+there is no server-side dry-run, so the CLI confirms unless `--yes` is passed.
+
+CLI and MCP surfaces take a **path** to the CSV, not its contents. Tool arguments travel
+through an agent's context, where a large CSV is expensive and liable to be silently
+truncated into a partial import that still looks successful. `GET /api/leave/balances/status`
+is the cheap read used to decide whether a re-import is due.
+
+The read-only MCP status tool is on the default leave surface. The destructive MCP import
+tool is available only when the accounting feature pack is enabled.
+
+Rows whose Xero employee name matches no TimePro employee, or matches several, are returned
+in `unmatchedEmployees` and skipped rather than guessed at; implausible balances are returned
+in `warnings`. The import succeeds regardless, so both lists must be surfaced to the user.
 
 The list endpoint (`GET /api/leave/`) returns per-entry `daysAway`, `updatedAt`, `optionalEmp`, `timeLessOverride`, `cancellationReason` (all bound on `LeaveEntry`) plus a top-level `cancelledCount` on the list envelope. These surface in `tp leave list --json`.
 

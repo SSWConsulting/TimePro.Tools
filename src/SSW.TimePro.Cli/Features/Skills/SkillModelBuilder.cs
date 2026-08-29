@@ -16,13 +16,13 @@ public static class SkillModelBuilder
     public const string DeveloperTimesheetDiagnosticsName = "timepro-dev-timesheet-diagnostics";
     public const string DeveloperFinanceDiagnosticsName = "timepro-dev-finance-diagnostics";
     public const string EnvironmentCompareName = "timepro-env-compare";
-    public const int CurrentSkillVersion = 1;
+    public const int CurrentSkillVersion = 2;
 
     private const string TimesheetsDescription =
         "Manage SSW TimePro timesheets with the tp CLI — view/accept/create entries, repo mappings, bookings, leave, and daily scrum. Use when entering, fixing, or reviewing timesheets.";
 
     private const string AccountingDescription =
-        "Explore SSW TimePro financial data via the tp CLI (read-only) — invoices with line items, billed timesheets, credit notes, receipts, sale products, client rates, aged debtors, unbilled time, recurring invoices, prepaid drawdowns and client billable-work threshold reports. Use for accountant-style questions. For raw HTTP/curl access (when tp isn't installed), use the timepro-accounting skill instead.";
+        "Explore SSW TimePro financial data via the tp CLI — read-only invoices, receipts, rates and reconciliation reports, plus explicitly approved Xero leave-balance imports. Use for accountant-style questions. For raw HTTP/curl access (when tp isn't installed), use the timepro-accounting skill instead.";
 
     private const string TenantSetupDescription =
         "Set up and switch TimePro tenant profiles with the tp CLI, including switching the active session to ssw-staging and using process-local --tenant/--env overrides without changing the active tenant.";

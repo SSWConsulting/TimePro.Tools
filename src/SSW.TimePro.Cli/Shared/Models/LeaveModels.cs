@@ -137,3 +137,40 @@ public class CancelLeaveRequest
     public string LeaveId { get; set; } = string.Empty;
     public string CancellationReason { get; set; } = string.Empty;
 }
+
+/// <summary>
+/// Current state of the leave balance sync (API "GET /api/leave/balances/status").
+/// Null dates mean nothing has been imported yet.
+/// </summary>
+public class LeaveBalanceStatus
+{
+    /// <summary>Date the imported balances are accurate as at, taken from the Xero export.</summary>
+    public DateOnly? AsAtDate { get; set; }
+
+    public DateTimeOffset? LastImportedAt { get; set; }
+
+    /// <summary>Number of employees with a stored balance.</summary>
+    public int EmployeeCount { get; set; }
+
+    /// <summary>Server's own judgement that the stored balances are too old to rely on.</summary>
+    public bool IsStale { get; set; }
+}
+
+/// <summary>
+/// Outcome of a leave balance import (API "POST /api/leave/balances/import").
+/// </summary>
+public class ImportLeaveBalancesResult
+{
+    public DateOnly AsAtDate { get; set; }
+    public int Created { get; set; }
+    public int Updated { get; set; }
+
+    /// <summary>
+    /// Xero rows whose employee name matched no TimePro employee, or matched more than one.
+    /// These rows were skipped, not imported.
+    /// </summary>
+    public List<string> UnmatchedEmployees { get; set; } = [];
+
+    /// <summary>Rows that were imported but look wrong (e.g. an implausibly large balance).</summary>
+    public List<string> Warnings { get; set; } = [];
+}

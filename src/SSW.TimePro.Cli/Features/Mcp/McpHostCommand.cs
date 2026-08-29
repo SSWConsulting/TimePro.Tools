@@ -39,6 +39,7 @@ public class McpHostCommand : AsyncCommand<McpHostCommand.Settings>
         builder.Services.AddHttpClient<ITimeProApiClient, TimeProApiClient>();
         builder.Services.AddSingleton<LeaveCreateService>();
         builder.Services.AddSingleton<LeaveUpdateService>();
+        builder.Services.AddSingleton<LeaveBalanceImportService>();
 
         var mcpServer = builder.Services
             .AddMcpServer()

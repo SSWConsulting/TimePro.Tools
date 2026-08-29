@@ -78,10 +78,12 @@ public class TimesheetGetTests : TestBase
         var entries = WireMock.LogEntries;
         entries.Should().HaveCount(1);
         var req = entries.First().RequestMessage;
-        req.Headers.Should().ContainKey("x-timepro-tenant-id");
-        req.Headers!["x-timepro-tenant-id"].Should().Contain("test");
+        req.Should().NotBeNull();
+        req!.Headers.Should().NotBeNull();
+        req.Headers!.Should().ContainKey("x-timepro-tenant-id");
+        req.Headers["x-timepro-tenant-id"].Should().Contain("test");
         req.Headers.Should().ContainKey("x-timepro-api-key");
-        req.Headers!["x-timepro-api-key"].Should().Contain("test-api-key");
+        req.Headers["x-timepro-api-key"].Should().Contain("test-api-key");
     }
 
     [Fact]

@@ -199,6 +199,20 @@ public class LeaveMcpTools
         }
     }
 
+    [McpServerTool(ReadOnly = true, Destructive = false)]
+    [Description("Report when TimePro's leave balances were last imported from Xero, how many employees have a stored balance, and whether the data is stale. Read-only. Check this before importing so you can tell the user whether a re-import is actually needed.")]
+    public async Task<string> GetLeaveBalanceStatus(CancellationToken ct = default)
+    {
+        if (_config.LoadActiveTenantConfig() is null)
+            return """{"error": "Not logged in. Run 'tp login --tenant <id>' first."}""";
+
+        var status = await _api.GetLeaveBalanceStatusAsync(ct);
+        if (status?.LastImportedAt is null)
+            return JsonSerializer.Serialize(new { imported = false }, JsonOpts);
+
+        return JsonSerializer.Serialize(status, JsonOpts);
+    }
+
     private static string? ResolveEmpId(string? empId, string? employeeId)
     {
         var requestedEmpId = !string.IsNullOrWhiteSpace(empId) ? empId : employeeId;

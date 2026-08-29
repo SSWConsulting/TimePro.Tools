@@ -29,6 +29,8 @@ using LeaveCreate = SSW.TimePro.Cli.Features.Leave.CreateCommand;
 using LeaveUpdate = SSW.TimePro.Cli.Features.Leave.UpdateCommand;
 using LeaveCancel = SSW.TimePro.Cli.Features.Leave.CancelCommand;
 using LeaveBalance = SSW.TimePro.Cli.Features.Leave.BalanceCommand;
+using LeaveBalancesStatus = SSW.TimePro.Cli.Features.Leave.BalancesStatusCommand;
+using LeaveBalancesImport = SSW.TimePro.Cli.Features.Leave.BalancesImportCommand;
 using InvList = SSW.TimePro.Cli.Features.Invoices.ListCommand;
 using InvGet = SSW.TimePro.Cli.Features.Invoices.GetCommand;
 using InvLines = SSW.TimePro.Cli.Features.Invoices.LinesCommand;
@@ -113,6 +115,7 @@ services.AddSingleton<ITenantProvider, DefaultTenantProvider>();
 services.AddHttpClient<ITimeProApiClient, TimeProApiClient>();
 services.AddSingleton<SSW.TimePro.Cli.Features.Leave.LeaveCreateService>();
 services.AddSingleton<SSW.TimePro.Cli.Features.Leave.LeaveUpdateService>();
+services.AddSingleton<SSW.TimePro.Cli.Features.Leave.LeaveBalanceImportService>();
 
 var registrar = new TypeRegistrar(services);
 
@@ -215,6 +218,17 @@ app.Configure(config =>
             .WithDescription("Cancel a leave request");
         branch.AddCommand<LeaveBalance>("balance")
             .WithDescription("Show leave stats (days since last leave, leave taken in last 12 months)");
+
+        // "balances" (plural) is the company-wide Xero balance sync, distinct from the
+        // per-employee "balance" stats command above.
+        branch.AddBranch("balances", balances =>
+        {
+            balances.SetDescription("Manage imported leave balances (Xero sync)");
+            balances.AddCommand<LeaveBalancesStatus>("status")
+                .WithDescription("Show when leave balances were last imported and whether they are stale");
+            balances.AddCommand<LeaveBalancesImport>("import")
+                .WithDescription("Import leave balances from a Xero CSV export");
+        });
     }
 
     config.AddBranch("leave", lv =>

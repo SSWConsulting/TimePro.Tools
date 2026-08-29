@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using ModelContextProtocol.Server;
+using SSW.TimePro.Cli.Features.Leave;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using SSW.TimePro.Cli.Shared.Models;
@@ -8,7 +9,7 @@ using SSW.TimePro.Cli.Shared.Models;
 namespace SSW.TimePro.Cli.Features.Mcp.Tools;
 
 /// <summary>
-/// MCP tools for accountant-focused read-only operations. Also exposes cross-domain read
+/// MCP tools for accountant-focused operations. Also exposes cross-domain read
 /// tools useful to accountants (timesheet queries, product lists, rate tables, etc.) that
 /// aren't already on <see cref="LookupMcpTools"/> or <see cref="TimesheetMcpTools"/>.
 ///
@@ -20,6 +21,7 @@ public class AccountingMcpTools
 {
     private readonly ITimeProApiClient _api;
     private readonly IConfigService _config;
+    private readonly LeaveBalanceImportService _leaveBalanceImportService;
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -28,10 +30,14 @@ public class AccountingMcpTools
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
     };
 
-    public AccountingMcpTools(ITimeProApiClient api, IConfigService config)
+    public AccountingMcpTools(
+        ITimeProApiClient api,
+        IConfigService config,
+        LeaveBalanceImportService leaveBalanceImportService)
     {
         _api = api;
         _config = config;
+        _leaveBalanceImportService = leaveBalanceImportService;
     }
 
     private bool NotAuthed(out string error)
@@ -58,6 +64,46 @@ public class AccountingMcpTools
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .Select(id => id.Trim())
             .ToList() ?? [];
+    }
+
+    // ─── Leave balance import ───────────────────────────────────────────────
+
+    [McpServerTool(Destructive = true, Idempotent = true, ReadOnly = false)]
+    [Description(
+        "Import leave balances for EVERY employee from a Xero 'Leave Balances' CSV export, replacing what TimePro currently stores. "
+        + "No dry run and no undo, so confirm with the user first. Pass the path to the CSV file, not its contents. "
+        + "Always report the returned unmatchedEmployees (rows skipped) and warnings - the import succeeds despite them.")]
+    public async Task<string> ImportLeaveBalances(
+        [Description("Path to the Xero 'Leave Balances' CSV export on this machine")] string csvPath,
+        CancellationToken ct = default)
+    {
+        if (NotAuthed(out var err)) return err;
+
+        try
+        {
+            var result = await _leaveBalanceImportService.ImportAsync(csvPath, ct);
+            return JsonSerializer.Serialize(new
+            {
+                success = true,
+                result.AsAtDate,
+                result.Created,
+                result.Updated,
+                result.UnmatchedEmployees,
+                result.Warnings
+            }, JsonOpts);
+        }
+        catch (LeaveBalanceImportValidationException ex)
+        {
+            return JsonSerializer.Serialize(new { error = ex.Message }, JsonOpts);
+        }
+        catch (LeaveBalanceImportUncertainException ex)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                error = ex.Message,
+                mayHaveBeenApplied = true
+            }, JsonOpts);
+        }
     }
 
     // ─── Invoices ───────────────────────────────────────────────────────────

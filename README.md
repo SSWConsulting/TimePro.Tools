@@ -12,7 +12,7 @@ SSW TimePro is a time tracking and invoicing system. This CLI makes it fast to v
 - **Timesheet CRUD** — Create, update, delete timesheets with rate checking and lock detection
 - **Suggested Timesheets** — View and accept suggested timesheets to keep accuracy stats high
 - **CRM Bookings** — See your appointments from the CRM calendar
-- **Leave Management** — Create, list, update, and cancel EasyLeave requests
+- **Leave Management** — Create, list, update, and cancel EasyLeave requests; leave admins can sync company-wide leave balances from a Xero CSV export
 - **Repo Mapping** — Map git repos to clients/projects; auto-detects via path or remote URL, with git worktree support; optional `--issues-repo` for projects whose issues live in a different GitHub repo than the code
 - **Daily Scrum** — Generate an SSW-format daily scrum email from timesheets, CRM bookings and GitHub activity, with AutoScrum-inspired `--smart` selection, overridable per-tenant/client templates, rich-text / markdown / plain clipboard support and an interactive copy mode
 - **Location Defaults** — Set WFH days so location is auto-applied when creating timesheets
@@ -132,6 +132,8 @@ tp ts get 2026-03-12       # Specific date
 | `tp leave create` | Create a leave request (see options and `--dry-run` below) |
 | `tp leave update ID` | Update a leave request while preserving unspecified API-returned fields; supports `--dry-run` |
 | `tp leave cancel ID` | Cancel a leave request (`--reason`) |
+| `tp leave balances status` | Show when leave balances were last imported from Xero and whether they are stale |
+| `tp leave balances import PATH` | Import leave balances for all employees from a Xero CSV export (leave admins only) |
 | `tp cl search QUERY` | Search for clients |
 | `tp proj list --client ID` | List projects for a client |
 | `tp proj recent` | Surface projects you've recently logged time against (likely picks for new entries) |
@@ -244,6 +246,12 @@ tp leave update <ID> --start 2026-04-01 --end 2026-04-01 \
 
 # Cancel a leave request
 tp leave cancel <ID> --reason "Plans changed" --yes
+
+# Check whether the stored leave balances are still current
+tp leave balances status --json
+
+# Import the latest Xero leave balances export (leave admins only)
+tp leave balances import ~/Downloads/LeaveBalances.csv --yes
 ```
 
 Leave create options:
@@ -265,6 +273,16 @@ explicit. Use `--clear-approved-by` or `--clear-cc` to remove those values, and
 `--half-day` / `--full-day` to change the day mode. Both create and update support
 `--dry-run`; combine it with `--json` to inspect the exact API payload without creating
 or changing leave.
+
+**Leave balances (Xero sync).** `tp leave balances import` uploads the raw Xero "Leave
+Balances" CSV export and replaces the balances stored in TimePro for every employee it can
+match. It requires leave admin rights, has no dry-run and no undo, so it prompts unless you
+pass `--yes`. Rows whose Xero name matches no TimePro employee — or matches more than one —
+are reported as skipped rather than guessed at, and implausibly large balances are flagged
+as warnings; the import still succeeds, so check both lists afterwards. Run
+`tp leave balances status` first to see whether a re-import is actually due. The accounting
+MCP tool takes the path to the CSV rather than its contents, so the file never has to pass
+through an agent's context.
 
 ### Week View
 
@@ -569,7 +587,7 @@ Current default tool groups include:
 |-------|----------|
 | Timesheets | Get, create, update, delete, suggested timesheets, accept suggestions, list iterations, `check_week` (leave-aware weekly coverage) |
 | Lookup | Search clients, list projects, get client rate, CRM bookings, location and repo mapping |
-| Leave | List EasyLeave entries (optionally filtered by `empId`), create and safely update EasyLeave requests with dry-run previews, `get_leave_balance` (days since last leave + 12-month hours) |
+| Leave | List EasyLeave entries (optionally filtered by `empId`), create and safely update EasyLeave requests with dry-run previews, `get_leave_balance` (days since last leave + 12-month hours), and `get_leave_balance_status` (Xero balance sync status) |
 
 Optional accounting MCP tools are enabled with:
 
@@ -577,7 +595,7 @@ Optional accounting MCP tools are enabled with:
 tp feature accounting enable
 ```
 
-That adds invoices, receipts, credit notes, products/SKUs, client rates, unbilled time, timesheet queries, current user/reference-code reporting, recurring invoices, and prepaid drawdown status. More complex accounting diagnostics live in guide-backed Markdown skills so teams can extend the collection without adding a dedicated command for every report.
+That adds invoices, receipts, credit notes, products/SKUs, client rates, unbilled time, timesheet queries, current user/reference-code reporting, recurring invoices, prepaid drawdown status, and the leave-admin-only `import_leave_balances` tool. More complex accounting diagnostics live in guide-backed Markdown skills so teams can extend the collection without adding a dedicated command for every report.
 
 Developer diagnostics are CLI/skill workflows. Enable the generated developer skills with:
 
@@ -608,6 +626,7 @@ Then ask Claude things like:
 - "Accept the suggested timesheet for Monday"
 - "What's my billing rate for Northwind?"
 - "Move my upcoming leave to Wednesday and keep its other details"
+- "Are the leave balances up to date? If not, import ~/Downloads/LeaveBalances.csv"
 
 ### VS Code (Copilot / Continue)
 

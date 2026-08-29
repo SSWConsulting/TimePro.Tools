@@ -105,6 +105,7 @@ The timesheets skill keeps:
 - `tp info --json` as the first health/update check, preferred over `tp --version`
 - `tp project recent --json` as the first project-selection step
 - the existing timesheet, booking, leave, repo mapping, scrum, and troubleshooting guidance
+- read-only EasyLeave balance freshness via CLI and the default MCP status tool
 - Northwind-only examples (`NWIND`, `1I776Q`, `Northwind/traders-app`)
 
 The tenant setup skill keeps:
@@ -119,7 +120,8 @@ The tenant setup skill keeps:
 The accounting skill keeps:
 
 - `allowed-tools: Bash(tp *)`
-- instruction-only read-only accounting workflows
+- instruction-only accounting workflows, read-only except for explicitly approved Xero leave-balance imports
+- default-MCP balance status plus accounting-gated MCP import guidance
 - client billable-work threshold report guidance, including the `.rows` JSON envelope shape
 - deeper reconciliation diagnostics for Excel, CSV, Xero MCP, bank-feed MCP, or another external source
 - guidance to check `tp accounting guide` first, then use specific recipes under `guides/accounting/`

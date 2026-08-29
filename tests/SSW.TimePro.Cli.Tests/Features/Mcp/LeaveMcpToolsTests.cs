@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FluentAssertions;
+using ModelContextProtocol.Server;
 using NSubstitute;
 using SSW.TimePro.Cli.Features.Leave;
 using SSW.TimePro.Cli.Features.Mcp.Tools;
@@ -12,6 +13,19 @@ namespace SSW.TimePro.Cli.Tests.Features.Mcp;
 
 public class LeaveMcpToolsTests
 {
+    [Fact]
+    public void GetLeaveBalanceStatus_IsMarkedReadOnly()
+    {
+        var attribute = typeof(LeaveMcpTools)
+            .GetMethod(nameof(LeaveMcpTools.GetLeaveBalanceStatus))!
+            .GetCustomAttributes(typeof(McpServerToolAttribute), inherit: false)
+            .Cast<McpServerToolAttribute>()
+            .Single();
+
+        attribute.ReadOnly.Should().BeTrue();
+        attribute.Destructive.Should().BeFalse();
+    }
+
     [Fact]
     public async Task CreateLeave_WhenProfileTimezoneAvailable_SendsDateOffsetsFromProfileTimezone()
     {
@@ -263,6 +277,33 @@ public class LeaveMcpToolsTests
         api.ReceivedCalls()
             .Should()
             .NotContain(call => call.GetMethodInfo().Name == nameof(ITimeProApiClient.UpdateLeaveAsync));
+    }
+
+    [Fact]
+    public async Task GetLeaveBalanceStatus_WhenNothingImported_ReportsNotImported()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        var config = Substitute.For<IConfigService>();
+        config.LoadActiveTenantConfig().Returns(new TenantConfig
+        {
+            TenantId = "test",
+            ApiUrl = "https://timepro.example",
+            ApiKey = "test-api-key",
+            EmployeeId = "TST"
+        });
+        api.GetLeaveBalanceStatusAsync(Arg.Any<CancellationToken>()).Returns(new LeaveBalanceStatus
+        {
+            AsAtDate = null,
+            LastImportedAt = null,
+            EmployeeCount = 0,
+            IsStale = false
+        });
+        var tools = CreateTools(api, config);
+
+        var json = await tools.GetLeaveBalanceStatus(TestContext.Current.CancellationToken);
+
+        using var doc = JsonDocument.Parse(json);
+        doc.RootElement.GetProperty("imported").GetBoolean().Should().BeFalse();
     }
 
     private static LeaveMcpTools CreateTools(ITimeProApiClient api, IConfigService config) =>

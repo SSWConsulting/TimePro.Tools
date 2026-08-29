@@ -14,7 +14,6 @@ public class LeaveMcpTools
     private readonly IConfigService _config;
     private readonly LeaveCreateService _leaveCreateService;
     private readonly LeaveUpdateService _leaveUpdateService;
-    private readonly LeaveBalanceImportService _leaveBalanceImportService;
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -26,14 +25,12 @@ public class LeaveMcpTools
         ITimeProApiClient api,
         IConfigService config,
         LeaveCreateService leaveCreateService,
-        LeaveUpdateService leaveUpdateService,
-        LeaveBalanceImportService leaveBalanceImportService)
+        LeaveUpdateService leaveUpdateService)
     {
         _api = api;
         _config = config;
         _leaveCreateService = leaveCreateService;
         _leaveUpdateService = leaveUpdateService;
-        _leaveBalanceImportService = leaveBalanceImportService;
     }
 
     [McpServerTool]
@@ -210,41 +207,10 @@ public class LeaveMcpTools
             return """{"error": "Not logged in. Run 'tp login --tenant <id>' first."}""";
 
         var status = await _api.GetLeaveBalanceStatusAsync(ct);
-        if (status is null)
+        if (status?.LastImportedAt is null)
             return JsonSerializer.Serialize(new { imported = false }, JsonOpts);
 
         return JsonSerializer.Serialize(status, JsonOpts);
-    }
-
-    [McpServerTool]
-    [Description(
-        "Import leave balances for EVERY employee from a Xero 'Leave Balances' CSV export, replacing what TimePro currently stores. "
-        + "No dry run and no undo, so confirm with the user first. Pass the path to the CSV file, not its contents. "
-        + "Always report the returned unmatchedEmployees (rows skipped) and warnings - the import succeeds despite them.")]
-    public async Task<string> ImportLeaveBalances(
-        [Description("Path to the Xero 'Leave Balances' CSV export on this machine")] string csvPath,
-        CancellationToken ct = default)
-    {
-        if (_config.LoadActiveTenantConfig() is null)
-            return """{"error": "Not logged in. Run 'tp login --tenant <id>' first."}""";
-
-        try
-        {
-            var result = await _leaveBalanceImportService.ImportAsync(csvPath, ct);
-            return JsonSerializer.Serialize(new
-            {
-                success = true,
-                result.AsAtDate,
-                result.Created,
-                result.Updated,
-                result.UnmatchedEmployees,
-                result.Warnings
-            }, JsonOpts);
-        }
-        catch (LeaveBalanceImportValidationException ex)
-        {
-            return JsonSerializer.Serialize(new { error = ex.Message }, JsonOpts);
-        }
     }
 
     private static string? ResolveEmpId(string? empId, string? employeeId)

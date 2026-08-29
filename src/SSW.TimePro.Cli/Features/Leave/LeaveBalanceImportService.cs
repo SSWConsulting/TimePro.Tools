@@ -39,7 +39,7 @@ public sealed class LeaveBalanceImportService
         string fullPath;
         try
         {
-            fullPath = Path.GetFullPath(csvPath.Trim());
+            fullPath = Path.GetFullPath(ExpandHomeDirectory(csvPath));
         }
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
         {
@@ -82,6 +82,33 @@ public sealed class LeaveBalanceImportService
         }
 
         return content;
+    }
+
+    /// <summary>
+    /// Expands the shell-style current-user home shorthand because MCP arguments are passed
+    /// directly to the process and do not go through shell expansion.
+    /// </summary>
+    internal static string ExpandHomeDirectory(string path)
+    {
+        var trimmedPath = path.Trim();
+        if (trimmedPath != "~"
+            && !trimmedPath.StartsWith("~/", StringComparison.Ordinal)
+            && !trimmedPath.StartsWith(@"~\", StringComparison.Ordinal))
+        {
+            return trimmedPath;
+        }
+
+        var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (string.IsNullOrWhiteSpace(userProfile))
+            return trimmedPath;
+
+        if (trimmedPath.Length == 1)
+            return userProfile;
+
+        var relativePath = trimmedPath[2..]
+            .Replace('/', Path.DirectorySeparatorChar)
+            .Replace('\\', Path.DirectorySeparatorChar);
+        return Path.Combine(userProfile, relativePath);
     }
 
     /// <summary>

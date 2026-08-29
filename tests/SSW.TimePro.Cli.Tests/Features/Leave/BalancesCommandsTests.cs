@@ -83,7 +83,13 @@ public class BalancesCommandsTests : IDisposable
     {
         var api = Substitute.For<ITimeProApiClient>();
         api.GetLeaveBalanceStatusAsync(Arg.Any<CancellationToken>())
-            .Returns((LeaveBalanceStatus?)null);
+            .Returns(new LeaveBalanceStatus
+            {
+                AsAtDate = null,
+                LastImportedAt = null,
+                EmployeeCount = 0,
+                IsStale = false
+            });
         var app = CreateApp(api);
 
         var exitCode = await app.RunAsync(["status", "--json"], TestContext.Current.CancellationToken);

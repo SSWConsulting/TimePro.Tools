@@ -41,7 +41,7 @@ public class BalancesStatusCommand : AsyncCommand<BalancesStatusCommand.Settings
         try
         {
             var status = await _api.GetLeaveBalanceStatusAsync(cancellationToken);
-            if (status is null)
+            if (status?.LastImportedAt is null)
             {
                 // Nothing imported yet is a valid state, not a failure.
                 if (settings.Json)

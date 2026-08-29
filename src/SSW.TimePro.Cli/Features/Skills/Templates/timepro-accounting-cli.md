@@ -6,7 +6,7 @@ Do not install this file directly as an agent skill.
 
 # TimePro Accounting (CLI)
 
-Accountant-facing read-only access to SSW TimePro via the `tp` CLI. Pipe `--json` output into `jq` or Python to calculate totals, compare against Xero, or audit historical data.
+Accountant-facing access to SSW TimePro via the `tp` CLI. The financial exploration workflows are read-only; the Xero leave-balance import is the one explicitly documented write and requires direct user approval. Pipe `--json` output into `jq` or Python to calculate totals, compare against Xero, or audit historical data.
 
 ## Setup
 This skill reuses the tenant config already configured for `tp`. If `tp login` has been run, nothing else is needed. Otherwise run `tp login --tenant <id>` first.
@@ -72,9 +72,35 @@ tp prepaid status <INVOICE_ID> --output /tmp/prepaid.pdf
 # Cross-employee/client/project timesheet query
 tp query --from 2026-03-01 --to 2026-03-31 --json
 tp query --from 2026-03-01 --to 2026-03-31 --client <CID> --json
+
+# Xero leave balances
+tp leave balances status --json
+tp leave balances import ./LeaveBalances.csv --yes --json
 ```
 
 ## Common workflows
+
+### Import Xero leave balances (destructive)
+This import replaces stored leave balances company-wide, has no dry-run, and cannot be
+undone through TimePro. Do not run it from an inferred request. Obtain explicit user
+approval for the exact file and tenant immediately before importing.
+
+1. Run `tp info --json` and report the selected tenant.
+2. Run `tp leave balances status --json` and report the current as-at/import dates,
+   employee count, and staleness.
+3. Confirm the local CSV path with the user. Do not paste the CSV into an agent prompt.
+4. After approval, run:
+
+```bash
+tp leave balances import ./LeaveBalances.csv --yes --json
+```
+
+Always report `created`, `updated`, `unmatchedEmployees`, and `warnings`. A successful
+request may still skip unmatched rows.
+
+For MCP, `get_leave_balance_status` is on the default TimePro surface, while the destructive
+`import_leave_balances` tool is available only after `tp feature accounting enable`. The
+same explicit approval and result-reporting rules apply.
 
 ### Drill into an invoice
 ```bash
@@ -220,8 +246,9 @@ Prefer the accounting guide before manually stitching primitives:
 - `guides/accounting/invoice-evidence-pack.md` assembles an invoice evidence pack from header, lines, allocated/write-off timesheets, receipts, and credit notes.
 - `guides/accounting/client-accounting-position.md` assembles client-level invoice, debt, unbilled, credit note, rate, and external comparison evidence.
 
-If using `tp mcp` with accounting enabled, MCP exposes primitive read-only tools.
-Use skills or guide-backed markdown to compose multi-step diagnostics locally.
+If using `tp mcp` with accounting enabled, MCP exposes primitive read-only tools plus the
+explicitly approved `import_leave_balances` write. Use skills or guide-backed markdown to
+compose multi-step diagnostics locally.
 
 Enable this MCP surface once with:
 

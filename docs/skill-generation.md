@@ -119,7 +119,8 @@ The tenant setup skill keeps:
 The accounting skill keeps:
 
 - `allowed-tools: Bash(tp *)`
-- instruction-only read-only accounting workflows
+- instruction-only accounting workflows, read-only except for explicitly approved Xero leave-balance imports
+- default-MCP balance status plus accounting-gated MCP import guidance
 - client billable-work threshold report guidance, including the `.rows` JSON envelope shape
 - deeper reconciliation diagnostics for Excel, CSV, Xero MCP, bank-feed MCP, or another external source
 - guidance to check `tp accounting guide` first, then use specific recipes under `guides/accounting/`

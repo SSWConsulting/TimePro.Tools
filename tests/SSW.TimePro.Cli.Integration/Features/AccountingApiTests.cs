@@ -118,7 +118,9 @@ public class AccountingApiTests : TestBase
         var rows = await ApiClient.GetInvoiceTimesheetsAsync(142, "writeoff", CancellationToken.None);
 
         rows.Should().BeEmpty();
-        WireMock.LogEntries.First().RequestMessage.AbsolutePath.Should().EndWith("/WriteOff");
+        var requestMessage = WireMock.LogEntries.First().RequestMessage;
+        requestMessage.Should().NotBeNull();
+        requestMessage!.AbsolutePath.Should().EndWith("/WriteOff");
     }
 
     [Fact]

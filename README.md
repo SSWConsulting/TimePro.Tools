@@ -280,9 +280,9 @@ match. It requires leave admin rights, has no dry-run and no undo, so it prompts
 pass `--yes`. Rows whose Xero name matches no TimePro employee — or matches more than one —
 are reported as skipped rather than guessed at, and implausibly large balances are flagged
 as warnings; the import still succeeds, so check both lists afterwards. Run
-`tp leave balances status` first to see whether a re-import is actually due. The MCP tool
-takes the path to the CSV rather than its contents, so the file never has to pass through
-an agent's context.
+`tp leave balances status` first to see whether a re-import is actually due. The accounting
+MCP tool takes the path to the CSV rather than its contents, so the file never has to pass
+through an agent's context.
 
 ### Week View
 
@@ -587,7 +587,7 @@ Current default tool groups include:
 |-------|----------|
 | Timesheets | Get, create, update, delete, suggested timesheets, accept suggestions, list iterations, `check_week` (leave-aware weekly coverage) |
 | Lookup | Search clients, list projects, get client rate, CRM bookings, location and repo mapping |
-| Leave | List EasyLeave entries (optionally filtered by `empId`), create and safely update EasyLeave requests with dry-run previews, `get_leave_balance` (days since last leave + 12-month hours), `get_leave_balance_status` and `import_leave_balances` (Xero balance sync, leave admins only) |
+| Leave | List EasyLeave entries (optionally filtered by `empId`), create and safely update EasyLeave requests with dry-run previews, `get_leave_balance` (days since last leave + 12-month hours), and `get_leave_balance_status` (Xero balance sync status) |
 
 Optional accounting MCP tools are enabled with:
 
@@ -595,7 +595,7 @@ Optional accounting MCP tools are enabled with:
 tp feature accounting enable
 ```
 
-That adds invoices, receipts, credit notes, products/SKUs, client rates, unbilled time, timesheet queries, current user/reference-code reporting, recurring invoices, and prepaid drawdown status. More complex accounting diagnostics live in guide-backed Markdown skills so teams can extend the collection without adding a dedicated command for every report.
+That adds invoices, receipts, credit notes, products/SKUs, client rates, unbilled time, timesheet queries, current user/reference-code reporting, recurring invoices, prepaid drawdown status, and the leave-admin-only `import_leave_balances` tool. More complex accounting diagnostics live in guide-backed Markdown skills so teams can extend the collection without adding a dedicated command for every report.
 
 Developer diagnostics are CLI/skill workflows. Enable the generated developer skills with:
 

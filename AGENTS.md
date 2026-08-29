@@ -120,6 +120,9 @@ through an agent's context, where a large CSV is expensive and liable to be sile
 truncated into a partial import that still looks successful. `GET /api/leave/balances/status`
 is the cheap read used to decide whether a re-import is due.
 
+The read-only MCP status tool is on the default leave surface. The destructive MCP import
+tool is available only when the accounting feature pack is enabled.
+
 Rows whose Xero employee name matches no TimePro employee, or matches several, are returned
 in `unmatchedEmployees` and skipped rather than guessed at; implausible balances are returned
 in `warnings`. The import succeeds regardless, so both lists must be surfaced to the user.

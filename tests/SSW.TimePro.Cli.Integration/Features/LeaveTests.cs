@@ -197,17 +197,20 @@ public class LeaveCreateTests : TestBase
         entries.Should().HaveCount(1);
 
         var logEntry = entries.First();
-        logEntry.RequestMessage.Method.Should().Be("POST");
-        logEntry.RequestMessage.Path.Should().Be("/api/leave/");
+        var requestMessage = logEntry.RequestMessage;
+        requestMessage.Should().NotBeNull();
+        requestMessage!.Method.Should().Be("POST");
+        requestMessage.Path.Should().Be("/api/leave/");
 
         // Verify headers
-        logEntry.RequestMessage.Headers.Should().ContainKey("x-timepro-tenant-id");
-        logEntry.RequestMessage.Headers!["x-timepro-tenant-id"].Should().Contain("test");
-        logEntry.RequestMessage.Headers.Should().ContainKey("x-timepro-api-key");
-        logEntry.RequestMessage.Headers!["x-timepro-api-key"].Should().Contain("test-api-key");
+        requestMessage.Headers.Should().NotBeNull();
+        requestMessage.Headers!.Should().ContainKey("x-timepro-tenant-id");
+        requestMessage.Headers["x-timepro-tenant-id"].Should().Contain("test");
+        requestMessage.Headers.Should().ContainKey("x-timepro-api-key");
+        requestMessage.Headers["x-timepro-api-key"].Should().Contain("test-api-key");
 
         // Verify body contains required fields
-        var body = logEntry.RequestMessage.Body;
+        var body = requestMessage.Body;
         body.Should().NotBeNullOrEmpty();
         var doc = JsonDocument.Parse(body!);
         var root = doc.RootElement;
@@ -250,7 +253,9 @@ public class LeaveCreateTests : TestBase
         await ApiClient.CreateLeaveAsync(request, CancellationToken.None);
 
         // Assert
-        var body = WireMock.LogEntries.First().RequestMessage.Body;
+        var requestMessage = WireMock.LogEntries.First().RequestMessage;
+        requestMessage.Should().NotBeNull();
+        var body = requestMessage!.Body;
         var doc = JsonDocument.Parse(body!);
         var root = doc.RootElement;
 
@@ -410,11 +415,13 @@ public class LeaveCancelTests : TestBase
         entries.Should().HaveCount(1);
 
         var logEntry = entries.First();
-        logEntry.RequestMessage.Method.Should().Be("PUT");
-        logEntry.RequestMessage.Path.Should().Be($"/api/leave/{leaveId}/cancel");
+        var requestMessage = logEntry.RequestMessage;
+        requestMessage.Should().NotBeNull();
+        requestMessage!.Method.Should().Be("PUT");
+        requestMessage.Path.Should().Be($"/api/leave/{leaveId}/cancel");
 
         // Verify body contains LeaveId and CancellationReason
-        var body = logEntry.RequestMessage.Body;
+        var body = requestMessage.Body;
         body.Should().NotBeNullOrEmpty();
         var doc = JsonDocument.Parse(body!);
         var root = doc.RootElement;
@@ -500,9 +507,11 @@ public class LeaveCancelTests : TestBase
 
         // Assert
         var req = WireMock.LogEntries.First().RequestMessage;
-        req.Headers.Should().ContainKey("x-timepro-tenant-id");
-        req.Headers!["x-timepro-tenant-id"].Should().Contain("test");
+        req.Should().NotBeNull();
+        req!.Headers.Should().NotBeNull();
+        req.Headers!.Should().ContainKey("x-timepro-tenant-id");
+        req.Headers["x-timepro-tenant-id"].Should().Contain("test");
         req.Headers.Should().ContainKey("x-timepro-api-key");
-        req.Headers!["x-timepro-api-key"].Should().Contain("test-api-key");
+        req.Headers["x-timepro-api-key"].Should().Contain("test-api-key");
     }
 }

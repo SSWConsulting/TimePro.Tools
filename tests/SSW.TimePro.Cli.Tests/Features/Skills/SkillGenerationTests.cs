@@ -121,7 +121,12 @@ public class SkillGenerationTests
         output.Should().Contain("guides/accounting/tax-mismatch.md");
         output.Should().Contain("guides/accounting/invoice-evidence-pack.md");
         output.Should().Contain("guides/accounting/client-accounting-position.md");
-        output.Should().Contain("MCP exposes primitive read-only tools");
+        output.Should().Contain("Import Xero leave balances (destructive)");
+        output.Should().Contain("tp leave balances status --json");
+        output.Should().Contain("tp leave balances import ./LeaveBalances.csv --yes --json");
+        output.Should().Contain("`get_leave_balance_status` is on the default TimePro surface");
+        output.Should().Contain("`import_leave_balances` tool is available only after `tp feature accounting enable`");
+        output.Should().Contain("explicitly approved `import_leave_balances` write");
         output.Should().Contain("With another MCP such as Xero");
         output.Should().Contain("tp feature accounting enable");
         output.Should().NotContain("## Run these first");

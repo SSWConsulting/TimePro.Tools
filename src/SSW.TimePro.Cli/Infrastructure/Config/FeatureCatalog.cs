@@ -17,7 +17,7 @@ public static class FeatureCatalog
         new(
             Accounting,
             "Accounting",
-            "Accounting skills, guide topics, and read-only accounting MCP tools.",
+            "Accounting skills, guide topics, and accounting MCP tools including guarded leave-balance import.",
             Version: 1,
             Aliases: ["accounts", "accountant"]),
         new(

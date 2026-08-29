@@ -44,7 +44,9 @@ public class LeaveBalancesApiTests : TestBase
         // The endpoint reads the request stream as CSV. If this ever regresses to the JSON
         // helpers the body becomes an escaped string literal and the server-side parser fails.
         var request = WireMock.LogEntries.Should().ContainSingle().Subject.RequestMessage;
-        request.Body.Should().Be(Csv);
+        request.Should().NotBeNull();
+        request!.Body.Should().Be(Csv);
+        request.Headers.Should().NotBeNull();
         request.Headers!["Content-Type"].ToString().Should().Contain("text/csv");
     }
 

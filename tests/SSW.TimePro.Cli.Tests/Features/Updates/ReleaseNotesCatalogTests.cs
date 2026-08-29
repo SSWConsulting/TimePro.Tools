@@ -50,7 +50,7 @@ public class ReleaseNotesCatalogTests
     {
         var catalog = ReleaseNotesCatalog.LoadEmbedded();
 
-        catalog.LatestKnown()!.VersionText.Should().Be("0.2.6");
+        catalog.LatestKnown()!.VersionText.Should().Be("0.2.7");
     }
 
     private static ReleaseNotesCatalog Catalog() =>

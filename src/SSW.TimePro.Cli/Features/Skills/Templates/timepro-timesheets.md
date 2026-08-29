@@ -60,6 +60,7 @@ tp bk list --week --json
 
 # Leave
 tp leave list --filter UPCOMING --json
+tp leave balances status --json
 tp leave create --start 2026-03-30 --end 2026-03-30 --type 1 \
   --note "Reason" --approved-by "approver@northwind.example" \
   --cc "notify1@northwind.example,notify2@northwind.example" --yes
@@ -69,6 +70,12 @@ tp leave update <ID> --start 2026-04-01 --end 2026-04-01 --note "Updated reason"
 tp leave update <ID> --note "Updated reason" --dry-run --json
 tp leave cancel <ID> --reason "Plans changed" --yes
 ```
+
+### Check EasyLeave balance freshness
+Use `tp leave balances status --json` for read-only questions about when company-wide
+EasyLeave balances were last imported and whether they are stale. The equivalent default
+MCP tool is `get_leave_balance_status`. Do not import balances from this skill; the
+destructive `import_leave_balances` workflow is accounting-gated.
 
 ## Workflow: Enter Timesheets for the Week
 1. Pick the project: `tp project recent --json`.

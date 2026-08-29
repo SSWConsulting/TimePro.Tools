@@ -64,6 +64,10 @@ public class SkillGenerationTests
         output.Should().Contain("name: timepro-timesheets");
         output.Should().Contain("description:");
         output.Should().Contain("allowed-tools: Bash(tp *), Bash(sl *)");
+        output.Should().Contain("tp leave balances status --json");
+        output.Should().Contain("The equivalent default\nMCP tool is `get_leave_balance_status`");
+        output.Should().Contain("`import_leave_balances` workflow is accounting-gated");
+        output.Should().NotContain("tp leave balances import");
     }
 
     [Fact]

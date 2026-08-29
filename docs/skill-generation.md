@@ -105,6 +105,7 @@ The timesheets skill keeps:
 - `tp info --json` as the first health/update check, preferred over `tp --version`
 - `tp project recent --json` as the first project-selection step
 - the existing timesheet, booking, leave, repo mapping, scrum, and troubleshooting guidance
+- read-only EasyLeave balance freshness via CLI and the default MCP status tool
 - Northwind-only examples (`NWIND`, `1I776Q`, `Northwind/traders-app`)
 
 The tenant setup skill keeps:

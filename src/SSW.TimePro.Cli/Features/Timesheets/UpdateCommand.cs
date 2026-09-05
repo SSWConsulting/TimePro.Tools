@@ -38,6 +38,10 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
         [Description("New end time (HH:mm)")]
         public string? End { get; set; }
 
+        [CommandOption("--less <MINUTES>")]
+        [Description("New break/less time in minutes. Use 0 to clear it")]
+        public int? Less { get; set; }
+
         [CommandOption("--client <CLIENT>")]
         [Description("New client ID")]
         public string? ClientId { get; set; }
@@ -86,6 +90,15 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
             return 1;
         }
 
+        if (settings.Less is < 0)
+        {
+            if (settings.Json)
+                OutputHelper.WriteJsonError("--less must be zero or greater");
+            else
+                OutputHelper.WriteError("--less must be zero or greater");
+            return 1;
+        }
+
         try
         {
             // Find the existing timesheet so we can send a full payload.
@@ -122,7 +135,9 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
                 TimeEnd = settings.End is not null
                     ? $"{existingDateStr}T{settings.End}:00"
                     : existing.EndTime,
-                TimeLess = existing.Less > 0 ? existing.Less : null,
+                TimeLess = settings.Less is not null
+                    ? settings.Less.Value / 60m
+                    : existing.Less > 0 ? existing.Less : null,
                 Note = settings.Description ?? existing.Notes,
                 LocationId = settings.Location is not null
                     ? LocationResolver.Resolve(settings.Location)
@@ -146,6 +161,8 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
                 changes.Add($"Start -> {settings.Start}");
             if (settings.End is not null)
                 changes.Add($"End -> {settings.End}");
+            if (settings.Less is not null)
+                changes.Add($"Less -> {settings.Less} minutes");
             if (settings.ClientId is not null)
                 changes.Add($"Client -> {settings.ClientId}");
             if (settings.ProjectId is not null)
@@ -159,7 +176,7 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
 
             if (changes.Count == 0)
             {
-                OutputHelper.WriteInfo("No changes specified. Use --location, --description, etc.");
+                OutputHelper.WriteInfo("No changes specified. Use --location, --description, --less, etc.");
                 return 0;
             }
 

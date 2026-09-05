@@ -220,6 +220,14 @@ When creating timesheets:
 - **Duplicate detection** — if a timesheet already exists for the time slot, you'll get a clear error suggesting `tp ts update` instead
 - **API error details** — validation errors now show the specific field and message from the API
 
+To change a timesheet's working window or deducted time without replacing it:
+
+```bash
+tp ts update 42 --date 2026-03-16 --end 19:00 --less 120 --yes
+```
+
+`--less` takes minutes. Pass `--less 0` to clear the deduction.
+
 ### Leave Management
 
 ```bash

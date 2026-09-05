@@ -120,14 +120,44 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
             var existingEntry = await GetExistingEntryAsync(tenant.EmployeeId, dateOnly, settings.TimesheetId);
             var categoryId = settings.Category ?? existingEntry?.CategoryId;
 
+            // The list endpoint usually returns the iteration name but not its ID. SaveTimesheet
+            // requires the ID in its full edit payload, so resolve it before updating.
+            var targetProjectId = settings.ProjectId ?? existing.ProjectId ?? "";
+            var projectChanged = settings.ProjectId is not null
+                && !string.Equals(settings.ProjectId, existing.ProjectId, StringComparison.OrdinalIgnoreCase);
+            var iterationId = projectChanged ? null : existing.IterationId;
+            if (iterationId is null && !string.IsNullOrEmpty(targetProjectId))
+            {
+                var iterations = await _api.GetIterationsAsync(targetProjectId, cancellationToken);
+                if (iterations.Count > 0)
+                {
+                    iterationId = iterations
+                        .FirstOrDefault(i => string.Equals(
+                            i.IterationName,
+                            existing.Iteration,
+                            StringComparison.OrdinalIgnoreCase))
+                        ?.IterationId;
+
+                    if (iterationId is null)
+                    {
+                        var message = $"Unable to resolve iteration '{existing.Iteration ?? "(none)"}' for project '{targetProjectId}'.";
+                        if (settings.Json)
+                            OutputHelper.WriteJsonError(message);
+                        else
+                            OutputHelper.WriteError(message);
+                        return 1;
+                    }
+                }
+            }
+
             // Build the full request from the existing timesheet, applying overrides
             var request = new TimesheetRequest
             {
                 TimeId = settings.TimesheetId,
                 EmpId = tenant.EmployeeId,
                 ClientId = settings.ClientId ?? existing.ClientId ?? "",
-                ProjectId = settings.ProjectId ?? existing.ProjectId ?? "",
-                IterationId = existing.IterationId,
+                ProjectId = targetProjectId,
+                IterationId = iterationId,
                 DateCreated = existingDateStr,
                 TimeStart = settings.Start is not null
                     ? $"{existingDateStr}T{settings.Start}:00"

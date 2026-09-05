@@ -115,6 +115,43 @@ public class TimesheetSaveTaxTests : TestBase
         doc.RootElement.GetProperty("salesTaxPct").GetDecimal().Should().Be(0.1m);
     }
 
+    [Theory]
+    [InlineData(2.0)]
+    [InlineData(0.0)]
+    public async Task UpdateTimesheet_WhenTimeLessIsSpecified_SendsHoursIncludingExplicitZero(
+        double timeLessHours)
+    {
+        WireMock.Given(Request.Create()
+                .WithPath("/api/v2/clients/NWIND/taxrates")
+                .UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithBody("0.1"));
+
+        WireMock.Given(Request.Create()
+                .WithPath("/api/Timesheets/SaveTimesheet")
+                .UsingPost())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithBody("{\"Success\":true,\"TimesheetId\":456}"));
+
+        var request = new TimesheetRequest
+        {
+            EmpId = "TST",
+            ClientId = "NWIND",
+            BillableId = "B",
+            TimeId = 456,
+            TimeLess = (decimal)timeLessHours
+        };
+
+        await ApiClient.UpdateTimesheetAsync(request, TestContext.Current.CancellationToken);
+
+        var saveCall = WireMock.LogEntries
+            .Single(e => e.RequestMessage!.AbsolutePath == "/api/Timesheets/SaveTimesheet");
+        using var doc = JsonDocument.Parse(saveCall.RequestMessage!.Body!);
+        doc.RootElement.GetProperty("timeLess").GetDecimal().Should().Be((decimal)timeLessHours);
+    }
+
     [Fact]
     public async Task CreateTimesheet_WhenSalesTaxPctProvided_DoesNotLookUpClient()
     {

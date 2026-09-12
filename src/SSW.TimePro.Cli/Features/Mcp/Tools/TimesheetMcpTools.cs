@@ -169,18 +169,32 @@ public class TimesheetMcpTools
 
             return JsonSerializer.Serialize(result, JsonOpts);
         }
-        catch (TimesheetUpdateValidationException ex)
+        catch (TimesheetValidationException ex)
         {
             return JsonSerializer.Serialize(new { error = ex.Message }, JsonOpts);
         }
     }
 
     [McpServerTool]
-    [Description("Delete a timesheet entry.")]
+    [Description("Delete a timesheet entry. Suggestions cannot be deleted; accept one first.")]
     public async Task<string> DeleteTimesheet(
         [Description("Timesheet ID")] int timesheetId,
+        [Description("Date the timesheet is on (yyyy-MM-dd). Speeds up the lookup; otherwise recent weeks are searched.")] string? date = null,
         CancellationToken ct = default)
     {
+        var tenant = _config.LoadActiveTenantConfig();
+        if (tenant?.EmployeeId is null)
+            return """{"error": "Not logged in"}""";
+
+        try
+        {
+            await TimesheetLookup.EnsureDeletableAsync(_api, tenant.EmployeeId, timesheetId, date, ct);
+        }
+        catch (TimesheetValidationException ex)
+        {
+            return JsonSerializer.Serialize(new { error = ex.Message }, JsonOpts);
+        }
+
         await _api.DeleteTimesheetAsync(timesheetId, ct);
         return JsonSerializer.Serialize(new { success = true, timesheetId }, JsonOpts);
     }
@@ -272,7 +286,7 @@ public class TimesheetMcpTools
 
             return JsonSerializer.Serialize(result, JsonOpts);
         }
-        catch (TimesheetUpdateValidationException ex)
+        catch (TimesheetValidationException ex)
         {
             return JsonSerializer.Serialize(new { error = ex.Message }, JsonOpts);
         }

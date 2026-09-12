@@ -13,4 +13,9 @@ public sealed record TimesheetWriteResult
     public int? TimesheetId { get; init; }
     public string? Message { get; init; }
     public TimesheetItem? Timesheet { get; init; }
+
+    /// <summary>Set only when an iteration was requested, so callers can tell a write that half landed.</summary>
+    public bool? IterationApplied { get; init; }
+
+    public string? Warning { get; init; }
 }

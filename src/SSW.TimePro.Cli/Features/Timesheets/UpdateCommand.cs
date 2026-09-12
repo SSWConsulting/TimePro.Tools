@@ -87,7 +87,11 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
         var tenant = _config.LoadActiveTenantConfig();
         if (tenant?.EmployeeId is null)
         {
-            OutputHelper.WriteError("Not logged in. Run 'tp login --tenant <id>' first.");
+            const string message = "Not logged in. Run 'tp login --tenant <id>' first.";
+            if (settings.Json)
+                OutputHelper.WriteJsonError(message);
+            else
+                OutputHelper.WriteError(message);
             return 1;
         }
 
@@ -150,7 +154,7 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
 
             return 0;
         }
-        catch (TimesheetUpdateValidationException ex)
+        catch (TimesheetValidationException ex)
         {
             if (settings.Json)
                 OutputHelper.WriteJsonError(ex.Message);

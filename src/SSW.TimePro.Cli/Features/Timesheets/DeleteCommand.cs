@@ -43,24 +43,18 @@ public class DeleteCommand : AsyncCommand<DeleteCommand.Settings>
         var tenant = _config.LoadActiveTenantConfig();
         if (tenant?.EmployeeId is null)
         {
-            OutputHelper.WriteError("Not logged in. Run 'tp login --tenant <id>' first.");
+            const string message = "Not logged in. Run 'tp login --tenant <id>' first.";
+            if (settings.Json)
+                OutputHelper.WriteJsonError(message);
+            else
+                OutputHelper.WriteError(message);
             return 1;
         }
 
         try
         {
-            var found = await TimesheetLookup.FindAsync(
+            await TimesheetLookup.EnsureDeletableAsync(
                 _api, tenant.EmployeeId, settings.TimesheetId, settings.Date, cancellationToken);
-
-            if (found?.Item.IsSuggested == true)
-            {
-                var message = $"Timesheet {settings.TimesheetId} is a suggestion and cannot be deleted. Accept it first: tp ts accept {settings.TimesheetId}";
-                if (settings.Json)
-                    OutputHelper.WriteJsonError(message);
-                else
-                    OutputHelper.WriteError(message);
-                return 1;
-            }
 
             if (!settings.Yes && !settings.Json)
             {
@@ -76,6 +70,14 @@ public class DeleteCommand : AsyncCommand<DeleteCommand.Settings>
                 OutputHelper.WriteSuccess($"Timesheet #{settings.TimesheetId} deleted");
 
             return 0;
+        }
+        catch (TimesheetValidationException ex)
+        {
+            if (settings.Json)
+                OutputHelper.WriteJsonError(ex.Message);
+            else
+                OutputHelper.WriteError(ex.Message);
+            return 1;
         }
         catch (ApiException ex)
         {

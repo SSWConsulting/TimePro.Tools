@@ -55,7 +55,11 @@ public class AcceptCommand : AsyncCommand<AcceptCommand.Settings>
         var tenant = _config.LoadActiveTenantConfig();
         if (tenant?.EmployeeId is null)
         {
-            OutputHelper.WriteError("Not logged in. Run 'tp login --tenant <id>' first.");
+            const string message = "Not logged in. Run 'tp login --tenant <id>' first.";
+            if (settings.Json)
+                OutputHelper.WriteJsonError(message);
+            else
+                OutputHelper.WriteError(message);
             return 1;
         }
 
@@ -94,9 +98,16 @@ public class AcceptCommand : AsyncCommand<AcceptCommand.Settings>
                 OutputHelper.WriteSuccess(
                     $"Suggested timesheet accepted{(result.TimesheetId is not null ? $" (new ID: {result.TimesheetId})" : "")}");
 
+            if (result.Warning is not null)
+            {
+                if (!settings.Json)
+                    OutputHelper.WriteWarning(result.Warning);
+                return 1;
+            }
+
             return 0;
         }
-        catch (TimesheetUpdateValidationException ex)
+        catch (TimesheetValidationException ex)
         {
             if (settings.Json)
                 OutputHelper.WriteJsonError(ex.Message);

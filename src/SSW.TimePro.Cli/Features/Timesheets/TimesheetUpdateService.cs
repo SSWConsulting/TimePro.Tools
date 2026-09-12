@@ -24,9 +24,9 @@ public sealed record TimesheetUpdatePlan(
     DateOnly Date,
     IReadOnlyList<string> Changes);
 
-public class TimesheetUpdateValidationException(string message) : Exception(message);
+public class TimesheetValidationException(string message) : Exception(message);
 
-public sealed class TimesheetNoChangesException(string message) : TimesheetUpdateValidationException(message);
+public sealed class TimesheetNoChangesException(string message) : TimesheetValidationException(message);
 
 /// <summary>
 /// Builds a complete SaveTimesheet payload from the stored entry plus the caller's overrides.
@@ -46,15 +46,15 @@ public sealed class TimesheetUpdateService
         CancellationToken ct = default)
     {
         if (options.Less is < 0)
-            throw new TimesheetUpdateValidationException("Break/less time must be zero or greater");
+            throw new TimesheetValidationException("Break/less time must be zero or greater");
 
         var found = await TimesheetLookup.FindAsync(_api, employeeId, timesheetId, options.Date, ct)
-            ?? throw new TimesheetUpdateValidationException(
+            ?? throw new TimesheetValidationException(
                 $"Timesheet #{timesheetId} not found. Pass the date (yyyy-MM-dd) to narrow the search.");
 
         var existing = found.Item;
         if (existing.IsSuggested)
-            throw new TimesheetUpdateValidationException(
+            throw new TimesheetValidationException(
                 $"Timesheet {timesheetId} is a suggestion and cannot be updated. Accept it first: tp ts accept {timesheetId}");
 
         var changes = DescribeChanges(options);
@@ -143,15 +143,15 @@ public sealed class TimesheetUpdateService
         if (options.Iteration is not null)
         {
             if (string.IsNullOrEmpty(targetProjectId))
-                throw new TimesheetUpdateValidationException("An iteration can only be set once the project is known.");
+                throw new TimesheetValidationException("An iteration can only be set once the project is known.");
 
             var available = await _api.GetIterationsAsync(targetProjectId, ct);
             if (available.Count == 0)
-                throw new TimesheetUpdateValidationException(
+                throw new TimesheetValidationException(
                     $"Project '{targetProjectId}' does not use iterations.");
 
             return IterationResolver.ResolveByNameOrId(available, options.Iteration)
-                ?? throw new TimesheetUpdateValidationException(
+                ?? throw new TimesheetValidationException(
                     $"Unknown iteration '{options.Iteration}' for project '{targetProjectId}'. Available iterations: {IterationResolver.Describe(available)}.");
         }
 
@@ -170,7 +170,7 @@ public sealed class TimesheetUpdateService
         return iterations
                    .FirstOrDefault(i => string.Equals(i.IterationName, existing.Iteration, StringComparison.OrdinalIgnoreCase))
                    ?.IterationId
-               ?? throw new TimesheetUpdateValidationException(
+               ?? throw new TimesheetValidationException(
                    $"Unable to resolve iteration '{existing.Iteration ?? "(none)"}' for project '{targetProjectId}'. Available iterations: {IterationResolver.Describe(iterations)}.");
     }
 

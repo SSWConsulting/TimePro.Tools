@@ -13,7 +13,7 @@ namespace SSW.TimePro.Cli.Integration.Features;
 /// SaveTimesheet?isEdit=true replaces the whole row, so the MCP update tool has to read the entry
 /// back and re-send everything the caller did not name.
 /// </summary>
-public class McpTimesheetUpdateTests : TestBase
+public class McpTimesheetWriteTests : TestBase
 {
     [Fact]
     public async Task UpdateTimesheet_WhenOnlyNotesChange_PreservesTheOmittedFieldsInThePayload()
@@ -83,6 +83,47 @@ public class McpTimesheetUpdateTests : TestBase
         using var doc = JsonDocument.Parse(result);
         doc.RootElement.GetProperty("error").GetString()
             .Should().Be("Timesheet 4242 is a suggestion and cannot be updated. Accept it first: tp ts accept 4242");
+    }
+
+    [Fact]
+    public async Task DeleteTimesheet_WhenEntryIsSuggested_DoesNotCallDelete()
+    {
+        StubLookups(isSuggested: true);
+        WireMock.Given(Request.Create()
+                .WithPath("/api/Timesheets/DeleteTimesheet/4242")
+                .UsingDelete())
+            .RespondWith(Response.Create().WithStatusCode(200));
+
+        var result = await CreateTools().DeleteTimesheet(
+            timesheetId: 4242,
+            date: "2026-03-16",
+            ct: TestContext.Current.CancellationToken);
+
+        WireMock.LogEntries
+            .Should().NotContain(e => e.RequestMessage!.AbsolutePath.Contains("DeleteTimesheet"));
+        using var doc = JsonDocument.Parse(result);
+        doc.RootElement.GetProperty("error").GetString()
+            .Should().Be("Timesheet 4242 is a suggestion and cannot be deleted. Accept it first: tp ts accept 4242");
+    }
+
+    [Fact]
+    public async Task DeleteTimesheet_WhenEntryIsReal_Deletes()
+    {
+        StubLookups();
+        WireMock.Given(Request.Create()
+                .WithPath("/api/Timesheets/DeleteTimesheet/4242")
+                .UsingDelete())
+            .RespondWith(Response.Create().WithStatusCode(200));
+
+        var result = await CreateTools().DeleteTimesheet(
+            timesheetId: 4242,
+            date: "2026-03-16",
+            ct: TestContext.Current.CancellationToken);
+
+        WireMock.LogEntries
+            .Should().Contain(e => e.RequestMessage!.AbsolutePath == "/api/Timesheets/DeleteTimesheet/4242");
+        using var doc = JsonDocument.Parse(result);
+        doc.RootElement.GetProperty("success").GetBoolean().Should().BeTrue();
     }
 
     private TimesheetMcpTools CreateTools()

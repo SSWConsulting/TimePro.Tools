@@ -95,6 +95,132 @@ public class AcceptCommandTests
         doc.RootElement.GetProperty("timesheet").GetProperty("notes").GetString().Should().Be("Product search");
     }
 
+    [Fact]
+    public async Task Accept_WhenAnotherRowAppearsAlongsideTheAcceptedOne_PicksTheMatchingRow()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureSuggestion(api);
+        api.AcceptSuggestedTimesheetAsync(42, null, null, null, Arg.Any<CancellationToken>())
+            .Returns((TimesheetResponse?)null)
+            .AndDoes(_ => ConfigureDay(api, Accepted(), UnrelatedRow()));
+        TimesheetRequest? request = null;
+        api.UpdateTimesheetAsync(
+                Arg.Do<TimesheetRequest>(value => request = value),
+                Arg.Any<CancellationToken>())
+            .Returns(new TimesheetResponse { Success = true });
+        var app = CreateApp(api);
+
+        var output = await UpdateCommandTests.CaptureStdoutAsync(() => app.RunAsync([
+            "accept",
+            "42",
+            "--date", "2026-03-16",
+            "--iteration", "Checkout API",
+            "--json"
+        ], TestContext.Current.CancellationToken));
+
+        output.ExitCode.Should().Be(0);
+        request.Should().NotBeNull();
+        request!.TimeId.Should().Be(77, because: "the unrelated row must never be updated");
+        using var doc = JsonDocument.Parse(output.Stdout);
+        doc.RootElement.GetProperty("iterationApplied").GetBoolean().Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Accept_WhenNoNewRowMatchesTheSuggestion_ReportsThatTheIterationWasNotApplied()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureSuggestion(api);
+        api.AcceptSuggestedTimesheetAsync(42, null, null, null, Arg.Any<CancellationToken>())
+            .Returns((TimesheetResponse?)null)
+            .AndDoes(_ => ConfigureDay(api, UnrelatedRow()));
+        var app = CreateApp(api);
+
+        var output = await UpdateCommandTests.CaptureStdoutAsync(() => app.RunAsync([
+            "accept",
+            "42",
+            "--date", "2026-03-16",
+            "--iteration", "Checkout API",
+            "--json"
+        ], TestContext.Current.CancellationToken));
+
+        output.ExitCode.Should().Be(1);
+        await api.DidNotReceive().UpdateTimesheetAsync(
+            Arg.Any<TimesheetRequest>(), Arg.Any<CancellationToken>());
+
+        using var doc = JsonDocument.Parse(output.Stdout);
+        doc.RootElement.GetProperty("success").GetBoolean().Should().BeTrue();
+        doc.RootElement.GetProperty("iterationApplied").GetBoolean().Should().BeFalse();
+        var warning = doc.RootElement.GetProperty("warning").GetString()!;
+        warning.Should().Contain("tp ts update");
+        warning.Should().Contain("Do not accept again");
+        warning.Should().NotContain("tp ts accept");
+    }
+
+    [Fact]
+    public async Task Accept_WhenTwoNewRowsBothMatch_DoesNotGuessWhichOneToUpdate()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureSuggestion(api);
+        var twin = Accepted();
+        twin.TimeId = 78;
+        api.AcceptSuggestedTimesheetAsync(42, null, null, null, Arg.Any<CancellationToken>())
+            .Returns((TimesheetResponse?)null)
+            .AndDoes(_ => ConfigureDay(api, Accepted(), twin));
+        var app = CreateApp(api);
+
+        var output = await UpdateCommandTests.CaptureStdoutAsync(() => app.RunAsync([
+            "accept",
+            "42",
+            "--date", "2026-03-16",
+            "--iteration", "Checkout API",
+            "--json"
+        ], TestContext.Current.CancellationToken));
+
+        output.ExitCode.Should().Be(1);
+        await api.DidNotReceive().UpdateTimesheetAsync(
+            Arg.Any<TimesheetRequest>(), Arg.Any<CancellationToken>());
+        using var doc = JsonDocument.Parse(output.Stdout);
+        doc.RootElement.GetProperty("iterationApplied").GetBoolean().Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Accept_WhenSuggestionAlreadyHasAnIterationAndNoneRequested_SkipsTheIterationLookup()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        var suggestion = Suggestion();
+        suggestion.Iteration = "Checkout API";
+        suggestion.IterationId = 3402;
+        ConfigureDay(api, suggestion);
+        api.AcceptSuggestedTimesheetAsync(42, null, null, null, Arg.Any<CancellationToken>())
+            .Returns(new TimesheetResponse { Success = true, TimesheetId = 77 })
+            .AndDoes(_ => ConfigureDay(api, Accepted()));
+        var app = CreateApp(api);
+
+        var exitCode = await app.RunAsync([
+            "accept",
+            "42",
+            "--date", "2026-03-16",
+            "--json"
+        ], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(0);
+        await api.DidNotReceive().GetIterationsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    private static TimesheetItem UnrelatedRow() => new()
+    {
+        TimeId = 99,
+        EmpId = "TST",
+        ClientId = "NWIND",
+        ProjectId = "4HCG7J",
+        LocationId = "SSW",
+        Notes = "Order history",
+        Date = "2026-03-16T00:00:00",
+        StartTime = "2026-03-16T13:00:00",
+        EndTime = "2026-03-16T17:00:00",
+        BillableId = "B"
+    };
+
     private static TimesheetItem Suggestion() => new()
     {
         TimeId = 42,

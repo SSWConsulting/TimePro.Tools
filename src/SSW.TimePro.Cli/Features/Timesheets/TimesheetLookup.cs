@@ -44,6 +44,23 @@ public static class TimesheetLookup
         return null;
     }
 
+    /// <summary>
+    /// Suggestions are rejected by the delete endpoint with a bare 400, so both the CLI and the MCP
+    /// delete surfaces check first. An entry that cannot be found is left to the API.
+    /// </summary>
+    public static async Task EnsureDeletableAsync(
+        ITimeProApiClient api,
+        string empId,
+        int timesheetId,
+        string? dateHint,
+        CancellationToken ct = default)
+    {
+        var found = await FindAsync(api, empId, timesheetId, dateHint, ct);
+        if (found?.Item.IsSuggested == true)
+            throw new TimesheetValidationException(
+                $"Timesheet {timesheetId} is a suggestion and cannot be deleted. Accept it first: tp ts accept {timesheetId}");
+    }
+
     public static async Task<TimesheetItem?> ReadByIdAsync(
         ITimeProApiClient api,
         string empId,
@@ -99,6 +116,15 @@ public static class TimesheetLookup
         return raw is not null && DateOnly.TryParseExact(raw, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
             ? date
             : null;
+    }
+
+    /// <summary>Compares two API timestamps to the minute, ignoring whether a date part is present.</summary>
+    public static bool SameClockTime(string? left, string? right)
+    {
+        if (left is null || right is null)
+            return left is null && right is null;
+
+        return HourMinute(left) == HourMinute(right);
     }
 
     private static bool TimeMatches(string? actual, string? requested)

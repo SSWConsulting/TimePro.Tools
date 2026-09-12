@@ -73,8 +73,13 @@ resolving an iteration by name or ID) and `TimesheetAcceptService` owns accept; 
 over them. Never build a `TimesheetRequest` for an edit anywhere else.
 
 `ts update` and `ts delete` refuse suggested entries locally (`tp ts accept <id>` first) rather than
-letting the API answer a bare 400. Accept fails before the API call when the project uses iterations
-and none can be resolved, listing the available ones.
+letting the API answer a bare 400; the MCP delete tool shares that check. Accept fails before the API
+call when the project uses iterations and none can be resolved, listing the available ones.
+
+Accept with an iteration is two calls (accept, then update), so it can half-succeed. When the
+accepted row cannot be identified unambiguously the iteration is not applied and the result carries
+`iterationApplied: false` plus a `warning` whose recovery is always `tp ts update`, never a second
+accept — accepting twice would duplicate the entry.
 
 `ts create`, `ts update` and `ts accept` return the saved entry on `--json`
 (`{"success":true,"timesheetId":N,"timesheet":{...}}`). The API usually answers writes with an empty

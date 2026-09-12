@@ -56,7 +56,7 @@ public class StatusCommand : AsyncCommand<StatusCommand.Settings>
         }
         catch (ApiException ex)
         {
-            OutputHelper.WriteError($"API error ({ex.StatusCode}): {ex.Message}");
+            OutputHelper.WriteApiError(ex, useJson: false);
             return 1;
         }
     }

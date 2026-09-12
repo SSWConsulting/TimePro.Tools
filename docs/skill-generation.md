@@ -5,7 +5,7 @@
 ## CLI surface
 
 ```bash
-tp skills create <TARGET> [--global]
+tp skills create <TARGET> [--global] [--force]
 ```
 
 - `<TARGET>` is the agent root, for example `.agents` or `.claude`.
@@ -16,6 +16,8 @@ tp skills create <TARGET> [--global]
   where the agent actually discovers them. Pick `<TARGET>` to match the agent's home dir:
   `tp skills create .claude --global` → `~/.claude/skills/`,
   `tp skills create .codex --global` → `~/.codex/skills/`.
+- A bare `.` with `--global` would write to `~/skills/`, where no agent looks, so it is
+  refused unless `--force` is passed.
 
 The default output writes:
 

@@ -154,7 +154,7 @@ tp ts get 2026-03-12       # Specific date
 | `tp check-update` | Check the latest GitHub Release and print update instructions |
 | `tp check-version` | Alias for `tp check-update` |
 | `tp whats-new [--url]` | Show embedded Markdown release notes, or print the latest known release-notes URL |
-| `tp skills create TARGET [--global]` | Generate unified agent skill files using enabled feature packs |
+| `tp skills create TARGET [--global] [--force]` | Generate unified agent skill files using enabled feature packs |
 | `tp user me` | Show current user info |
 | `tp user list [QUERY]` | List users and match names/emails to EmpIDs (`--emp-id`, `--email`, `--all`, `--json`) |
 | `tp user get EMP_ID` | Show focused user details by EmpID (`--json`) |

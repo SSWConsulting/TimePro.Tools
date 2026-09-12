@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Spectre.Console;
 using Spectre.Console.Rendering;
+using SSW.TimePro.Cli.Infrastructure.ApiClient;
 
 namespace SSW.TimePro.Cli.Infrastructure.Output;
 
@@ -88,6 +89,25 @@ public static class OutputHelper
     public static void WriteErrorDetail(string message)
     {
         ErrorConsole.MarkupLine($"[grey]{Markup.Escape(message)}[/]");
+    }
+
+    /// <summary>
+    /// Reports a failed API call on whichever path the caller is using, including the
+    /// detail parsed out of the server response body.
+    /// </summary>
+    public static void WriteApiError(ApiException exception, bool useJson)
+    {
+        var detail = ApiErrorParser.ExtractDetail(exception.ResponseBody);
+
+        if (useJson)
+        {
+            WriteJsonError($"API error: {exception.Message}", exception.StatusCode, detail);
+            return;
+        }
+
+        WriteError(detail is null
+            ? $"API error ({exception.StatusCode}): {exception.Message}"
+            : $"API error ({exception.StatusCode}): {exception.Message} - {detail}");
     }
 
     /// <summary>

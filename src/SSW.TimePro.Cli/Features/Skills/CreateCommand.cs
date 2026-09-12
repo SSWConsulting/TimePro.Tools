@@ -19,6 +19,10 @@ public class CreateCommand : Command<CreateCommand.Settings>
         [CommandOption("--global")]
         [Description("Write to global config instead of local project")]
         public bool Global { get; set; }
+
+        [CommandOption("--force")]
+        [Description("Allow writing skills straight into the home directory (~/skills)")]
+        public bool Force { get; set; }
     }
 
     public CreateCommand(IConfigService config) => _config = config;
@@ -29,12 +33,21 @@ public class CreateCommand : Command<CreateCommand.Settings>
         var global = _config.LoadGlobalConfig();
         var mappings = _config.LoadRepoMappings();
 
+        var homeDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
         // --global only swaps the base dir; the skill layout is always skills/<name>/SKILL.md.
         var baseDir = ResolveBaseDir(
             settings.Global,
             settings.Target,
             Environment.CurrentDirectory,
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+            homeDirectory);
+
+        var rejection = RejectHomeRoot(baseDir, homeDirectory, settings.Force);
+        if (rejection is not null)
+        {
+            OutputHelper.WriteError(rejection);
+            return 1;
+        }
 
         // Detect repo mapping for current directory (with worktree support)
         var repoMapping = RepoDetector.Detect(Environment.CurrentDirectory, mappings);
@@ -94,6 +107,25 @@ public class CreateCommand : Command<CreateCommand.Settings>
         global
             ? Path.Combine(homeDirectory, target)
             : Path.Combine(currentDirectory, target);
+
+    /// <summary>
+    /// No agent reads <c>~/skills</c>, so a bare home target is almost always a mistyped
+    /// <c>--global</c> target rather than a deliberate choice.
+    /// </summary>
+    internal static string? RejectHomeRoot(string baseDir, string homeDirectory, bool force)
+    {
+        if (force || !IsSameDirectory(baseDir, homeDirectory))
+            return null;
+
+        return "Refusing to write skills to the home directory (~/skills), where no agent finds them. "
+            + "Pass the agent directory instead, e.g. 'tp skills create .claude --global', or re-run with --force.";
+    }
+
+    private static bool IsSameDirectory(string left, string right) =>
+        string.Equals(
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(left)),
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(right)),
+            StringComparison.OrdinalIgnoreCase);
 
     private static string WriteSkill(string baseDir, SkillContentModel model)
     {

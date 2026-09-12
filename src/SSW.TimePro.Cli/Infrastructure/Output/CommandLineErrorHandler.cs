@@ -1,4 +1,5 @@
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
+using SSW.TimePro.Cli.Infrastructure.Cli;
 using Spectre.Console.Cli;
 
 namespace SSW.TimePro.Cli.Infrastructure.Output;
@@ -32,18 +33,21 @@ public static class CommandLineErrorHandler
         return !bool.TryParse(value, out var enabled) || enabled;
     }
 
-    public static int Handle(Exception exception, bool jsonRequested)
+    public static int Handle(Exception exception, bool jsonRequested, IReadOnlyList<string>? args = null)
     {
         if (FindConnectionFailure(exception) is { } connectionFailure)
             return HandleConnectionFailure(connectionFailure, jsonRequested);
 
         var commandLineError = exception as CommandAppException;
+        var unknownCommand = exception is CommandParseException && args is not null
+            ? UnknownCommandHelp.TryDescribe(args)
+            : null;
 
         if (jsonRequested)
         {
             OutputHelper.WriteJsonError(
                 exception.Message,
-                detail: commandLineError is null ? exception.ToString() : null);
+                detail: unknownCommand?.Detail ?? (commandLineError is null ? exception.ToString() : null));
         }
         else if (commandLineError is not null)
         {
@@ -51,6 +55,9 @@ public static class CommandLineErrorHandler
                 OutputHelper.WriteErrorRenderable(commandLineError.Pretty);
             else
                 OutputHelper.WriteError(commandLineError.Message);
+
+            if (unknownCommand is not null)
+                OutputHelper.WriteErrorDetail(unknownCommand.Detail);
         }
         else
         {

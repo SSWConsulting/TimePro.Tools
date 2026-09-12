@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
 using SSW.TimePro.Cli.Features.Leave;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
@@ -27,7 +28,8 @@ public class AccountingMcpTools
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true,
-        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
 
     public AccountingMcpTools(

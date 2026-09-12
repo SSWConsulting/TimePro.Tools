@@ -35,8 +35,8 @@ public class ReceiptRecurringApiTests : TestBase
       "createdOn": "2026-06-09T11:10:46.607565", "modifiedOn": "2026-08-30T00:20:18.3787796",
       "products": [
         {
-          "id": 9, "recurringInvoiceID": 7, "prodID": "EK6H8R", "prodName": "Checkout API support",
-          "prodCatgoryID": "KR4022", "prodCategoryName": "Support",
+          "id": 9, "recurringInvoiceID": 7, "prodID": "PRD001", "prodName": "Checkout API support",
+          "prodCatgoryID": "CAT001", "prodCategoryName": "Support",
           "sellAmt": 2934.38, "sellTotal": 2934.38, "salesTaxPct": 0.1, "salesTaxAmt": 293.438,
           "costTotal": null, "noteInternal": "", "note": "Monthly retainer", "qty": 1,
           "modifiedBy": "bob@northwind.example", "createdBy": "bob@northwind.example",
@@ -82,7 +82,7 @@ public class ReceiptRecurringApiTests : TestBase
         d.CanGenerateNow.Should().BeTrue();
         d.NextInvoicePeriodEnd.Should().Be(new DateTime(2026, 10, 30, 22, 0, 0));
         d.Products.Should().HaveCount(1);
-        d.Products![0].ProdId.Should().Be("EK6H8R");
+        d.Products![0].ProdId.Should().Be("PRD001");
         d.Products[0].ProdName.Should().Be("Checkout API support");
         d.Products[0].Qty.Should().Be(1);
         d.Products[0].SellTotal.Should().Be(2934.38m);
@@ -97,7 +97,7 @@ public class ReceiptRecurringApiTests : TestBase
     private const string PaidReceiptsPagedJson = """
     {"total":1,"data":[
       {
-        "Bank": null, "Batch": "m160725", "Branch": null, "CategoryID": null,
+        "Bank": null, "Batch": "b000001", "Branch": null, "CategoryID": null,
         "ClientId": "NWIND", "PaymentDate": "2026-03-20T00:00:00",
         "DateCreated": "2026-03-20T11:38:39.753", "DateUpdated": null, "Drawer": null,
         "EmpUpdated": "Bob Northwind/BOB/NWIND", "ExportID": null, "Month": null, "Note": "",
@@ -110,7 +110,7 @@ public class ReceiptRecurringApiTests : TestBase
         "Unallocated": 0.0, "PaidTotal": -100.0, "CoName": "Northwind Traders",
         "ClientFirstName": null, "ClientSurname": "Northwind",
         "InvoiceIDs": [142], "SaleReceiptPaids": [],
-        "ExternalSyncType": "Xero", "ExternalSyncId": "7ca82ece-9d0c-4a64-9fa1-49450b792d29",
+        "ExternalSyncType": "Xero", "ExternalSyncId": "00000000-0000-0000-0000-000000000001",
         "CreditNoteId": null
       }
     ]}
@@ -122,7 +122,7 @@ public class ReceiptRecurringApiTests : TestBase
         "SaleReceiptID": "501", "ReceiptType": "DD", "ClientID": "NWIND", "CategoryID": null,
         "CoName": "Northwind Traders", "PaymentDate": "2026-03-20T00:00:00",
         "ClientFirstName": null, "ClientSurname": "Northwind", "IsNew": false,
-        "BatchNo": "m160725", "ReceiptTotal": -100.0, "Note": "",
+        "BatchNo": "b000001", "ReceiptTotal": -100.0, "Note": "",
         "OutstandingInvoices": [],
         "SaleReceiptPaids": [
           {
@@ -133,7 +133,7 @@ public class ReceiptRecurringApiTests : TestBase
             "SaleReceiptStatus": "Part Payment", "Note": ""
           }
         ],
-        "ExternalSyncType": "Xero", "ExternalSyncId": "7ca82ece-9d0c-4a64-9fa1-49450b792d29"
+        "ExternalSyncType": "Xero", "ExternalSyncId": "00000000-0000-0000-0000-000000000001"
       },
       "ContactPerson": "Bob Northwind",
       "PaymentMethods": [{"ID": "DD", "Name": "Direct Deposit", "Sign": "-"}],
@@ -148,8 +148,8 @@ public class ReceiptRecurringApiTests : TestBase
         "invoiceID": 142, "paid": -100.0, "coName": "Northwind Traders",
         "dateCreated": "2026-03-20T11:38:39.753", "paymentDate": "2026-03-20T00:00:00",
         "dateUpdated": null, "empUpdated": "Bob Northwind/BOB/NWIND", "note": "",
-        "rowguid": "ec6fa1c3-e5a7-448b-89f7-210a5b198aa4", "saleReceiptID": 501,
-        "saleReceiptStatus": "Part Payment", "sswTimeStamp": "AAAAAAABHPM=",
+        "rowguid": "00000000-0000-0000-0000-000000000002", "saleReceiptID": 501,
+        "saleReceiptStatus": "Part Payment", "sswTimeStamp": "AAAAAAAAAAA=",
         "creditNoteId": 16, "isCreditingPrepaid": false
       }
     ]
@@ -169,7 +169,7 @@ public class ReceiptRecurringApiTests : TestBase
         r.SaleReceiptId.Should().Be(501);
         r.PaidTotal.Should().Be(-100.0m);
         r.InvoiceIds.Should().Equal(142);
-        r.Batch.Should().Be("m160725");
+        r.Batch.Should().Be("b000001");
         r.CoName.Should().Be("Northwind Traders");
         r.SaleReceiptType!.TypeName.Should().Be("Direct Deposit");
         r.SaleReceiptType.IsHardCoded.Should().BeFalse();
@@ -197,7 +197,7 @@ public class ReceiptRecurringApiTests : TestBase
         d.SaleReceiptId.Should().Be(501);
         d.ClientId.Should().Be("NWIND");
         d.ReceiptTotal.Should().Be(-100.0m);
-        d.BatchNo.Should().Be("m160725");
+        d.BatchNo.Should().Be("b000001");
         d.SaleReceiptPaids.Should().HaveCount(1);
         d.SaleReceiptPaids[0].InvoiceId.Should().Be(142);
         d.SaleReceiptPaids[0].PaidAmt.Should().Be(-100.0m);

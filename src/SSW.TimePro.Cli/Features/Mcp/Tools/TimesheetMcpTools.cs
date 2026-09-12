@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
 using SSW.TimePro.Cli.Features.Timesheets;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
@@ -18,7 +19,8 @@ public class TimesheetMcpTools
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
 
     public TimesheetMcpTools(ITimeProApiClient api, IConfigService config)

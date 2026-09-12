@@ -131,6 +131,24 @@ public class AccountingMcpToolsTests
         }
     }
 
+    [Fact]
+    public async Task ListRecurringInvoices_RendersUnitAsEnumName()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        api.ListRecurringInvoicesAsync(null, null, false, 0, 50, "LastInvEndDate", "desc", Arg.Any<CancellationToken>())
+            .Returns(new PagedResponse<RecurringInvoiceRow>
+            {
+                Total = 1,
+                Data = [new RecurringInvoiceRow { Id = 7, ClientId = "NWIND", Unit = RecurrenceUnit.Month }]
+            });
+
+        var tools = CreateTools(api, CreateConfig());
+        var json = await tools.ListRecurringInvoices(ct: TestContext.Current.CancellationToken);
+
+        using var doc = JsonDocument.Parse(json);
+        doc.RootElement.GetProperty("data")[0].GetProperty("unit").GetString().Should().Be("month");
+    }
+
     private static IConfigService CreateConfig()
     {
         var config = Substitute.For<IConfigService>();

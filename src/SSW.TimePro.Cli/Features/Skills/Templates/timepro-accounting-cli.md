@@ -111,7 +111,7 @@ tp invoice timesheets $INV --json   > /tmp/inv_ts.json
 tp invoice receipts $INV --json     > /tmp/inv_receipts.json
 ```
 
-Reconcile line `sellTotal` to invoice header `subTotal`, `subTotal + salesTaxAmt` to header `sellTotal`, receipt `paidTotal` to header `paidAmt`, and header `osAmt` to remaining outstanding.
+Reconcile line `sellTotal` to invoice header `subTotal`, `subTotal + salesTaxAmt` to header `sellTotal`, receipt `paid` to header `paidAmt`, and header `osAmt` to remaining outstanding.
 
 ### Monthly invoiced sales
 ```bash
@@ -257,7 +257,7 @@ tp feature accounting enable
 ```
 
 ## Data gotchas
-- Receipt `paidTotal` is negative for incoming payments in raw JSON. Report positive sales with `abs()`.
+- Receipt amounts are negative for incoming payments in raw JSON — `paidTotal` on `tp receipt list`, `paid` on `tp invoice receipts`. Report positive sales with `abs()`.
 - Date field choice matters: receipts use `paymentDate` for money in, invoices often use `dateCreated` for raised.
 - Paged list endpoints may need a high `--limit` or `--skip` walk for full months.
 - Tax rates may arrive as `0.1` or `10` for 10%. Normalize before comparing.

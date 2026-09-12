@@ -254,6 +254,59 @@ public class CreateCommandTests
         api.ShouldNotHaveReceived(nameof(ITimeProApiClient.GetLeaveTypesAsync));
     }
 
+    [Fact]
+    public async Task Create_WhenHalfDay_UsesWorkdayTimesInsteadOfEndOfDay()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        CreateLeaveRequest? request = null;
+        api.GetEmployeeSettingsAsync(Arg.Any<CancellationToken>())
+            .Returns(new EmployeeSettings { TimezoneId = "UTC" });
+        api.CreateLeaveAsync(Arg.Do<CreateLeaveRequest>(r => request = r), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+        var app = CreateApp(api);
+
+        var exitCode = await app.RunAsync([
+            "create",
+            "--start", "2026-03-30",
+            "--end", "2026-03-30",
+            "--type", "1",
+            "--note", "Annual leave",
+            "--half-day",
+            "--start-time", "09:00",
+            "--end-time", "13:30",
+            "--json"
+        ], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(0);
+        request.Should().NotBeNull();
+        request!.AllDay.Should().BeFalse();
+        request.StartDate.Should().Be("2026-03-30T09:00:00.0000000+00:00");
+        request.EndDate.Should().Be("2026-03-30T13:30:00.0000000+00:00");
+    }
+
+    [Fact]
+    public async Task Create_WhenHalfDayEndTimeIsNotOnTheHourOrHalfHour_ReturnsErrorWithoutCallingApi()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        api.GetEmployeeSettingsAsync(Arg.Any<CancellationToken>())
+            .Returns(new EmployeeSettings { TimezoneId = "UTC" });
+        var app = CreateApp(api);
+
+        var exitCode = await app.RunAsync([
+            "create",
+            "--start", "2026-03-30",
+            "--end", "2026-03-30",
+            "--type", "1",
+            "--note", "Annual leave",
+            "--half-day",
+            "--end-time", "13:20",
+            "--json"
+        ], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(1);
+        api.ShouldNotHaveReceived(nameof(ITimeProApiClient.CreateLeaveAsync));
+    }
+
     private static CommandApp CreateApp(ITimeProApiClient api)
     {
         var tenantProvider = Substitute.For<ITenantProvider>();

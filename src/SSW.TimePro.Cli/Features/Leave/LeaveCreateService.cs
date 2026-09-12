@@ -59,10 +59,21 @@ public sealed class LeaveCreateService
                 timeZoneError ?? "Invalid leave request timezone");
         }
 
+        var allDay = !options.HalfDay;
+        var userStartTime = LeaveRequestParser.NormalizeTime(
+            options.StartTime,
+            LeaveRequestParser.DefaultStartTime);
+        var userEndTime = LeaveRequestParser.NormalizeTime(
+            options.EndTime,
+            LeaveRequestParser.DefaultEndTime);
+
         if (!LeaveRequestParser.TryParseDateRange(
                 options.Start,
                 options.End,
                 requestTimeZone,
+                allDay,
+                userStartTime,
+                userEndTime,
                 out var startDate,
                 out var endDate,
                 out var dateError))
@@ -79,6 +90,9 @@ public sealed class LeaveCreateService
         if (options.HalfDay && startDate.Date != endDate.Date)
             throw new LeaveCreateValidationException("Partial-day leave must start and end on the same day");
 
+        if (!allDay && !LeaveRequestParser.TryValidatePartialDayTimes(startDate, endDate, out var timeError))
+            throw new LeaveCreateValidationException(timeError!);
+
         var leaveTypeId = await ResolveLeaveTypeAsync(options.Type, ct);
         if (leaveTypeId is null)
             throw new LeaveCreateValidationException($"Unknown leave type: '{options.Type}'.");
@@ -90,13 +104,9 @@ public sealed class LeaveCreateService
             EndDate = endDate.ToString("o"),
             LeaveTypeId = leaveTypeId.Value,
             Note = options.Note.Trim(),
-            UserStartTime = LeaveRequestParser.NormalizeTime(
-                options.StartTime,
-                LeaveRequestParser.DefaultStartTime),
-            UserEndTime = LeaveRequestParser.NormalizeTime(
-                options.EndTime,
-                LeaveRequestParser.DefaultEndTime),
-            AllDay = !options.HalfDay,
+            UserStartTime = userStartTime,
+            UserEndTime = userEndTime,
+            AllDay = allDay,
             OptionalEmp = LeaveRequestParser.ParseOptionalEmployees(options.Cc),
             ApprovedBy = options.ApprovedBy?.Trim(),
             TimeLessOverride = null

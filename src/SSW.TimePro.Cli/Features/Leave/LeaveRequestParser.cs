@@ -8,10 +8,15 @@ internal static class LeaveRequestParser
     public const string DefaultStartTime = "09:00:00";
     public const string DefaultEndTime = "18:00:00";
 
+    private static readonly TimeOnly EndOfDay = new(23, 59, 0);
+
     public static bool TryParseDateRange(
         string start,
         string end,
         TimeZoneInfo timeZone,
+        bool allDay,
+        string userStartTime,
+        string userEndTime,
         out DateTimeOffset startDate,
         out DateTimeOffset endDate,
         out string? error)
@@ -20,18 +25,40 @@ internal static class LeaveRequestParser
         endDate = default;
         error = null;
 
-        if (!TryParseStartDate(start, timeZone, out startDate))
+        var startTimeOfDay = allDay ? TimeOnly.MinValue : ParseTimeOfDay(userStartTime, DefaultStartTime);
+        var endTimeOfDay = allDay ? EndOfDay : ParseTimeOfDay(userEndTime, DefaultEndTime);
+
+        if (!TryParseBoundary(start, timeZone, startTimeOfDay, out startDate))
         {
             error = $"Invalid start date: '{start}'. Use yyyy-MM-dd format.";
             return false;
         }
 
-        if (!TryParseEndDate(end, timeZone, out endDate))
+        if (!TryParseBoundary(end, timeZone, endTimeOfDay, out endDate))
         {
             error = $"Invalid end date: '{end}'. Use yyyy-MM-dd format.";
             return false;
         }
 
+        return true;
+    }
+
+    /// <summary>Mirrors the server rule so dry-run rejects what the real call would reject.</summary>
+    public static bool TryValidatePartialDayTimes(DateTimeOffset startDate, DateTimeOffset endDate, out string? error)
+    {
+        if (!IsOnHourOrHalfHour(startDate))
+        {
+            error = "Start time must be on the hour or half-hour.";
+            return false;
+        }
+
+        if (!IsOnHourOrHalfHour(endDate))
+        {
+            error = "End time must be on the hour or half-hour.";
+            return false;
+        }
+
+        error = null;
         return true;
     }
 
@@ -83,27 +110,31 @@ internal static class LeaveRequestParser
         return true;
     }
 
-    private static bool TryParseStartDate(string value, TimeZoneInfo timeZone, out DateTimeOffset result)
+    private static bool TryParseBoundary(
+        string value,
+        TimeZoneInfo timeZone,
+        TimeOnly timeOfDay,
+        out DateTimeOffset result)
     {
         if (DateOnly.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateOnly))
         {
-            result = ToDateTimeOffset(dateOnly, TimeOnly.MinValue, timeZone);
+            result = ToDateTimeOffset(dateOnly, timeOfDay, timeZone);
             return true;
         }
 
-        return TryParseDateTime(value, timeZone, useEndOfDayForDateOnly: false, out result);
+        return TryParseDateTime(value, timeZone, timeOfDay, out result);
     }
 
-    private static bool TryParseEndDate(string value, TimeZoneInfo timeZone, out DateTimeOffset result)
+    private static TimeOnly ParseTimeOfDay(string? value, string fallback)
     {
-        if (DateOnly.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateOnly))
-        {
-            result = ToDateTimeOffset(dateOnly, new TimeOnly(23, 59, 0), timeZone);
-            return true;
-        }
-
-        return TryParseDateTime(value, timeZone, useEndOfDayForDateOnly: true, out result);
+        var normalized = NormalizeTime(value, fallback);
+        return TimeOnly.TryParseExact(normalized, "HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed)
+            ? parsed
+            : TimeOnly.Parse(fallback, CultureInfo.InvariantCulture);
     }
+
+    private static bool IsOnHourOrHalfHour(DateTimeOffset value) =>
+        value.Minute is 0 or 30 && value.Second == 0 && value.Millisecond == 0;
 
     private static DateTimeOffset ToDateTimeOffset(DateOnly date, TimeOnly time, TimeZoneInfo timeZone)
     {
@@ -114,7 +145,7 @@ internal static class LeaveRequestParser
     private static bool TryParseDateTime(
         string value,
         TimeZoneInfo timeZone,
-        bool useEndOfDayForDateOnly,
+        TimeOnly timeOfDay,
         out DateTimeOffset result)
     {
         var trimmed = value.Trim();
@@ -128,8 +159,8 @@ internal static class LeaveRequestParser
             return false;
         }
 
-        if (useEndOfDayForDateOnly && dateTime.TimeOfDay == TimeSpan.Zero)
-            dateTime = dateTime.Date.AddHours(23).AddMinutes(59);
+        if (dateTime.TimeOfDay == TimeSpan.Zero)
+            dateTime = dateTime.Date.Add(timeOfDay.ToTimeSpan());
 
         dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Unspecified);
         result = new DateTimeOffset(dateTime, timeZone.GetUtcOffset(dateTime));

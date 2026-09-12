@@ -139,8 +139,8 @@ public class UpdateCommandTests
 
         exitCode.Should().Be(0);
         request.Should().NotBeNull();
-        request!.StartDate.Should().Be("2026-04-01T00:00:00.0000000+10:00");
-        request.EndDate.Should().Be("2026-04-01T23:59:00.0000000+10:00");
+        request!.StartDate.Should().Be("2026-04-01T07:30:00.0000000+10:00");
+        request.EndDate.Should().Be("2026-04-01T16:00:00.0000000+10:00");
         request.LeaveTypeId.Should().Be(2);
         request.AllDay.Should().BeFalse();
         request.ApprovedBy.Should().BeNull();
@@ -184,7 +184,94 @@ public class UpdateCommandTests
         api.ShouldNotHaveReceived(nameof(ITimeProApiClient.UpdateLeaveAsync));
     }
 
-    private static void ConfigureExistingLeave(ITimeProApiClient api)
+    [Fact]
+    public async Task Update_WhenSwitchingToFullDay_UsesWholeDayRange()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureExistingLeave(api, allDay: false);
+        UpdateLeaveRequest? request = null;
+        api.UpdateLeaveAsync(Arg.Do<UpdateLeaveRequest>(value => request = value), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+        var app = CreateApp(api);
+
+        var exitCode = await app.RunAsync([
+            "update",
+            LeaveId,
+            "--full-day",
+            "--json"
+        ], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(0);
+        request.Should().NotBeNull();
+        request!.AllDay.Should().BeTrue();
+        request.StartDate.Should().Be("2026-03-30T00:00:00.0000000+00:00");
+        request.EndDate.Should().Be("2026-03-30T23:59:00.0000000+00:00");
+    }
+
+    [Fact]
+    public async Task Update_WhenSwitchingToHalfDay_UsesWorkdayTimesInsteadOfEndOfDay()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureExistingLeave(api);
+        UpdateLeaveRequest? request = null;
+        api.UpdateLeaveAsync(Arg.Do<UpdateLeaveRequest>(value => request = value), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+        var app = CreateApp(api);
+
+        var exitCode = await app.RunAsync([
+            "update",
+            LeaveId,
+            "--half-day",
+            "--json"
+        ], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(0);
+        request.Should().NotBeNull();
+        request!.AllDay.Should().BeFalse();
+        request.StartDate.Should().Be("2026-03-30T07:30:00.0000000+00:00");
+        request.EndDate.Should().Be("2026-03-30T16:00:00.0000000+00:00");
+    }
+
+    [Fact]
+    public async Task Update_WhenPartialDayEndTimeIsNotOnTheHourOrHalfHour_DoesNotCallUpdateApi()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureExistingLeave(api);
+        var app = CreateApp(api);
+
+        var exitCode = await app.RunAsync([
+            "update",
+            LeaveId,
+            "--half-day",
+            "--end-time", "16:20",
+            "--json"
+        ], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(1);
+        api.ShouldNotHaveReceived(nameof(ITimeProApiClient.UpdateLeaveAsync));
+    }
+
+    [Fact]
+    public async Task Update_WhenDryRunPartialDayEndTimeIsInvalid_FailsLikeTheRealCall()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureExistingLeave(api);
+        var app = CreateApp(api);
+
+        var exitCode = await app.RunAsync([
+            "update",
+            LeaveId,
+            "--half-day",
+            "--end-time", "16:20",
+            "--dry-run",
+            "--json"
+        ], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(1);
+        api.ShouldNotHaveReceived(nameof(ITimeProApiClient.UpdateLeaveAsync));
+    }
+
+    private static void ConfigureExistingLeave(ITimeProApiClient api, bool allDay = true)
     {
         api.GetLeaveAsync(
                 "UPCOMING",
@@ -214,7 +301,7 @@ public class UpdateCommandTests
                             ApprovedBy = "approver@northwind.example",
                             OptionalEmp = ["notify@northwind.example"],
                             LeaveType = new LeaveTypeInfo { Id = 1, Name = "Annual Leave", IsActive = true },
-                            AllDay = true,
+                            AllDay = allDay,
                             TimeLessOverride = 1.5m
                         }
                     ]

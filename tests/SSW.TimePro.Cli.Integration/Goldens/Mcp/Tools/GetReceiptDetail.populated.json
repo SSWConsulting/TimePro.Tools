@@ -1,0 +1,38 @@
+{
+  "contactPerson": "Bob Northwind",
+  "invoicesAmount": 1100,
+  "paymentMethods": [
+    {
+      "id": "EFT",
+      "name": "EFT",
+      "sign": "-"
+    }
+  ],
+  "receipt": {
+    "clientId": "NWIND",
+    "coName": "Northwind Traders",
+    "isNew": false,
+    "note": "EFT",
+    "outstandingInvoices": [],
+    "paymentDate": "2026-04-01T00:00:00",
+    "receiptTotal": 1100,
+    "receiptType": "EFT",
+    "saleReceiptId": 142,
+    "saleReceiptPaids": [
+      {
+        "alreadyPaidAmt": 0,
+        "balance": 0,
+        "clientId": "NWIND",
+        "coName": "Northwind Traders",
+        "invoiceDate": "2026-03-31T00:00:00",
+        "invoiceId": 108,
+        "isAllocated": true,
+        "paidAmt": 1100,
+        "paymentDate": "2026-04-01T00:00:00",
+        "saleReceiptId": 142,
+        "total": 1100
+      }
+    ]
+  },
+  "totalPaid": 1100
+}

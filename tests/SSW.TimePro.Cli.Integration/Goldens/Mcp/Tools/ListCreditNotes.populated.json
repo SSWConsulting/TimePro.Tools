@@ -1,0 +1,15 @@
+[
+  {
+    "amount": 110,
+    "associatedInvoiceId": 108,
+    "creditNoteDate": "2026-04-02T00:00:00",
+    "id": 7,
+    "isCreditingInvoice": true,
+    "isLocked": false,
+    "note": "Goodwill credit",
+    "paid": 0,
+    "syncDisplayName": "Not synced",
+    "syncStatus": 0,
+    "taxRate": 10
+  }
+]

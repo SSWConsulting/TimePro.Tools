@@ -1,0 +1,1501 @@
+{
+  "count": 47,
+  "tools": [
+    {
+      "description": "Accept a suggested timesheet, converting it into a real timesheet. Returns the entry as saved.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "date": {
+            "default": null,
+            "description": "Date the suggestion is on (yyyy-MM-dd). Speeds up the lookup; otherwise recent weeks are searched.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "iteration": {
+            "default": null,
+            "description": "Iteration/sprint for the accepted timesheet, by name or ID. Required for projects that use iterations.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "location": {
+            "default": null,
+            "description": "Override location",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "notes": {
+            "default": null,
+            "description": "Override notes",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "suggestedId": {
+            "description": "Suggested timesheet ID",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "suggestedId"
+        ],
+        "type": "object"
+      },
+      "name": "accept_suggested_timesheet"
+    },
+    {
+      "description": "Validate a week of timesheets for gaps and issues (leave-aware). Returns per-day coverage with hours, leave, issues, plus allCovered. week: 0=this week (default), -1=last week. The single most useful tool for confirming a week is complete before submitting.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "empId": {
+            "default": null,
+            "description": "empId to check. Defaults to the current user\u0027s empId.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "employeeId": {
+            "default": null,
+            "description": "Alias for empId.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "week": {
+            "default": 0,
+            "description": "Week offset. 0=this week (default), -1=last week.",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "name": "check_week"
+    },
+    {
+      "description": "Create a leave request for the current user. An explicit timezone override takes priority; otherwise uses the TimePro profile timezone first, then the MCP host machine timezone as the browser-equivalent fallback.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "approvedBy": {
+            "default": null,
+            "description": "Approver\u0027s email address",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cc": {
+            "default": null,
+            "description": "Comma-separated list of emails to notify",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dryRun": {
+            "default": false,
+            "description": "Validate and return the proposed request without creating leave",
+            "type": "boolean"
+          },
+          "end": {
+            "description": "End date (yyyy-MM-dd)",
+            "type": "string"
+          },
+          "endTime": {
+            "default": null,
+            "description": "End time override (HH:mm, default 18:00)",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "halfDay": {
+            "default": false,
+            "description": "Request partial-day leave; start and end must be the same day",
+            "type": "boolean"
+          },
+          "note": {
+            "description": "Leave note/reason",
+            "type": "string"
+          },
+          "start": {
+            "description": "Start date (yyyy-MM-dd)",
+            "type": "string"
+          },
+          "startTime": {
+            "default": null,
+            "description": "Start time override (HH:mm, default 09:00)",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timeZoneId": {
+            "default": null,
+            "description": "Timezone override (IANA or Windows ID); takes priority over the TimePro user profile timezone",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": {
+            "description": "Leave type ID or active leave type name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "type",
+          "note"
+        ],
+        "type": "object"
+      },
+      "name": "create_leave"
+    },
+    {
+      "description": "Create a new timesheet entry. Some projects require an iteration ID \u2014 use ListIterations to check and find the correct ID.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "billableId": {
+            "default": "B",
+            "description": "Billable type: B (billable), BPP (prepaid), W (write-off)",
+            "type": "string"
+          },
+          "categoryId": {
+            "default": null,
+            "description": "Category ID (e.g., TRAIN, PresDe)",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "clientId": {
+            "description": "Client ID",
+            "type": "string"
+          },
+          "date": {
+            "description": "Date (yyyy-MM-dd)",
+            "type": "string"
+          },
+          "description": {
+            "default": null,
+            "description": "Notes/description",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "endTime": {
+            "default": "17:00",
+            "description": "End time (HH:mm)",
+            "type": "string"
+          },
+          "iterationId": {
+            "default": null,
+            "description": "Iteration/sprint ID. Required for projects that use iterations (e.g., 1I776Q). Use ListIterations to find the ID.",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "location": {
+            "default": null,
+            "description": "Location (e.g., Office, Home)",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "projectId": {
+            "description": "Project ID",
+            "type": "string"
+          },
+          "startTime": {
+            "default": "09:00",
+            "description": "Start time (HH:mm)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientId",
+          "projectId",
+          "date"
+        ],
+        "type": "object"
+      },
+      "name": "create_timesheet"
+    },
+    {
+      "description": "Delete a timesheet entry. Suggestions cannot be deleted; accept one first.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "date": {
+            "default": null,
+            "description": "Date the timesheet is on (yyyy-MM-dd). Speeds up the lookup; otherwise recent weeks are searched.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timesheetId": {
+            "description": "Timesheet ID",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "timesheetId"
+        ],
+        "type": "object"
+      },
+      "name": "delete_timesheet"
+    },
+    {
+      "description": "Get the aged-debtor view for a client: outstanding invoices with days overdue.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "clientId": {
+            "description": "Client ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientId"
+        ],
+        "type": "object"
+      },
+      "name": "get_client_outstanding"
+    },
+    {
+      "description": "Get the current employee\u0027s billing rate for a client. Includes rate expiry info.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "clientId": {
+            "description": "Client ID",
+            "type": "string"
+          },
+          "date": {
+            "default": null,
+            "description": "Date for rate lookup (yyyy-MM-dd). Defaults to today.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "clientId"
+        ],
+        "type": "object"
+      },
+      "name": "get_client_rate"
+    },
+    {
+      "description": "List clients that have outstanding (unbilled) time, with OS balance and earliest unallocated timesheet date.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "get_clients_with_outstanding_time"
+    },
+    {
+      "description": "Get CRM bookings/appointments for a date range.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "endDate": {
+            "description": "End date (yyyy-MM-dd)",
+            "type": "string"
+          },
+          "startDate": {
+            "description": "Start date (yyyy-MM-dd)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "startDate",
+          "endDate"
+        ],
+        "type": "object"
+      },
+      "name": "get_crm_bookings"
+    },
+    {
+      "description": "Get the current user (identity, tenant, display name) \u2014 handy for showing who an MCP session is authenticated as.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "get_current_user"
+    },
+    {
+      "description": "Get a single invoice header. GST convention: SubTotal is ex-GST, SalesTaxAmt is GST, SellTotal is inc-GST; SalesTaxPct is the raw API tax rate and should be normalized before calculations.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "invoiceId": {
+            "description": "Invoice ID",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "invoiceId"
+        ],
+        "type": "object"
+      },
+      "name": "get_invoice"
+    },
+    {
+      "description": "List line items (products) on an invoice. SellAmt and SellTotal are ex-GST; SalesTaxAmt is the GST component when returned.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "invoiceId": {
+            "description": "Invoice ID",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "invoiceId"
+        ],
+        "type": "object"
+      },
+      "name": "get_invoice_lines"
+    },
+    {
+      "description": "List receipts (payments) against a specific invoice.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "invoiceId": {
+            "description": "Invoice ID",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "invoiceId"
+        ],
+        "type": "object"
+      },
+      "name": "get_invoice_receipts"
+    },
+    {
+      "description": "List timesheets billed on an invoice. SellTotal, BillableAmount, and Amount are treated as ex-GST; SalesTaxAmt/SalesTaxPct provide the tax component/rate when returned. Set type=\u0027writeoff\u0027 for written-off timesheets instead of allocated.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "invoiceId": {
+            "description": "Invoice ID",
+            "type": "integer"
+          },
+          "type": {
+            "default": "allocated",
+            "description": "Either \u0027allocated\u0027 (default) or \u0027writeoff\u0027",
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoiceId"
+        ],
+        "type": "object"
+      },
+      "name": "get_invoice_timesheets"
+    },
+    {
+      "description": "List all invoices for a client (full history, unpaged). Invoice amount convention: SubTotal ex-GST, SalesTaxAmt GST, SellTotal inc-GST.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "clientId": {
+            "description": "Client ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientId"
+        ],
+        "type": "object"
+      },
+      "name": "get_invoices_by_client"
+    },
+    {
+      "description": "Get leave stats for an employee: days since last leave and total leave hours taken in the last 12 months. Defaults to the current user\u0027s empId. (TimePro does not expose entitlement/remaining per leave type.)",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "empId": {
+            "default": null,
+            "description": "empId to read. Defaults to the current user\u0027s empId.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "employeeId": {
+            "default": null,
+            "description": "Alias for empId.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "name": "get_leave_balance"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true
+      },
+      "description": "Report when TimePro\u0027s leave balances were last imported from Xero, how many employees have a stored balance, and whether the data is stale. Read-only. Check this before importing so you can tell the user whether a re-import is actually needed.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "get_leave_balance_status"
+    },
+    {
+      "description": "List EasyLeave entries. Use empId for one person; employeeId is accepted as an alias. Omit both to return all visible leave.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "empId": {
+            "default": null,
+            "description": "empId to filter by",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "employeeId": {
+            "default": null,
+            "description": "Alias for empId",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "filter": {
+            "default": "UPCOMING",
+            "description": "Filter: UPCOMING (default) or PAST",
+            "type": "string"
+          },
+          "limit": {
+            "default": 10,
+            "description": "Number of entries to return",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "name": "get_leave_entries"
+    },
+    {
+      "description": "Get the WFH/location defaults and repo mapping for a given path.",
+      "inputSchema": {
+        "properties": {
+          "repoPath": {
+            "default": null,
+            "description": "Repository path to check for mapping",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "name": "get_location_and_mapping"
+    },
+    {
+      "description": "Get structured prepaid drawdown totals for an invoice: original, drawnDown, credited, and remaining amounts split into exGst/gst/incGst. remaining.exGst is sourced from the existing client invoice table endpoint\u0027s ledger-backed RemainingPrepaidCredit.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "invoiceId": {
+            "description": "Prepaid invoice ID",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "invoiceId"
+        ],
+        "type": "object"
+      },
+      "name": "get_prepaid_status"
+    },
+    {
+      "description": "Download the prepaid drawdown status report PDF for an invoice. Returns base64-encoded bytes inside a JSON envelope \u2014 decode on the client side to save as .pdf. Prefer GetPrepaidStatus for structured totals.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "invoiceId": {
+            "description": "Prepaid invoice ID",
+            "type": "integer"
+          },
+          "templateId": {
+            "default": 0,
+            "description": "Report template ID (0 = tenant default)",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "invoiceId"
+        ],
+        "type": "object"
+      },
+      "name": "get_prepaid_status_pdf"
+    },
+    {
+      "description": "Get a single product by ID.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "productId": {
+            "description": "Product ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "productId"
+        ],
+        "type": "object"
+      },
+      "name": "get_product"
+    },
+    {
+      "description": "Show product discounts configured for a client.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "clientId": {
+            "description": "Client ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientId"
+        ],
+        "type": "object"
+      },
+      "name": "get_product_discounts_for_client"
+    },
+    {
+      "description": "Get projects for a client. Returns project IDs and names.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "clientId": {
+            "description": "Client ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientId"
+        ],
+        "type": "object"
+      },
+      "name": "get_projects_for_client"
+    },
+    {
+      "description": "Project-hours summary for one empId over a period (billable vs non-billable across projects). Defaults to the current user; employeeId is accepted as an alias.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "empId": {
+            "default": null,
+            "description": "empId to summarize. Defaults to the current user\u0027s empId.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "employeeId": {
+            "default": null,
+            "description": "Alias for empId",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "endDate": {
+            "description": "End date (yyyy-MM-dd)",
+            "type": "string"
+          },
+          "startDate": {
+            "description": "Start date (yyyy-MM-dd)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "startDate",
+          "endDate"
+        ],
+        "type": "object"
+      },
+      "name": "get_projects_summary"
+    },
+    {
+      "description": "Get a receipt with its invoice allocations (how the payment is split across invoices).",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "receiptId": {
+            "description": "Receipt ID",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "receiptId"
+        ],
+        "type": "object"
+      },
+      "name": "get_receipt_detail"
+    },
+    {
+      "description": "Get a recurring invoice template (includes product lines).",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "recurringId": {
+            "description": "Recurring invoice ID",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "recurringId"
+        ],
+        "type": "object"
+      },
+      "name": "get_recurring_invoice"
+    },
+    {
+      "description": "Get suggested timesheets for a date. Refreshes suggestions first.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "date": {
+            "description": "Date (yyyy-MM-dd)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date"
+        ],
+        "type": "object"
+      },
+      "name": "get_suggested_timesheets"
+    },
+    {
+      "description": "Get timesheets for a date or date range. Use empId to read another employee\u0027s timesheets; employeeId is accepted as an alias.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "date": {
+            "description": "Single date or start date (yyyy-MM-dd)",
+            "type": "string"
+          },
+          "empId": {
+            "default": null,
+            "description": "empId to read. Defaults to the current user\u0027s empId.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "employeeId": {
+            "default": null,
+            "description": "Alias for empId.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "endDate": {
+            "default": null,
+            "description": "End date for range (yyyy-MM-dd). If omitted, returns single day.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "date"
+        ],
+        "type": "object"
+      },
+      "name": "get_timesheets"
+    },
+    {
+      "description": "List unbilled (unallocated) timesheets for a client - revenue still in the pipeline. SellTotal, BillableAmount, and Amount are treated as ex-GST.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "clientId": {
+            "description": "Client ID",
+            "type": "string"
+          },
+          "direction": {
+            "default": null,
+            "description": "Sort direction",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pageSize": {
+            "default": null,
+            "description": "Page size",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "skip": {
+            "default": null,
+            "description": "Rows to skip",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "sortField": {
+            "default": null,
+            "description": "Sort field (e.g. DateCreated)",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "clientId"
+        ],
+        "type": "object"
+      },
+      "name": "get_unbilled_timesheets_for_client"
+    },
+    {
+      "description": "List unpaid invoices for a client. Invoice amount convention: SubTotal ex-GST, SalesTaxAmt GST, SellTotal inc-GST.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "clientId": {
+            "description": "Client ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientId"
+        ],
+        "type": "object"
+      },
+      "name": "get_unpaid_invoices_by_client"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "readOnlyHint": false
+      },
+      "description": "Import leave balances for EVERY employee from a Xero \u0027Leave Balances\u0027 CSV export, replacing what TimePro currently stores. No dry run and no undo, so confirm with the user first. Pass the path to the CSV file, not its contents. Always report the returned unmatchedEmployees (rows skipped) and warnings - the import succeeds despite them.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "csvPath": {
+            "description": "Path to the Xero \u0027Leave Balances\u0027 CSV export on this machine",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csvPath"
+        ],
+        "type": "object"
+      },
+      "name": "import_leave_balances"
+    },
+    {
+      "description": "List all SKUs. Set isPrepaid=true to list only prepaid SKUs (useful for prepaid drawdown analysis).",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "isPrepaid": {
+            "default": false,
+            "description": "Filter to prepaid SKUs only",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "list_all_skus"
+    },
+    {
+      "description": "List timesheet billable-type codes (B = billable, BPP = prepaid, W = write-off, etc.).",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "list_billable_types"
+    },
+    {
+      "description": "List timesheet category codes (for labelling timesheets when creating or filtering queries).",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "list_categories"
+    },
+    {
+      "description": "List all configured client rates (all empIds by default). For just the current user\u0027s rate for a client, prefer GetClientRate. employeeId is accepted as an alias for empId.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "clientId": {
+            "description": "Client ID",
+            "type": "string"
+          },
+          "direction": {
+            "default": "desc",
+            "description": "Sort direction (asc/desc)",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "empId": {
+            "default": null,
+            "description": "Filter to one empId",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "employeeId": {
+            "default": null,
+            "description": "Alias for empId",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pageSize": {
+            "default": 100,
+            "description": "Page size (default 100)",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "showExpired": {
+            "default": false,
+            "description": "Include expired rates",
+            "type": "boolean"
+          },
+          "skip": {
+            "default": 0,
+            "description": "Rows to skip",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "sortField": {
+            "default": "ExpiryDate",
+            "description": "Sort field (default ExpiryDate)",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "clientId"
+        ],
+        "type": "object"
+      },
+      "name": "list_client_rates"
+    },
+    {
+      "description": "List credit notes for a client.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "clientId": {
+            "description": "Client ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientId"
+        ],
+        "type": "object"
+      },
+      "name": "list_credit_notes"
+    },
+    {
+      "description": "List invoices (paged). Filter by query text, sort by DateCreated/DateInvoiced/SellTotal/ClientID. SellTotal is GST-inclusive. Set onlyRecurring=true for recurring-generated invoices.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "dir": {
+            "default": "desc",
+            "description": "Sort direction: asc or desc (default desc)",
+            "type": "string"
+          },
+          "field": {
+            "default": "DateCreated",
+            "description": "Sort field (default DateCreated)",
+            "type": "string"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Page size (default 50)",
+            "type": "integer"
+          },
+          "onlyRecurring": {
+            "default": false,
+            "description": "Filter to recurring-generated invoices only",
+            "type": "boolean"
+          },
+          "query": {
+            "default": null,
+            "description": "Free-text search (client name, invoice id)",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "skip": {
+            "default": 0,
+            "description": "Rows to skip (default 0)",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "name": "list_invoices"
+    },
+    {
+      "description": "List iterations/sprints for a project. Returns empty list if the project doesn\u0027t use iterations. If the list is non-empty, an iteration ID is required when creating timesheets for this project.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "projectId": {
+            "description": "Project ID (e.g., 1I776Q)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "projectId"
+        ],
+        "type": "object"
+      },
+      "name": "list_iterations"
+    },
+    {
+      "description": "List timesheet location codes (SSW, Home, Client, Travel, Other).",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "list_locations"
+    },
+    {
+      "description": "List paid receipts (paged). Sort by PaymentDate descending by default. PaidTotal is NEGATIVE for incoming payments; take abs() for reported sales.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "dir": {
+            "default": "desc",
+            "description": "Sort direction",
+            "type": "string"
+          },
+          "field": {
+            "default": "PaymentDate",
+            "description": "Sort field (default PaymentDate)",
+            "type": "string"
+          },
+          "limit": {
+            "default": 100,
+            "description": "Page size (500 is safe)",
+            "type": "integer"
+          },
+          "searchText": {
+            "default": null,
+            "description": "Search text (client/reference)",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "skip": {
+            "default": 0,
+            "description": "Rows to skip",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "name": "list_paid_receipts"
+    },
+    {
+      "description": "List products. With isExpand=true, each product includes its SKUs inline.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "isExpand": {
+            "default": false,
+            "description": "Expand SKUs",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "name": "list_products"
+    },
+    {
+      "description": "List recurring invoice templates.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "clientId": {
+            "default": null,
+            "description": "Filter to one client",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dir": {
+            "default": "desc",
+            "description": "Sort direction",
+            "type": "string"
+          },
+          "field": {
+            "default": "LastInvEndDate",
+            "description": "Sort field (default LastInvEndDate)",
+            "type": "string"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Page size",
+            "type": "integer"
+          },
+          "query": {
+            "default": null,
+            "description": "Search text",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "showOutdated": {
+            "default": false,
+            "description": "Include outdated/stopped templates",
+            "type": "boolean"
+          },
+          "skip": {
+            "default": 0,
+            "description": "Rows to skip",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "name": "list_recurring_invoices"
+    },
+    {
+      "description": "Query timesheets across empIds, clients, projects and a date range. Returns detailed rows including hours and sell price; sell prices/amounts are treated as ex-GST for invoice reconciliation. employeeIds is accepted as an alias for empIds.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "categoryIds": {
+            "default": null,
+            "description": "Filter to specific category IDs",
+            "items": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "clientIds": {
+            "default": null,
+            "description": "Filter to specific client IDs",
+            "items": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "empIds": {
+            "default": null,
+            "description": "Filter to specific empIds (omit for all)",
+            "items": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "employeeIds": {
+            "default": null,
+            "description": "Alias for empIds",
+            "items": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "endDate": {
+            "description": "End date (yyyy-MM-dd)",
+            "type": "string"
+          },
+          "projectIds": {
+            "default": null,
+            "description": "Filter to specific project IDs",
+            "items": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "startDate": {
+            "description": "Start date (yyyy-MM-dd)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "startDate",
+          "endDate"
+        ],
+        "type": "object"
+      },
+      "name": "query_timesheets"
+    },
+    {
+      "description": "Search for clients by name. Returns client IDs and names.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "description": "Search text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "type": "object"
+      },
+      "name": "search_clients"
+    },
+    {
+      "description": "Update an existing leave request for the current user. Unspecified API-returned fields are preserved. List leave entries first to obtain the leave ID.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "approvedBy": {
+            "default": null,
+            "description": "New approver email; omit to preserve",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cc": {
+            "default": null,
+            "description": "Comma-separated CC recipients; omit to preserve",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "clearApprovedBy": {
+            "default": false,
+            "description": "Remove the current approver",
+            "type": "boolean"
+          },
+          "clearCc": {
+            "default": false,
+            "description": "Remove all current CC recipients",
+            "type": "boolean"
+          },
+          "dryRun": {
+            "default": false,
+            "description": "Validate and return the proposed update without applying it",
+            "type": "boolean"
+          },
+          "end": {
+            "default": null,
+            "description": "New end date (yyyy-MM-dd); omit to preserve",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "endTime": {
+            "default": null,
+            "description": "Employee workday end time (HH:mm); omit to preserve it when returned, otherwise use the profile value",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "halfDay": {
+            "default": null,
+            "description": "true for partial-day, false for full-day, omit to preserve",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "Leave entry ID (GUID)",
+            "type": "string"
+          },
+          "note": {
+            "default": null,
+            "description": "New leave note/reason; omit to preserve",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start": {
+            "default": null,
+            "description": "New start date (yyyy-MM-dd); omit to preserve",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "startTime": {
+            "default": null,
+            "description": "Employee workday start time (HH:mm); omit to preserve it when returned, otherwise use the profile value",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timeZoneId": {
+            "default": null,
+            "description": "Timezone for changed dates (IANA or Windows ID)",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": {
+            "default": null,
+            "description": "New leave type ID or active leave type name; omit to preserve",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "update_leave"
+    },
+    {
+      "description": "Update an existing timesheet. Only specify fields you want to change; everything else is preserved. Returns the entry as saved.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {
+          "billableId": {
+            "default": null,
+            "description": "New billable type: B, BPP, W",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "date": {
+            "default": null,
+            "description": "Date the timesheet is on (yyyy-MM-dd). Speeds up the lookup; otherwise recent weeks are searched.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "default": null,
+            "description": "New notes/description",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "iteration": {
+            "default": null,
+            "description": "New iteration/sprint, by name or ID. Use ListIterations to see the options.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "location": {
+            "default": null,
+            "description": "New location",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timesheetId": {
+            "description": "Timesheet ID",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "timesheetId"
+        ],
+        "type": "object"
+      },
+      "name": "update_timesheet"
+    }
+  ]
+}

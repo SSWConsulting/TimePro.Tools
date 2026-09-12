@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "text": "[\n  {\n    \u0022timeId\u0022: 4242,\n    \u0022empId\u0022: \u0022BOB\u0022,\n    \u0022empName\u0022: \u0022Bob Northwind\u0022,\n    \u0022client\u0022: \u0022Northwind Traders\u0022,\n    \u0022clientId\u0022: \u0022NWIND\u0022,\n    \u0022project\u0022: \u0022Northwind Traders\u0022,\n    \u0022projectId\u0022: \u00221I776Q\u0022,\n    \u0022date\u0022: \u00222026-03-16\u0022,\n    \u0022startTime\u0022: \u00222026-03-16T09:00:00\u0022,\n    \u0022endTime\u0022: \u00222026-03-16T17:00:00\u0022,\n    \u0022totalTime\u0022: 7.5,\n    \u0022location\u0022: \u0022Home\u0022,\n    \u0022billableId\u0022: \u0022B\u0022,\n    \u0022isSuggested\u0022: false,\n    \u0022notes\u0022: \u0022Product search\u0022,\n    \u0022isLocked\u0022: false,\n    \u0022invoiceId\u0022: null\n  },\n  {\n    \u0022timeId\u0022: 4243,\n    \u0022empId\u0022: \u0022BOB\u0022,\n    \u0022empName\u0022: \u0022Bob Northwind\u0022,\n    \u0022client\u0022: \u0022Northwind Traders\u0022,\n    \u0022clientId\u0022: \u0022NWIND\u0022,\n    \u0022project\u0022: \u0022Northwind Traders\u0022,\n    \u0022projectId\u0022: \u00221I776Q\u0022,\n    \u0022date\u0022: \u00222026-03-16\u0022,\n    \u0022startTime\u0022: \u00222026-03-16T13:00:00\u0022,\n    \u0022endTime\u0022: \u00222026-03-16T14:00:00\u0022,\n    \u0022totalTime\u0022: 1,\n    \u0022location\u0022: \u0022SSW\u0022,\n    \u0022billableId\u0022: \u0022B\u0022,\n    \u0022isSuggested\u0022: true,\n    \u0022notes\u0022: \u0022Order history\u0022,\n    \u0022isLocked\u0022: false,\n    \u0022invoiceId\u0022: null\n  }\n]",
+      "type": "text"
+    }
+  ]
+}

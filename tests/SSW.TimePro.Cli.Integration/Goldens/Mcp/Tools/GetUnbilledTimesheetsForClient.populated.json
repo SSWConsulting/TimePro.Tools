@@ -1,0 +1,25 @@
+[
+  {
+    "amount": 600,
+    "billableAmount": 600,
+    "billableId": "B",
+    "categoryId": "WEBDEV",
+    "clientId": "NWIND",
+    "clientName": "Northwind Traders",
+    "dateCreated": "2026-03-16T00:00:00",
+    "empId": "BOB",
+    "empName": "Bob Northwind",
+    "invoiceId": 108,
+    "notes": "Checkout API",
+    "projectId": "1I776Q",
+    "projectName": "Northwind Traders",
+    "salesTaxAmt": 60,
+    "salesTaxPct": 10,
+    "sellPrice": 80,
+    "sellTotal": 600,
+    "timeEnd": "17:00",
+    "timeId": 4242,
+    "timeStart": "09:00",
+    "totalTime": 7.5
+  }
+]

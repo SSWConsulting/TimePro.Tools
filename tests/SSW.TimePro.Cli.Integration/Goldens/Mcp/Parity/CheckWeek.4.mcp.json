@@ -1,0 +1,96 @@
+{
+  "allCovered": false,
+  "days": [
+    {
+      "coverReason": "logged",
+      "covered": false,
+      "date": "{{weekday0}}",
+      "dayOfWeek": "Monday",
+      "issues": [
+        {
+          "message": "1 suggested timesheet(s) not accepted",
+          "severity": "info"
+        }
+      ],
+      "leaveHours": 0,
+      "leaveType": null,
+      "suggestedCount": 1,
+      "timesheetCount": 1,
+      "totalHours": 7.5
+    },
+    {
+      "coverReason": "logged",
+      "covered": false,
+      "date": "{{weekday1}}",
+      "dayOfWeek": "Tuesday",
+      "issues": [
+        {
+          "message": "1 suggested timesheet(s) not accepted",
+          "severity": "info"
+        }
+      ],
+      "leaveHours": 0,
+      "leaveType": null,
+      "suggestedCount": 1,
+      "timesheetCount": 1,
+      "totalHours": 7.5
+    },
+    {
+      "coverReason": "logged",
+      "covered": false,
+      "date": "{{weekday2}}",
+      "dayOfWeek": "Wednesday",
+      "issues": [
+        {
+          "message": "1 suggested timesheet(s) not accepted",
+          "severity": "info"
+        }
+      ],
+      "leaveHours": 0,
+      "leaveType": null,
+      "suggestedCount": 1,
+      "timesheetCount": 1,
+      "totalHours": 7.5
+    },
+    {
+      "coverReason": "logged",
+      "covered": false,
+      "date": "{{weekday3}}",
+      "dayOfWeek": "Thursday",
+      "issues": [
+        {
+          "message": "1 suggested timesheet(s) not accepted",
+          "severity": "info"
+        }
+      ],
+      "leaveHours": 0,
+      "leaveType": null,
+      "suggestedCount": 1,
+      "timesheetCount": 1,
+      "totalHours": 7.5
+    },
+    {
+      "coverReason": "logged",
+      "covered": false,
+      "date": "{{weekday4}}",
+      "dayOfWeek": "Friday",
+      "issues": [
+        {
+          "message": "1 suggested timesheet(s) not accepted",
+          "severity": "info"
+        }
+      ],
+      "leaveHours": 0,
+      "leaveType": null,
+      "suggestedCount": 1,
+      "timesheetCount": 1,
+      "totalHours": 7.5
+    }
+  ],
+  "empId": "BOB",
+  "errors": 0,
+  "infos": 5,
+  "warnings": 0,
+  "weekEnd": "{{weekday4}}",
+  "weekStart": "{{weekday0}}"
+}

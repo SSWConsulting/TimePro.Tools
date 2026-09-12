@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "text": "{\n  \u0022empId\u0022: \u0022BOB\u0022,\n  \u0022clientId\u0022: \u0022NWIND\u0022,\n  \u0022rate\u0022: 175,\n  \u0022prepaidRate\u0022: 150,\n  \u0022clientRateId\u0022: 900,\n  \u0022employeeName\u0022: \u0022Bob Northwind\u0022,\n  \u0022clientName\u0022: \u0022Northwind Traders\u0022,\n  \u0022expiryDate\u0022: \u00222026-12-31\u0022,\n  \u0022notes\u0022: \u0022Standard rate\u0022\n}",
+      "type": "text"
+    }
+  ]
+}

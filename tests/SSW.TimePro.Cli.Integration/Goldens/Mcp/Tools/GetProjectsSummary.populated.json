@@ -1,0 +1,11 @@
+[
+  {
+    "clientID": "NWIND",
+    "endDate": "2026-03-31",
+    "isBillable": true,
+    "projectID": "1I776Q",
+    "projectName": "Northwind Traders",
+    "startDate": "2026-03-01",
+    "sum": 22.5
+  }
+]

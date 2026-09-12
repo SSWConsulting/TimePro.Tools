@@ -1,0 +1,17 @@
+{
+  "clientId": "NWIND",
+  "coName": "Northwind Traders",
+  "contactPerson": "Bob Northwind",
+  "outstandingInvoices": [
+    {
+      "dateInvoiced": "2026-03-31T00:00:00",
+      "daysOverdue": 7,
+      "dueDate": "2026-04-14T00:00:00",
+      "invoiceId": 108,
+      "invoiceType": "P",
+      "osAmt": 1100,
+      "paidAmt": 0,
+      "total": 1100
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "text": "[\n  {\n    \u0022id\u0022: \u00220f2b7e7a-1111-4444-8888-aaaaaaaaaaaa\u0022,\n    \u0022startDate\u0022: \u00222026-04-01T00:00:00\\u002B10:00\u0022,\n    \u0022endDate\u0022: \u00222026-04-01T23:59:00\\u002B10:00\u0022,\n    \u0022createdAt\u0022: \u00222026-03-01T09:00:00\\u002B10:00\u0022,\n    \u0022updatedAt\u0022: \u00222026-03-02T09:00:00\\u002B10:00\u0022,\n    \u0022note\u0022: \u0022Family day\u0022,\n    \u0022approvedBy\u0022: \u0022bob@northwind.example\u0022,\n    \u0022optionalEmp\u0022: [\n      \u0022bob@northwind.example\u0022\n    ],\n    \u0022requestedEmpId\u0022: \u0022BOB\u0022,\n    \u0022userStartTime\u0022: \u002209:00\u0022,\n    \u0022userEndTime\u0022: \u002218:00\u0022,\n    \u0022daysAway\u0022: 1,\n    \u0022timeLessOverride\u0022: null,\n    \u0022cancellationReason\u0022: null,\n    \u0022startDateWithoutOffset\u0022: null,\n    \u0022endDateWithoutOffset\u0022: null,\n    \u0022allDay\u0022: true,\n    \u0022length\u0022: 1,\n    \u0022leaveType\u0022: {\n      \u0022id\u0022: 1,\n      \u0022name\u0022: \u0022Annual Leave\u0022,\n      \u0022isActive\u0022: true\n    },\n    \u0022status\u0022: 1,\n    \u0022statusName\u0022: \u0022Pending\u0022\n  }\n]",
+      "type": "text"
+    }
+  ]
+}

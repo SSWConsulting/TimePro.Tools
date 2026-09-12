@@ -1,0 +1,15 @@
+{
+  "data": [
+    {
+      "clientId": "NWIND",
+      "coName": "Northwind Traders",
+      "dateCreated": "2026-03-31T00:00:00",
+      "externalSyncStatus": 0,
+      "invoiceId": 108,
+      "invoiceType": "P",
+      "paidAmt": 0,
+      "sellTotal": 1100
+    }
+  ],
+  "total": 1
+}

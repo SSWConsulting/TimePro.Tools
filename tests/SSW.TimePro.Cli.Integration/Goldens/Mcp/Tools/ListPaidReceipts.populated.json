@@ -1,0 +1,26 @@
+{
+  "data": [
+    {
+      "bank": "Northwind Bank",
+      "clientId": "NWIND",
+      "coName": "Northwind Traders",
+      "dateCreated": "2026-04-01T00:00:00",
+      "empUpdated": "BOB",
+      "invoiceIds": [
+        108
+      ],
+      "note": "EFT",
+      "paidTotal": -1100,
+      "paymentDate": "2026-04-01T00:00:00",
+      "saleReceiptId": 142,
+      "saleReceiptPaids": [],
+      "saleReceiptType": {
+        "id": "EFT",
+        "typeName": "EFT",
+        "typeSign": "-"
+      },
+      "unallocated": 0
+    }
+  ],
+  "total": 1
+}

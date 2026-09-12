@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "text": "[\n  {\n    \u0022iterationId\u0022: 3402,\n    \u0022iterationName\u0022: \u0022Checkout API\u0022,\n    \u0022lastUsedDate\u0022: \u00222026-03-09\u0022\n  },\n  {\n    \u0022iterationId\u0022: 3403,\n    \u0022iterationName\u0022: \u0022Order history\u0022,\n    \u0022lastUsedDate\u0022: \u00222026-03-13\u0022\n  }\n]",
+      "type": "text"
+    }
+  ]
+}

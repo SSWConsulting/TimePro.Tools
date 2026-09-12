@@ -746,6 +746,76 @@ Config is stored at `~/.config/timepro-cli/`:
 | `config.json` | Active tenant, WFH days, default location |
 | `tenants/{id}.json` | Per-tenant credentials (API key, employee ID, API URL) |
 | `repo-mappings.json` | Repository-to-client/project mappings |
+| `logs/commands.jsonl` | Local command log (see [Diagnostics](#diagnostics)) |
+
+## Diagnostics
+
+When a `tp` call goes wrong, these are the things that let you say *which* call it was.
+
+### Headers sent on every API call
+
+| Header | Value |
+|--------|-------|
+| `User-Agent` | `timepro-cli/<version>` |
+| `x-timepro-client-surface` | `cli` or `mcp` |
+| `x-timepro-client-command` | Command name without arguments, e.g. `ts update`, or `mcp:update_timesheet` |
+| `x-timepro-client-request-id` | A new UUID per HTTP attempt |
+
+No arguments, notes, employee IDs or other values are ever put in a header.
+
+### Request IDs
+
+Failures carry the request id of the attempt that failed, so a local error can be matched to a
+server-side request. If the server echoes an id of its own (`x-timepro-client-request-id`,
+`request-id` or `x-request-id`), that one is used instead.
+
+Human output prints it as a trailing line on stderr:
+
+```
+Error: API error (400): TimePro API returned 400 Bad Request - Entity ClientInvoice with ID 999999 not found
+request id: e9f64f68-48b7-4141-8e1f-6cdba40bbf2d
+```
+
+`--json` adds it to the error envelope alongside the existing keys:
+
+```json
+{"error":{"code":400,"message":"API error: ...","detail":"...","requestId":"e9f64f68-48b7-4141-8e1f-6cdba40bbf2d"}}
+```
+
+### `--verbose`
+
+Works on any command. Prints the resolved API host and every request id to **stderr**, so `--json`
+output on stdout stays machine-readable:
+
+```bash
+tp ts get --week --json --verbose
+```
+
+```
+api host: api.staging.northwind.example (tenant northwind-staging)
+GET /api/Timesheets/GetTimesheetListViewModel -> 200 (request id: a66c7bd8-d49d-4a5e-bc62-5ffce3749f7a)
+```
+
+### Local command log
+
+Each CLI invocation and each MCP tool call appends one JSON line to
+`~/.config/timepro-cli/logs/commands.jsonl`:
+
+```json
+{"ts":"2026-09-12T12:34:53.05Z","version":"0.3.0","surface":"cli","command":"invoice get","tenant":"northwind-staging","apiHost":"api.staging.example","durationMs":249,"exitCode":1,"requests":[{"requestId":"e9f64f68-48b7-4141-8e1f-6cdba40bbf2d","method":"GET","route":"/api/v2/ClientInvoice/{id}","status":400}]}
+```
+
+It records command names, route templates, statuses and timings — never arguments, request bodies,
+API keys, timesheet notes or employee IDs. Query strings are dropped entirely, and a call whose path
+carries an identifier logs its template (`/api/employees/{empId}`), never the value. The file is
+owner-only (`0600`), rolls at 2 MB keeping 5 files, drops entries older than 7 days when it rolls,
+and is **never uploaded anywhere**.
+
+To turn it off, set `telemetry.localLog` to `false` in `~/.config/timepro-cli/config.json`:
+
+```json
+{ "telemetry": { "localLog": false } }
+```
 
 ## Local development (build from source)
 

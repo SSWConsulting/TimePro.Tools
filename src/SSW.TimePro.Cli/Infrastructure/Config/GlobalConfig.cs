@@ -47,6 +47,21 @@ public class GlobalConfig
     /// </summary>
     [JsonPropertyName("guides")]
     public GuideConfig Guides { get; set; } = new();
+
+    /// <summary>
+    /// Local diagnostics settings. Nothing here is ever uploaded.
+    /// </summary>
+    [JsonPropertyName("telemetry")]
+    public TelemetryConfig Telemetry { get; set; } = new();
+}
+
+public class TelemetryConfig
+{
+    /// <summary>
+    /// Whether each invocation appends a line to the local command log. Set to false to opt out.
+    /// </summary>
+    [JsonPropertyName("localLog")]
+    public bool LocalLog { get; set; } = true;
 }
 
 public class FeatureConfig

@@ -101,13 +101,29 @@ public static class OutputHelper
 
         if (useJson)
         {
-            WriteJsonError($"API error: {exception.Message}", exception.StatusCode, detail);
+            WriteJsonError(
+                $"API error: {exception.Message}",
+                exception.StatusCode,
+                detail,
+                requestId: exception.RequestId);
             return;
         }
 
         WriteError(detail is null
             ? $"API error ({exception.StatusCode}): {exception.Message}"
             : $"API error ({exception.StatusCode}): {exception.Message} - {detail}");
+
+        WriteRequestId(exception.RequestId);
+    }
+
+    /// <summary>
+    /// Writes the correlation id under an error so a user can quote it to whoever reads the
+    /// server logs. Silent when there is no id (a failure before any HTTP attempt).
+    /// </summary>
+    public static void WriteRequestId(string? requestId)
+    {
+        if (!string.IsNullOrWhiteSpace(requestId))
+            WriteErrorDetail($"request id: {requestId}");
     }
 
     /// <summary>
@@ -129,9 +145,10 @@ public static class OutputHelper
         string? detail = null,
         object? recovery = null,
         string? tenant = null,
-        string? apiUrl = null)
+        string? apiUrl = null,
+        string? requestId = null)
     {
-        var envelope = new ErrorEnvelope(new ErrorPayload(code, message, detail, recovery, tenant, apiUrl));
+        var envelope = new ErrorEnvelope(new ErrorPayload(code, message, detail, recovery, tenant, apiUrl, requestId));
         Console.Out.WriteLine(JsonSerializer.Serialize(envelope, ErrorEnvelopeOptions));
     }
 
@@ -149,7 +166,10 @@ public static class OutputHelper
         [property: JsonPropertyName("tenant")]
         [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Tenant = null,
         [property: JsonPropertyName("apiUrl")]
-        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ApiUrl = null);
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ApiUrl = null,
+        // Optional, present once an HTTP attempt was made: matches x-timepro-client-request-id.
+        [property: JsonPropertyName("requestId")]
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? RequestId = null);
 
     /// <summary>
     /// Writes a success message.

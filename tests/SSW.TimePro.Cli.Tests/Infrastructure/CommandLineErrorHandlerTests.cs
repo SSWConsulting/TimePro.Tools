@@ -120,7 +120,30 @@ public class CommandLineErrorHandlerTests
         stdout.Should().BeEmpty();
     }
 
-    private static ITimeProApiClient UnreachableApi()
+    [Fact]
+    public async Task Run_WhenTheApiIsUnreachableAndJsonRequested_CarriesTheRequestIdInTheEnvelope()
+    {
+        var (exitCode, stdout) = await RunAsync(["ts", "get", "--json"], UnreachableApi("req-connect-1"));
+
+        exitCode.Should().Be(1);
+        using var doc = JsonDocument.Parse(stdout);
+        var error = doc.RootElement.GetProperty("error");
+        error.GetProperty("requestId").GetString().Should().Be("req-connect-1");
+        error.GetProperty("tenant").GetString().Should().Be("northwind-local");
+        error.GetProperty("apiUrl").GetString().Should().Be("https://localhost:1/");
+        error.GetProperty("message").GetString().Should().Be("Connection refused (localhost:1)");
+    }
+
+    [Fact]
+    public async Task Run_WhenTheFailureHasNoRequestId_OmitsTheKey()
+    {
+        var (_, stdout) = await RunAsync(["ts", "get", "--json"], UnreachableApi());
+
+        using var doc = JsonDocument.Parse(stdout);
+        doc.RootElement.GetProperty("error").TryGetProperty("requestId", out _).Should().BeFalse();
+    }
+
+    private static ITimeProApiClient UnreachableApi(string? requestId = null)
     {
         var api = Substitute.For<ITimeProApiClient>();
         api.GetTimesheetsAsync(Arg.Any<string>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
@@ -128,7 +151,9 @@ public class CommandLineErrorHandlerTests
                 "Connection refused (localhost:1)",
                 tenantFile: "northwind-local",
                 tenantId: "northwind",
-                apiUrl: "https://localhost:1/"));
+                apiUrl: "https://localhost:1/",
+                innerException: null,
+                requestId: requestId));
 
         return api;
     }

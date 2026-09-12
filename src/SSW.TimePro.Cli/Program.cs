@@ -13,6 +13,7 @@ using SSW.TimePro.Cli.Infrastructure.Cli;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using SSW.TimePro.Cli.Infrastructure.DependencyInjection;
 using SSW.TimePro.Cli.Infrastructure.Output;
+using SSW.TimePro.Cli.Infrastructure.Telemetry;
 using Spectre.Console.Cli;
 
 
@@ -20,7 +21,10 @@ var configService = new ConfigService();
 var featureFlags = FeatureFlagCommandLineInterceptor.ExtractCommandLineOptions(args);
 FeatureFlagCommandLineInterceptor.EnableRequestedFeatures(configService, featureFlags.EnableFeatures);
 
-var tenantOverride = TenantOverrideResolver.ExtractCommandLineOptions(featureFlags.Args);
+var verbose = VerboseCommandLineInterceptor.ExtractCommandLineOptions(featureFlags.Args);
+ClientContext.Verbose = verbose.Verbose;
+
+var tenantOverride = TenantOverrideResolver.ExtractCommandLineOptions(verbose.Args);
 if (tenantOverride.Error is not null)
 {
     OutputHelper.WriteError(tenantOverride.Error);
@@ -57,6 +61,16 @@ if (tenantOverrideError is not null)
 if (overrideTenant is not null)
     configService.SetActiveTenantOverride(overrideTenant);
 
+var invocation = ClientContext.BeginCli(CommandPathResolver.Resolve(tenantOverride.Args));
+
+if (verbose.Verbose && configService.LoadActiveTenantConfig() is { } verboseTenant)
+{
+    var host = Uri.TryCreate(verboseTenant.ApiUrl, UriKind.Absolute, out var verboseUri)
+        ? verboseUri.Host
+        : verboseTenant.ApiUrl;
+    Console.Error.WriteLine($"api host: {host} (tenant {verboseTenant.ConfigName ?? verboseTenant.TenantId})");
+}
+
 // Configure DI
 var services = new ServiceCollection();
 services.AddSingleton<IConfigService>(configService);
@@ -79,4 +93,15 @@ app.Configure(config =>
     CliConfiguration.Configure(config);
 });
 
-return await app.RunAsync(tenantOverride.Args);
+var started = System.Diagnostics.Stopwatch.StartNew();
+var exitCode = await app.RunAsync(tenantOverride.Args);
+started.Stop();
+
+CommandLog.Record(
+    invocation,
+    configService.LoadGlobalConfig,
+    configService.LoadActiveTenantConfig,
+    started.ElapsedMilliseconds,
+    exitCode);
+
+return exitCode;

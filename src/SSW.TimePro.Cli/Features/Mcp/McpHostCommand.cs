@@ -47,6 +47,7 @@ public class McpHostCommand : AsyncCommand<McpHostCommand.Settings>
         var mcpServer = builder.Services
             .AddMcpServer()
             .WithStdioServerTransport()
+            .WithClientContext()
             .WithTools<TimesheetMcpTools>()
             .WithTools<LookupMcpTools>()
             .WithTools<LeaveMcpTools>();

@@ -1,7 +1,9 @@
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using SSW.TimePro.Cli.Infrastructure.Cli;
 using SSW.TimePro.Cli.Infrastructure.Config;
+using SSW.TimePro.Cli.Infrastructure.Telemetry;
 using SSW.TimePro.Cli.Shared.Models;
 
 namespace SSW.TimePro.Cli.Infrastructure.ApiClient;
@@ -163,7 +165,8 @@ public class TimeProApiClient : ITimeProApiClient
 
     public async Task DeleteTimesheetAsync(int timesheetId, CancellationToken ct = default)
     {
-        await DeleteAsync($"/api/Timesheets/DeleteTimesheet/{timesheetId}", ct);
+        await DeleteAsync($"/api/Timesheets/DeleteTimesheet/{timesheetId}", ct,
+            "/api/Timesheets/DeleteTimesheet/{timesheetId}");
     }
 
     // ───────────────────────── Employees / Users ─────────────────────────
@@ -213,7 +216,8 @@ public class TimeProApiClient : ITimeProApiClient
 
     public async Task<EmployeeDetail?> GetUserAsync(string empId, CancellationToken ct = default)
     {
-        var user = await GetAsync<EmployeeDetail>($"/api/employees/{Uri.EscapeDataString(empId)}", ct);
+        var user = await GetAsync<EmployeeDetail>($"/api/employees/{Uri.EscapeDataString(empId)}", ct,
+            "/api/employees/{empId}");
         if (user is null)
             return null;
 
@@ -279,7 +283,7 @@ public class TimeProApiClient : ITimeProApiClient
         var url = $"/api/v2/clients/{Uri.EscapeDataString(clientId)}/taxrates";
         try
         {
-            return await GetAsync<decimal?>(url, ct);
+            return await GetAsync<decimal?>(url, ct, "/api/v2/clients/{clientId}/taxrates");
         }
         catch (ApiException ex) when (ex.StatusCode == 404)
         {
@@ -336,7 +340,8 @@ public class TimeProApiClient : ITimeProApiClient
 
     public async Task DeleteSuggestedTimesheetAsync(int suggestedId, CancellationToken ct = default)
     {
-        await DeleteAsync($"/api/Timesheets/DeleteSuggestedTimesheet/{suggestedId}", ct);
+        await DeleteAsync($"/api/Timesheets/DeleteSuggestedTimesheet/{suggestedId}", ct,
+            "/api/Timesheets/DeleteSuggestedTimesheet/{suggestedId}");
     }
 
     // ───────────────────────── Leave ─────────────────────────
@@ -372,7 +377,8 @@ public class TimeProApiClient : ITimeProApiClient
     public async Task<LeaveStats?> GetLeaveStatsAsync(string employeeId, CancellationToken ct = default)
     {
         return await GetAsync<LeaveStats>(
-            $"/api/leave/stats/{Uri.EscapeDataString(employeeId)}", ct);
+            $"/api/leave/stats/{Uri.EscapeDataString(employeeId)}", ct,
+            "/api/leave/stats/{employeeId}");
     }
 
     public async Task CreateLeaveAsync(CreateLeaveRequest request, CancellationToken ct = default)
@@ -387,7 +393,8 @@ public class TimeProApiClient : ITimeProApiClient
 
     public async Task CancelLeaveAsync(string leaveId, CancelLeaveRequest request, CancellationToken ct = default)
     {
-        await PutAsync($"/api/leave/{Uri.EscapeDataString(leaveId)}/cancel", request, ct);
+        await PutAsync($"/api/leave/{Uri.EscapeDataString(leaveId)}/cancel", request, ct,
+            "/api/leave/{leaveId}/cancel");
     }
 
     public async Task<LeaveBalanceStatus?> GetLeaveBalanceStatusAsync(CancellationToken ct = default)
@@ -416,10 +423,10 @@ public class TimeProApiClient : ITimeProApiClient
         if (query.Count > 0) url += "?" + string.Join("&", query);
 
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        ConfigureRequest(request);
+        var requestId = ConfigureRequest(request);
 
-        using var response = await SendAsync(request, ct);
-        await EnsureSuccessAsync(response, ct);
+        using var response = await SendAsync(request, requestId, "/Export/ExportTimesheetsToCSV", ct);
+        await EnsureSuccessAsync(response, requestId, ct);
 
         return await response.Content.ReadAsByteArrayAsync(ct);
     }
@@ -472,12 +479,14 @@ public class TimeProApiClient : ITimeProApiClient
 
     public async Task<InvoiceHeader?> GetInvoiceAsync(int invoiceId, CancellationToken ct = default)
     {
-        return await GetAsync<InvoiceHeader>($"/api/v2/ClientInvoice/{invoiceId}", ct);
+        return await GetAsync<InvoiceHeader>($"/api/v2/ClientInvoice/{invoiceId}", ct,
+            "/api/v2/ClientInvoice/{invoiceId}");
     }
 
     public async Task<List<InvoiceLine>> GetInvoiceProductsAsync(int invoiceId, CancellationToken ct = default)
     {
-        return await GetAsync<List<InvoiceLine>>($"/api/v2/ClientInvoice/{invoiceId}/products", ct) ?? [];
+        return await GetAsync<List<InvoiceLine>>($"/api/v2/ClientInvoice/{invoiceId}/products", ct,
+            "/api/v2/ClientInvoice/{invoiceId}/products") ?? [];
     }
 
     public async Task<List<InvoiceTimesheet>> GetInvoiceTimesheetsAsync(int invoiceId, string type, CancellationToken ct = default)
@@ -486,30 +495,31 @@ public class TimeProApiClient : ITimeProApiClient
             ? "WriteOff"
             : "Allocated";
         var url = $"/api/v2/Timesheets/WithNames/{endpoint}?invoiceID={invoiceId}";
-        return await GetAsync<List<InvoiceTimesheet>>(url, ct) ?? [];
+        return await GetAsync<List<InvoiceTimesheet>>(url, ct, $"/api/v2/Timesheets/WithNames/{endpoint}") ?? [];
     }
 
     public async Task<List<ReceiptRow>> GetInvoiceReceiptsAsync(int invoiceId, CancellationToken ct = default)
     {
-        return await GetAsync<List<ReceiptRow>>($"/api/v2/ClientInvoice/{invoiceId}/receipts", ct) ?? [];
+        return await GetAsync<List<ReceiptRow>>($"/api/v2/ClientInvoice/{invoiceId}/receipts", ct,
+            "/api/v2/ClientInvoice/{invoiceId}/receipts") ?? [];
     }
 
     public async Task<List<InvoiceHeader>> GetInvoicesByClientAsync(string clientId, CancellationToken ct = default)
     {
         var url = $"/api/ClientInvoice/ClientID/{Uri.EscapeDataString(clientId)}";
-        return await GetAsync<List<InvoiceHeader>>(url, ct) ?? [];
+        return await GetAsync<List<InvoiceHeader>>(url, ct, "/api/ClientInvoice/ClientID/{clientId}") ?? [];
     }
 
     public async Task<ClientInvoiceTable?> GetClientInvoiceTableByClientAsync(string clientId, CancellationToken ct = default)
     {
         var url = $"/api/ClientInvoice/GetByClientId/{Uri.EscapeDataString(clientId)}?sortField=invoiceid&direction=desc&outstandingOnly=false&withCreditNotes=false";
-        return await GetAsync<ClientInvoiceTable>(url, ct);
+        return await GetAsync<ClientInvoiceTable>(url, ct, "/api/ClientInvoice/GetByClientId/{clientId}");
     }
 
     public async Task<List<InvoiceHeader>> GetUnpaidInvoicesByClientAsync(string clientId, CancellationToken ct = default)
     {
         var url = $"/api/ClientInvoice/UnpaidByClientID/{Uri.EscapeDataString(clientId)}";
-        return await GetAsync<List<InvoiceHeader>>(url, ct) ?? [];
+        return await GetAsync<List<InvoiceHeader>>(url, ct, "/api/ClientInvoice/UnpaidByClientID/{clientId}") ?? [];
     }
 
     // ───────────────────────── Accounting: Receipts ─────────────────────────
@@ -523,13 +533,15 @@ public class TimeProApiClient : ITimeProApiClient
 
     public async Task<ReceiptDetailResponse?> GetReceiptDetailAsync(int receiptId, CancellationToken ct = default)
     {
-        return await GetAsync<ReceiptDetailResponse>($"/api/Receipting/details/{receiptId}", ct);
+        return await GetAsync<ReceiptDetailResponse>($"/api/Receipting/details/{receiptId}", ct,
+            "/api/Receipting/details/{receiptId}");
     }
 
     public async Task<ClientOutstandingSummary?> GetClientOutstandingAsync(string clientId, CancellationToken ct = default)
     {
         return await GetAsync<ClientOutstandingSummary>(
-            $"/api/Receipting/ClientOutstanding/{Uri.EscapeDataString(clientId)}", ct);
+            $"/api/Receipting/ClientOutstanding/{Uri.EscapeDataString(clientId)}", ct,
+            "/api/Receipting/ClientOutstanding/{clientId}");
     }
 
     // ───────────────────────── Accounting: Credit Notes ─────────────────────────
@@ -537,7 +549,8 @@ public class TimeProApiClient : ITimeProApiClient
     public async Task<List<CreditNoteRow>> GetCreditNotesByClientAsync(string clientId, CancellationToken ct = default)
     {
         return await GetAsync<List<CreditNoteRow>>(
-            $"/api/creditnote/by-client/{Uri.EscapeDataString(clientId)}", ct) ?? [];
+            $"/api/creditnote/by-client/{Uri.EscapeDataString(clientId)}", ct,
+            "/api/creditnote/by-client/{clientId}") ?? [];
     }
 
     // ───────────────────────── Accounting: Products / SKUs ─────────────────────────
@@ -550,7 +563,8 @@ public class TimeProApiClient : ITimeProApiClient
 
     public async Task<ProductRow?> GetProductAsync(string productId, CancellationToken ct = default)
     {
-        return await GetAsync<ProductRow>($"/api/Product/{Uri.EscapeDataString(productId)}", ct);
+        return await GetAsync<ProductRow>($"/api/Product/{Uri.EscapeDataString(productId)}", ct,
+            "/api/Product/{productId}");
     }
 
     public async Task<List<ProductSkuRow>> ListAllSkusAsync(bool isPrepaid, CancellationToken ct = default)
@@ -562,7 +576,8 @@ public class TimeProApiClient : ITimeProApiClient
     public async Task<List<ProductDiscountRow>> GetProductDiscountsForClientAsync(string clientId, CancellationToken ct = default)
     {
         return await GetAsync<List<ProductDiscountRow>>(
-            $"/api/Product/GetDiscountsForClient/{Uri.EscapeDataString(clientId)}", ct) ?? [];
+            $"/api/Product/GetDiscountsForClient/{Uri.EscapeDataString(clientId)}", ct,
+            "/api/Product/GetDiscountsForClient/{clientId}") ?? [];
     }
 
     // ───────────────────────── Accounting: Rates / Outstanding / Unbilled ─────────────────────────
@@ -626,7 +641,8 @@ public class TimeProApiClient : ITimeProApiClient
 
     public async Task<RecurringInvoiceDetail?> GetRecurringInvoiceAsync(int invoiceId, CancellationToken ct = default)
     {
-        return await GetAsync<RecurringInvoiceDetail>($"/api/recurring/invoices/{invoiceId}", ct);
+        return await GetAsync<RecurringInvoiceDetail>($"/api/recurring/invoices/{invoiceId}", ct,
+            "/api/recurring/invoices/{invoiceId}");
     }
 
     // ───────────────────────── Accounting: Prepaid ─────────────────────────
@@ -753,7 +769,8 @@ public class TimeProApiClient : ITimeProApiClient
 
     // ───────────────────────── HTTP Helpers ─────────────────────────
 
-    private void ConfigureRequest(HttpRequestMessage request)
+    /// <summary>Returns the request id generated for this attempt.</summary>
+    private string ConfigureRequest(HttpRequestMessage request)
     {
         var tenant = _tenantProvider.GetCurrentTenant()
             ?? throw new InvalidOperationException(
@@ -764,25 +781,53 @@ public class TimeProApiClient : ITimeProApiClient
         request.Headers.TryAddWithoutValidation("x-timepro-tenant-id", tenant.TenantId);
         request.Headers.TryAddWithoutValidation("x-timepro-api-key", tenant.ApiKey);
         request.Headers.TryAddWithoutValidation("x-timepro-api-name", tenant.AppName);
+
+        var invocation = ClientContext.Current;
+        var requestId = Guid.NewGuid().ToString();
+
+        request.Headers.TryAddWithoutValidation("User-Agent", ClientHeaders.UserAgent(BuildInfo.Version));
+        request.Headers.TryAddWithoutValidation(
+            ClientHeaders.Surface, invocation?.Surface ?? ClientSurface.Cli);
+        request.Headers.TryAddWithoutValidation(
+            ClientHeaders.Command, invocation?.Command ?? CommandPathResolver.Unknown);
+        request.Headers.TryAddWithoutValidation(ClientHeaders.RequestId, requestId);
+
+        return requestId;
     }
 
-    private async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+    private async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request, string requestId, string? routeTemplate, CancellationToken ct)
     {
+        var method = request.Method.Method;
+        var route = RouteTemplate.Sanitize(routeTemplate, request.RequestUri);
+
         try
         {
-            return await _http.SendAsync(request, ct);
+            var response = await _http.SendAsync(request, ct);
+            RecordAttempt(ClientHeaders.ResolveRequestId(response, requestId), method, route, (int)response.StatusCode);
+            return response;
         }
         catch (HttpRequestException ex)
         {
-            throw ConnectionFailure(ex.Message, ex);
+            RecordAttempt(requestId, method, route, status: null);
+            throw ConnectionFailure(ex.Message, requestId, ex);
         }
         catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
         {
-            throw ConnectionFailure($"Request to {request.RequestUri} timed out", ex);
+            RecordAttempt(requestId, method, route, status: null);
+            throw ConnectionFailure($"Request to {request.RequestUri} timed out", requestId, ex);
         }
     }
 
-    private TimeProConnectionException ConnectionFailure(string message, Exception inner)
+    private static void RecordAttempt(string requestId, string method, string route, int? status)
+    {
+        ClientContext.Current?.Record(new RequestRecord(requestId, method, route, status));
+
+        if (ClientContext.Verbose)
+            Console.Error.WriteLine($"{method} {route} -> {status?.ToString() ?? "no response"} (request id: {requestId})");
+    }
+
+    private TimeProConnectionException ConnectionFailure(string message, string requestId, Exception inner)
     {
         var tenant = _tenantProvider.GetCurrentTenant();
         return new TimeProConnectionException(
@@ -790,27 +835,28 @@ public class TimeProApiClient : ITimeProApiClient
             tenant?.ConfigName,
             tenant?.TenantId,
             tenant?.ApiUrl ?? "unknown",
-            inner);
+            inner,
+            requestId);
     }
 
-    private async Task<T?> GetAsync<T>(string relativeUrl, CancellationToken ct)
+    private async Task<T?> GetAsync<T>(string relativeUrl, CancellationToken ct, string? routeTemplate = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, relativeUrl);
-        ConfigureRequest(request);
+        var requestId = ConfigureRequest(request);
 
-        using var response = await SendAsync(request, ct);
-        await EnsureSuccessAsync(response, ct);
+        using var response = await SendAsync(request, requestId, routeTemplate, ct);
+        await EnsureSuccessAsync(response, requestId, ct);
 
         return await response.Content.ReadFromJsonAsync<T>(ReadJsonOptions, ct);
     }
 
-    private async Task<T?> GetAsyncAllowEmptyBody<T>(string relativeUrl, CancellationToken ct)
+    private async Task<T?> GetAsyncAllowEmptyBody<T>(string relativeUrl, CancellationToken ct, string? routeTemplate = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, relativeUrl);
-        ConfigureRequest(request);
+        var requestId = ConfigureRequest(request);
 
-        using var response = await SendAsync(request, ct);
-        await EnsureSuccessAsync(response, ct);
+        using var response = await SendAsync(request, requestId, routeTemplate, ct);
+        await EnsureSuccessAsync(response, requestId, ct);
 
         var content = await response.Content.ReadAsStringAsync(ct);
         if (string.IsNullOrWhiteSpace(content))
@@ -819,27 +865,27 @@ public class TimeProApiClient : ITimeProApiClient
         return JsonSerializer.Deserialize<T>(content, ReadJsonOptions);
     }
 
-    private async Task<byte[]> GetBytesAsync(string relativeUrl, CancellationToken ct)
+    private async Task<byte[]> GetBytesAsync(string relativeUrl, CancellationToken ct, string? routeTemplate = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, relativeUrl);
-        ConfigureRequest(request);
+        var requestId = ConfigureRequest(request);
 
-        using var response = await SendAsync(request, ct);
-        await EnsureSuccessAsync(response, ct);
+        using var response = await SendAsync(request, requestId, routeTemplate, ct);
+        await EnsureSuccessAsync(response, requestId, ct);
 
         return await response.Content.ReadAsByteArrayAsync(ct);
     }
 
-    private async Task<T?> PostAsync<T>(string relativeUrl, object body, CancellationToken ct)
+    private async Task<T?> PostAsync<T>(string relativeUrl, object body, CancellationToken ct, string? routeTemplate = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, relativeUrl)
         {
             Content = JsonContent.Create(body, options: WriteJsonOptions)
         };
-        ConfigureRequest(request);
+        var requestId = ConfigureRequest(request);
 
-        using var response = await SendAsync(request, ct);
-        await EnsureSuccessAsync(response, ct);
+        using var response = await SendAsync(request, requestId, routeTemplate, ct);
+        await EnsureSuccessAsync(response, requestId, ct);
 
         // Some endpoints return empty body on success (e.g. SaveTimesheet)
         var content = await response.Content.ReadAsStringAsync(ct);
@@ -853,16 +899,16 @@ public class TimeProApiClient : ITimeProApiClient
     /// POSTs a body verbatim under an explicit content type, for endpoints that read the raw
     /// request stream rather than a JSON payload (currently the Xero leave balance CSV import).
     /// </summary>
-    private async Task<T?> PostRawAsync<T>(string relativeUrl, string content, string contentType, CancellationToken ct)
+    private async Task<T?> PostRawAsync<T>(string relativeUrl, string content, string contentType, CancellationToken ct, string? routeTemplate = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, relativeUrl)
         {
             Content = new StringContent(content, Encoding.UTF8, contentType)
         };
-        ConfigureRequest(request);
+        var requestId = ConfigureRequest(request);
 
-        using var response = await SendAsync(request, ct);
-        await EnsureSuccessAsync(response, ct);
+        using var response = await SendAsync(request, requestId, routeTemplate, ct);
+        await EnsureSuccessAsync(response, requestId, ct);
 
         var body = await response.Content.ReadAsStringAsync(ct);
         if (string.IsNullOrWhiteSpace(body))
@@ -871,28 +917,29 @@ public class TimeProApiClient : ITimeProApiClient
         return JsonSerializer.Deserialize<T>(body, ReadJsonOptions);
     }
 
-    private async Task PutAsync(string relativeUrl, object body, CancellationToken ct)
+    private async Task PutAsync(string relativeUrl, object body, CancellationToken ct, string? routeTemplate = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Put, relativeUrl)
         {
             Content = JsonContent.Create(body, options: WriteJsonOptions)
         };
-        ConfigureRequest(request);
+        var requestId = ConfigureRequest(request);
 
-        using var response = await SendAsync(request, ct);
-        await EnsureSuccessAsync(response, ct);
+        using var response = await SendAsync(request, requestId, routeTemplate, ct);
+        await EnsureSuccessAsync(response, requestId, ct);
     }
 
-    private async Task DeleteAsync(string relativeUrl, CancellationToken ct)
+    private async Task DeleteAsync(string relativeUrl, CancellationToken ct, string? routeTemplate = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Delete, relativeUrl);
-        ConfigureRequest(request);
+        var requestId = ConfigureRequest(request);
 
-        using var response = await SendAsync(request, ct);
-        await EnsureSuccessAsync(response, ct);
+        using var response = await SendAsync(request, requestId, routeTemplate, ct);
+        await EnsureSuccessAsync(response, requestId, ct);
     }
 
-    private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken ct)
+    private static async Task EnsureSuccessAsync(
+        HttpResponseMessage response, string requestId, CancellationToken ct)
     {
         if (response.IsSuccessStatusCode)
             return;
@@ -901,6 +948,7 @@ public class TimeProApiClient : ITimeProApiClient
         throw new ApiException(
             (int)response.StatusCode,
             $"TimePro API returned {(int)response.StatusCode} {response.ReasonPhrase}",
-            body);
+            body,
+            ClientHeaders.ResolveRequestId(response, requestId));
     }
 }

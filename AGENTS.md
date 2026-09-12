@@ -28,6 +28,25 @@ Each command is a class inheriting `AsyncCommand<TSettings>` from Spectre.Consol
 - All methods are async and accept `CancellationToken`
 - API URL comes from active tenant config
 
+`ConfigureRequest` also sends the client-identity headers (`User-Agent: timepro-cli/<version>`,
+`x-timepro-client-surface`, `x-timepro-client-command`, and a fresh `x-timepro-client-request-id`
+per attempt) and returns that id; `SendAsync` records the attempt and `EnsureSuccessAsync` puts the
+effective id (server echo preferred) on `ApiException.RequestId`, which surfaces as `requestId` in
+the JSON error envelope and a trailing `request id:` line on stderr. The command name comes from
+`ClientContext`, an AsyncLocal set once in `Program.cs` from `CommandPathResolver` and per MCP tool
+call by `McpInvocationFilter` — AsyncLocal because MCP tool calls overlap, and whitelisted because
+the tool name comes from the client and becomes a header value.
+
+**Any client call whose path carries an identifier must pass its own `routeTemplate`** (the last
+argument on the HTTP helpers, e.g. `"/api/employees/{empId}"`). The route is never inferred from the
+finished URL: employee, client and project ids are ordinary strings (`BOB`, `NWIND`) that no
+value-shape rule can tell from a path literal. `RouteRedactionTests` drives every such call and
+fails if the value reaches the route, so a new parameterised endpoint goes in both places.
+
+Each finished invocation appends a line to the local JSONL log via `CommandLog`; it must never carry
+arguments, bodies, keys or employee ids, and no diagnostic step — config read included — may fail
+the command. `--verbose` is stripped from argv like `--tenant` and prints to stderr only.
+
 ### Configuration
 - Global config: `~/.config/timepro-cli/config.json`
 - Per-tenant: `~/.config/timepro-cli/tenants/{id}.json`

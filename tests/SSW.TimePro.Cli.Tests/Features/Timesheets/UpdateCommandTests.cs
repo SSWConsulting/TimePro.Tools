@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -207,10 +208,163 @@ public class UpdateCommandTests
             Arg.Any<CancellationToken>());
     }
 
+
+    [Fact]
+    public async Task Update_WhenIterationNameIsGiven_ResolvesItAgainstTheProject()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureExistingTimesheet(api, lessHours: 1, iterationId: 3402);
+        api.GetIterationsAsync("1I776Q", Arg.Any<CancellationToken>())
+            .Returns([
+                new IterationItem { IterationId = 3402, IterationName = "Checkout API" },
+                new IterationItem { IterationId = 3403, IterationName = "Order history" }
+            ]);
+        TimesheetRequest? request = null;
+        api.UpdateTimesheetAsync(
+                Arg.Do<TimesheetRequest>(value => request = value),
+                Arg.Any<CancellationToken>())
+            .Returns(new TimesheetResponse { Success = true });
+        var app = CreateApp(api);
+
+        var exitCode = await app.RunAsync([
+            "update",
+            "42",
+            "--date", "2026-03-16",
+            "--iteration", "Order history",
+            "--json"
+        ], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(0);
+        request.Should().NotBeNull();
+        request!.IterationId.Should().Be(3403);
+        request.Note.Should().Be("Product search");
+        request.CategoryId.Should().Be("WEBDEV");
+    }
+
+    [Fact]
+    public async Task Update_WhenIterationIdIsGiven_UsesIt()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureExistingTimesheet(api, lessHours: 1, iterationId: 3402);
+        api.GetIterationsAsync("1I776Q", Arg.Any<CancellationToken>())
+            .Returns([
+                new IterationItem { IterationId = 3402, IterationName = "Checkout API" },
+                new IterationItem { IterationId = 3403, IterationName = "Order history" }
+            ]);
+        TimesheetRequest? request = null;
+        api.UpdateTimesheetAsync(
+                Arg.Do<TimesheetRequest>(value => request = value),
+                Arg.Any<CancellationToken>())
+            .Returns(new TimesheetResponse { Success = true });
+        var app = CreateApp(api);
+
+        var exitCode = await app.RunAsync([
+            "update",
+            "42",
+            "--date", "2026-03-16",
+            "--iteration", "3403",
+            "--json"
+        ], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(0);
+        request!.IterationId.Should().Be(3403);
+    }
+
+    [Fact]
+    public async Task Update_WhenRequestedIterationIsUnknown_ListsTheAvailableOnesWithoutUpdating()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureExistingTimesheet(api, lessHours: 1, iterationId: 3402);
+        var app = CreateApp(api);
+
+        var output = await CaptureStdoutAsync(() => app.RunAsync([
+            "update",
+            "42",
+            "--date", "2026-03-16",
+            "--iteration", "Sprint 99",
+            "--json"
+        ], TestContext.Current.CancellationToken));
+
+        output.ExitCode.Should().Be(1);
+        await api.DidNotReceive().UpdateTimesheetAsync(
+            Arg.Any<TimesheetRequest>(),
+            Arg.Any<CancellationToken>());
+        using var doc = JsonDocument.Parse(output.Stdout);
+        doc.RootElement.GetProperty("error").GetProperty("message").GetString()
+            .Should().Contain("Checkout API (3402)");
+    }
+
+    [Fact]
+    public async Task Update_WhenEntryIsSuggested_FailsLocallyWithoutCallingSave()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureExistingTimesheet(api, lessHours: 1, iterationId: 3402, isSuggested: true);
+        var app = CreateApp(api);
+
+        var output = await CaptureStdoutAsync(() => app.RunAsync([
+            "update",
+            "42",
+            "--date", "2026-03-16",
+            "--description", "Updated product search",
+            "--json"
+        ], TestContext.Current.CancellationToken));
+
+        output.ExitCode.Should().Be(1);
+        await api.DidNotReceive().UpdateTimesheetAsync(
+            Arg.Any<TimesheetRequest>(),
+            Arg.Any<CancellationToken>());
+        using var doc = JsonDocument.Parse(output.Stdout);
+        doc.RootElement.GetProperty("error").GetProperty("message").GetString()
+            .Should().Be("Timesheet 42 is a suggestion and cannot be updated. Accept it first: tp ts accept 42");
+    }
+
+    [Fact]
+    public async Task Update_WhenJson_ReturnsTheSavedEntryInsteadOfNull()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureExistingTimesheet(api, lessHours: 1, iterationId: 3402);
+        api.UpdateTimesheetAsync(Arg.Any<TimesheetRequest>(), Arg.Any<CancellationToken>())
+            .Returns((TimesheetResponse?)null);
+        var app = CreateApp(api);
+
+        var output = await CaptureStdoutAsync(() => app.RunAsync([
+            "update",
+            "42",
+            "--date", "2026-03-16",
+            "--description", "Updated product search",
+            "--json"
+        ], TestContext.Current.CancellationToken));
+
+        output.ExitCode.Should().Be(0);
+        output.Stdout.Trim().Should().NotBe("null");
+        using var doc = JsonDocument.Parse(output.Stdout);
+        doc.RootElement.GetProperty("success").GetBoolean().Should().BeTrue();
+        doc.RootElement.GetProperty("timesheetId").GetInt32().Should().Be(42);
+        doc.RootElement.GetProperty("timesheet").GetProperty("timeId").GetInt32().Should().Be(42);
+        doc.RootElement.GetProperty("timesheet").GetProperty("projectId").GetString().Should().Be("1I776Q");
+    }
+
+    internal static async Task<(int ExitCode, string Stdout)> CaptureStdoutAsync(Func<Task<int>> action)
+    {
+        var original = Console.Out;
+        var writer = new StringWriter();
+        try
+        {
+            Console.SetOut(writer);
+            var exitCode = await action();
+            return (exitCode, writer.ToString());
+        }
+        finally
+        {
+            Console.SetOut(original);
+        }
+    }
+
     private static void ConfigureExistingTimesheet(
         ITimeProApiClient api,
         decimal lessHours,
-        int? iterationId = null)
+        int? iterationId = null,
+        bool isSuggested = false)
     {
         api.GetTimesheetsAsync(
                 "TST",
@@ -231,6 +385,7 @@ public class UpdateCommandTests
                     StartTime = "2026-03-16T09:00:00",
                     EndTime = "2026-03-16T18:00:00",
                     BillableId = "B",
+                    IsSuggested = isSuggested,
                     Less = lessHours
                 }
             ]);
@@ -263,6 +418,7 @@ public class UpdateCommandTests
         var services = new ServiceCollection();
         services.AddSingleton(api);
         services.AddSingleton(config);
+        services.AddSingleton<TimesheetUpdateService>();
 
         var app = new CommandApp(new TypeRegistrar(services));
         app.Configure(configurator =>

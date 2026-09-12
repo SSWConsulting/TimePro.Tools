@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using SSW.TimePro.Cli.Features.Leave;
 using SSW.TimePro.Cli.Features.Mcp.Tools;
+using SSW.TimePro.Cli.Features.Timesheets;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using Spectre.Console.Cli;
@@ -40,6 +41,8 @@ public class McpHostCommand : AsyncCommand<McpHostCommand.Settings>
         builder.Services.AddSingleton<LeaveCreateService>();
         builder.Services.AddSingleton<LeaveUpdateService>();
         builder.Services.AddSingleton<LeaveBalanceImportService>();
+        builder.Services.AddSingleton<TimesheetUpdateService>();
+        builder.Services.AddSingleton<TimesheetAcceptService>();
 
         var mcpServer = builder.Services
             .AddMcpServer()

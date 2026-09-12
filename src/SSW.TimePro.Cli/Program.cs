@@ -81,6 +81,7 @@ services.AddSingleton<SSW.TimePro.Cli.Features.Leave.LeaveListService>();
 services.AddSingleton<SSW.TimePro.Cli.Features.Leave.LeaveCreateService>();
 services.AddSingleton<SSW.TimePro.Cli.Features.Leave.LeaveUpdateService>();
 services.AddSingleton<SSW.TimePro.Cli.Features.Leave.LeaveBalanceImportService>();
+services.AddSingleton<TimesheetCreateService>();
 services.AddSingleton<TimesheetUpdateService>();
 services.AddSingleton<TimesheetAcceptService>();
 

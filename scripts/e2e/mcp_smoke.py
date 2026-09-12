@@ -311,7 +311,7 @@ def run_smoke(process, state):
     # The write goes through MCP on purpose, so a create tool the server rejects keeps this gate
     # red instead of being routed around.
     state["createAttempted"] = True
-    call_tool(
+    create_result = call_tool(
         process,
         "create_timesheet",
         {
@@ -334,6 +334,11 @@ def run_smoke(process, state):
 
     created = matches[0]
     created_id = created["timeId"]
+    reported_id = create_result.get("timesheetId") if isinstance(create_result, dict) else None
+    if reported_id not in (None, created_id):
+        raise SmokeFailure(
+            f"create_timesheet reported id {reported_id} but the row read back is {created_id}"
+        )
     for field, expected in (("clientId", CLIENT_ID), ("projectId", project_id), ("date", date)):
         if created.get(field) != expected:
             raise SmokeFailure(

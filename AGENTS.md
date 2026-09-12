@@ -165,24 +165,36 @@ git config --local hook.nuget-audit.command scripts/security/nuget-audit.sh
 git hook list pre-push
 ```
 
-## Documentation & Examples
+## Privacy, Documentation & Examples
 
-**⚠️ Never use real client, project, or repo names in documentation, READMEs, example commands, skill files, tests, or commit messages.** The only fictional placeholder allowed in this repo is **Northwind** (the canonical sample dataset).
+This is a **public repository**. Anything you write to it or to GitHub is visible to the world.
 
-Examples of what **not** to write:
-- Real client IDs or names (e.g. any actual SSW customer)
-- Real GitHub owner/repo slugs for customer work
-- Real PR or issue titles scraped from live projects
-- Real project codes from the TimePro system
+**Never put private or identifying information into anything that leaves this machine without the user's explicit permission for that specific item.** That covers commits, commit messages, branch names, GitHub issues, PRs, PR descriptions and comments, release notes, docs, READMEs, tests, fixtures, skill files, example output blocks, and anything emitted by `tp skills create`.
 
-Use these placeholders instead:
+Private or identifying information includes:
+- Real client IDs or names (any actual SSW customer)
+- Real employee IDs, names, or emails, including the user's own
+- Real project codes, timesheet IDs, invoice IDs, or leave request IDs from TimePro
+- Real GitHub owner/repo slugs, PR or issue titles from customer work
+- Tenant config contents, API keys, hostnames of internal or local servers
+- The names of local scripts, skills, or agent tooling used during the work
+
+If real data is genuinely needed to explain a change, ask first. Do not assume permission carries over from one item to the next.
+
+### Placeholders
+
+Use the **Northwind** dataset. A Northwind test client exists in TimePro, so examples can be real runs against it.
+
 - Client: `NWIND` / `"Northwind Traders"`
-- Project ID: `1I776Q` (arbitrary placeholder, not a real TimePro ID)
+- Project ID: `1I776Q` (`"Northwind Traders"`)
+- User: `Bob Northwind`, employee ID `BOB`, email `bob@northwind.example`
 - GitHub repo: `Northwind/traders-app`, `Northwind/traders-mobile`
-- PR/issue numbers: `#42`, `#108`, `#142` — any small integers are fine
-- Example descriptions: "Product search", "Checkout API", "Order history", etc.
+- PR/issue numbers: `#42`, `#108`, `#142`, any small integers
+- Example descriptions: "Product search", "Checkout API", "Order history"
 
-This rule applies to anything under version control, anything emitted by `tp skills create`, and anything in example output blocks. When updating docs, grep the working tree for anything that looks like a real customer name, a real-world repo slug, or internal-only project codes before committing. If in doubt, replace with a Northwind variant.
+SSW itself and this repo are acceptable secondary examples when a Northwind example does not make sense (for example, the `ssw` tenant name in login instructions).
+
+Before committing or opening an issue or PR, grep the change for anything that looks like a real customer name, a real employee ID, a real-world repo slug, or an internal project code. If in doubt, replace it with a Northwind variant.
 
 ## Diagnostic Guides
 

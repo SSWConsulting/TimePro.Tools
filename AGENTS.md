@@ -81,7 +81,20 @@ Run `tp --help` for full command list. Key commands:
 
 ### Leave-aware `tp ts check`
 
-`ts check` merges approved leave + public holidays into weekly coverage. A full-day leave day is `covered` (never an error); a partial-day leave only expects the remaining hours. The `--json` output gives per-day `covered` / `coverReason` (`logged`, `leave-full`, `leave-partial`, `holiday`, `missing`), `leaveHours` / `leaveType`, and a top-level `allCovered`. Fetch/merge logic lives in the shared `WeekCoverageService`; the rules are in the pure, unit-tested `CheckEvaluator`. Exit code 1 when errors are found (CI-friendly).
+`ts check` merges approved leave + public holidays into weekly coverage. A full-day leave day is `covered` (never an error); a partial-day leave only expects the remaining hours. The `--json` output gives per-day `covered` / `coverReason` (`logged`, `leave-full`, `leave-partial`, `holiday`, `missing`), `leaveHours` / `leaveType`, and a top-level `allCovered`, plus a top-level `pendingSuggestions`. Fetch/merge logic lives in the shared `WeekCoverageService`; the rules — including the closing summary line — are in the pure, unit-tested `CheckEvaluator`. Exit code 1 when errors are found (CI-friendly).
+
+Unaccepted suggested timesheets never reduce coverage, so the summary states them alongside it (`All days covered; 3 suggestions still need accepting`) instead of contradicting it, and exit stays 0. `--strict` makes pending suggestions a failure (exit 1 on both the human and `--json` paths). It gates
+suggestions only — on the `--json` path a week with coverage gaps is still data, not a process failure,
+so errors alone keep exit 0 there.
+
+### Timesheet export scope
+
+`/Export/ExportTimesheetsToCSV` takes only a date range, so it always returns every employee.
+`ts export` therefore scopes the returned file client-side through `TimesheetCsvScoper`: it finds the
+`EmpID` column by header name, keeps the logged-in employee's rows by default (`--emp-id` for another,
+`--all` for the raw export, warned on stderr), and falls back to the raw export with a warning when
+the header has no `EmpID`. The real export quotes fields containing commas and newlines, so the
+scoper is RFC 4180-aware — splitting on lines would corrupt the file.
 
 ### Timesheet writes
 

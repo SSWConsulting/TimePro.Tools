@@ -200,7 +200,7 @@ public class TimesheetMcpTools
     }
 
     [McpServerTool]
-    [Description("Validate a week of timesheets for gaps and issues (leave-aware). Returns per-day coverage with hours, leave, issues, plus allCovered. week: 0=this week (default), -1=last week. The single most useful tool for confirming a week is complete before submitting.")]
+    [Description("Validate a week of timesheets for gaps and issues (leave-aware). Returns per-day coverage with hours, leave, issues, plus allCovered and pendingSuggestions. week: 0=this week (default), -1=last week. The single most useful tool for confirming a week is complete before submitting.")]
     public async Task<string> CheckWeek(
         [Description("Week offset. 0=this week (default), -1=last week.")] int week = 0,
         [Description("empId to check. Defaults to the current user's empId.")] string? empId = null,
@@ -225,6 +225,7 @@ public class TimesheetMcpTools
             warnings = coverage.Warnings,
             infos = coverage.Infos,
             allCovered = coverage.AllCovered,
+            pendingSuggestions = CheckEvaluator.CountPendingSuggestions(coverage.Days),
             days = coverage.Days.Select(check => new
             {
                 date = check.Date.ToString("yyyy-MM-dd"),

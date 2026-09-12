@@ -28,6 +28,10 @@ public class CheckCommand : AsyncCommand<CheckCommand.Settings>
         [CommandOption("--emp-id|--employee-id|--employee <EMP_ID>")]
         [Description("empId. Defaults to the current user")]
         public string? EmpId { get; set; }
+
+        [CommandOption("--strict")]
+        [Description("Treat unaccepted suggested timesheets as errors (exit 1)")]
+        public bool Strict { get; set; }
     }
 
     public CheckCommand(ITimeProApiClient api, IConfigService config)
@@ -76,6 +80,9 @@ public class CheckCommand : AsyncCommand<CheckCommand.Settings>
                 Issues = check.Issues.Select(i => new IssueJson(i.Severity, i.Message)).ToList()
             }).ToList();
 
+            var pendingSuggestions = CheckEvaluator.CountPendingSuggestions(dayChecks);
+            var summary = CheckEvaluator.Summarize(errors, warnings, infos, pendingSuggestions, allCovered, settings.Strict);
+
             var result = new
             {
                 empId,
@@ -85,6 +92,7 @@ public class CheckCommand : AsyncCommand<CheckCommand.Settings>
                 warnings,
                 infos,
                 allCovered,
+                pendingSuggestions,
                 days = dayResults
             };
 
@@ -132,17 +140,18 @@ public class CheckCommand : AsyncCommand<CheckCommand.Settings>
 
                 AnsiConsole.Write(new Rule().RuleStyle("dim"));
 
-                if (errors == 0 && warnings == 0)
-                    OutputHelper.WriteSuccess(allCovered ? "All clear — every day covered" : "All clear — no issues found");
+                if (summary.Severity == "success")
+                    OutputHelper.WriteSuccess(summary.Message);
                 else
-                    AnsiConsole.MarkupLine($" [red]{errors} error(s)[/], [yellow]{warnings} warning(s)[/], [dim]{infos} info(s)[/]");
+                    AnsiConsole.MarkupLine($" [{(summary.Severity == "error" ? "red" : "yellow")}]{Markup.Escape(summary.Message)}[/]");
 
                 AnsiConsole.WriteLine();
             });
 
             // --json mode: the check ran fine, so a week with gaps is data (errors/allCovered
-            // in the payload), not a process failure. Human mode keeps non-zero for shell gating.
-            return settings.Json ? 0 : (errors > 0 ? 1 : 0);
+            // in the payload), not a process failure. Human mode keeps non-zero for shell gating,
+            // and --strict gates on both paths because it was asked for explicitly.
+            return settings.Json ? (summary.StrictFailure ? 1 : 0) : (summary.Failed ? 1 : 0);
         }
         catch (ApiException ex)
         {

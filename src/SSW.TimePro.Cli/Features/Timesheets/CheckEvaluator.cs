@@ -30,6 +30,9 @@ public static class CheckEvaluator
 
     public sealed record Issue(string Severity, string Message);
 
+    /// <summary>The closing summary line, its severity, and whether the week should fail a caller.</summary>
+    public sealed record WeekSummary(string Severity, string Message, bool Failed, bool StrictFailure);
+
     public sealed record DayCheck(
         DateOnly Date,
         decimal TotalHours,
@@ -194,6 +197,43 @@ public static class CheckEvaluator
             covered,
             coverReason,
             issues);
+    }
+
+    public static int CountPendingSuggestions(IEnumerable<DayCheck> days) => days.Sum(d => d.SuggestedCount);
+
+    /// <summary>
+    /// Compose the closing line. Pending suggestions never reduce coverage, so they are stated
+    /// alongside it rather than contradicting it — and only <paramref name="strict"/> makes them fail.
+    /// </summary>
+    public static WeekSummary Summarize(
+        int errors, int warnings, int infos, int pendingSuggestions, bool allCovered, bool strict)
+    {
+        var suggestions = pendingSuggestions switch
+        {
+            <= 0 => null,
+            1 => "1 suggestion still needs accepting",
+            _ => $"{pendingSuggestions} suggestions still need accepting"
+        };
+
+        var strictFailure = strict && pendingSuggestions > 0;
+        var failed = errors > 0 || strictFailure;
+
+        if (errors == 0 && warnings == 0)
+        {
+            var message = suggestions is null
+                ? (allCovered ? "All clear — every day covered" : "All clear — no issues found")
+                : $"{(allCovered ? "All days covered" : "No issues found")}; {suggestions}";
+
+            var severity = strictFailure ? "error" : suggestions is null ? "success" : "warning";
+            return new WeekSummary(severity, message, failed, strictFailure);
+        }
+
+        var counts = $"{errors} error(s), {warnings} warning(s), {infos} info(s)";
+        return new WeekSummary(
+            failed ? "error" : "warning",
+            suggestions is null ? counts : $"{counts}; {suggestions}",
+            failed,
+            strictFailure);
     }
 
     private static DateOnly? ParseDate(string? value)

@@ -2,10 +2,11 @@ using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
+using SSW.TimePro.Cli.Features.Rates;
 using SSW.TimePro.Cli.Features.Timesheets;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
-using SSW.TimePro.Cli.Shared;
+using SSW.TimePro.Cli.Infrastructure.Output;
 using SSW.TimePro.Cli.Shared.Models;
 
 namespace SSW.TimePro.Cli.Features.Mcp.Tools;
@@ -15,6 +16,7 @@ public class TimesheetMcpTools
 {
     private readonly ITimeProApiClient _api;
     private readonly IConfigService _config;
+    private readonly TimesheetCreateService _creates;
     private readonly TimesheetUpdateService _updates;
     private readonly TimesheetAcceptService _accepts;
 
@@ -28,11 +30,13 @@ public class TimesheetMcpTools
     public TimesheetMcpTools(
         ITimeProApiClient api,
         IConfigService config,
+        TimesheetCreateService creates,
         TimesheetUpdateService updates,
         TimesheetAcceptService accepts)
     {
         _api = api;
         _config = config;
+        _creates = creates;
         _updates = updates;
         _accepts = accepts;
     }
@@ -96,37 +100,49 @@ public class TimesheetMcpTools
         if (tenant?.EmployeeId is null)
             return """{"error": "Not logged in"}""";
 
-        // Resolve location from WFH defaults if not specified
-        if (string.IsNullOrEmpty(location))
+        try
         {
-            var global = _config.LoadGlobalConfig();
-            var dateOnly = DateOnly.ParseExact(date, "yyyy-MM-dd");
-            var dayName = dateOnly.DayOfWeek.ToString();
-            location = global.WfhDays.Contains(dayName, StringComparer.OrdinalIgnoreCase)
-                ? "Home" : LocationResolver.Resolve(global.DefaultLocation);
-        }
-        else
-        {
-            location = LocationResolver.Resolve(location);
-        }
+            var prepared = await _creates.PrepareAsync(
+                tenant.EmployeeId,
+                new TimesheetCreateOptions(
+                    ClientId: clientId,
+                    ProjectId: projectId,
+                    Date: date,
+                    Start: startTime,
+                    End: endTime,
+                    Description: description,
+                    Location: location,
+                    Category: categoryId,
+                    IterationId: iterationId,
+                    Billable: billableId),
+                ct);
 
-        var request = new TimesheetRequest
-        {
-            EmpId = tenant.EmployeeId,
-            ClientId = clientId,
-            ProjectId = projectId,
-            IterationId = iterationId,
-            DateCreated = date,
-            TimeStart = $"{date}T{startTime}:00",
-            TimeEnd = $"{date}T{endTime}:00",
-            Note = description,
-            LocationId = location,
-            CategoryId = categoryId,
-            BillableId = billableId
-        };
+            // Creating a rate is a deliberate act with its own approval, so the agent is told how
+            // to set one rather than having one written on its behalf.
+            if (prepared.NoActiveRate)
+                return NoActiveRateError(clientId);
 
-        var response = await _api.CreateTimesheetAsync(request, ct);
-        return JsonSerializer.Serialize(response, JsonOpts);
+            var result = await _creates.ApplyAsync(prepared.Plan!, ct);
+
+            // Serialised with the CLI's options so both surfaces answer with the same document.
+            return OutputHelper.SerializeJson(result);
+        }
+        catch (TimesheetValidationException ex)
+        {
+            return JsonSerializer.Serialize(new { error = ex.Message }, JsonOpts);
+        }
+    }
+
+    private static string NoActiveRateError(string clientId)
+    {
+        var steps = RateResolver.BuildRecoveryOptions(clientId, new RateRecommendation(0m, 0m, RateSource.None));
+
+        return JsonSerializer.Serialize(new
+        {
+            error = $"No active rate for client '{clientId}' (expired or not set), so TimePro cannot price the entry. "
+                  + "Set a rate using the recovery command below, then retry.",
+            recovery = new { reason = "no_active_rate", clientId, steps }
+        }, JsonOpts);
     }
 
     [McpServerTool]

@@ -191,10 +191,38 @@ public static class McpCliParityTable
             ExpectParity = true
         },
 
+        new("CreateTimesheet", "ts create")
+        {
+            CliArgs = ["ts", "create", "--client", NorthwindApi.ClientId, "--project", NorthwindApi.ProjectId,
+                       "--date", Date, "--description", "Product search", "--iteration", "3402",
+                       "--yes", "--json"],
+            InvokeTool = (h, ct) => h.Timesheets.CreateTimesheet(
+                NorthwindApi.ClientId, NorthwindApi.ProjectId, Date,
+                description: "Product search", iterationId: 3402, ct: ct),
+            ExpectParity = true,
+            ExpectedRequests =
+            [
+                new("GET", "/api/Timesheets/GetClientRate"),
+                new("POST", "/api/Timesheets/SaveTimesheet")
+                {
+                    BodyContains =
+                    [
+                        "\"sellPrice\":175",
+                        "\"categoryID\":\"WEBDEV\"",
+                        "\"locationID\":\"SSW\"",
+                        "\"iterationID\":3402",
+                        "\"billableID\":\"B\"",
+                        "\"timeStart\":\"2026-03-16T09:00:00\"",
+                        "\"salesTaxPct\":0.1"
+                    ]
+                }
+            ],
+            ForbiddenRequests = [new("POST", "/api/Timesheets/SaveClientRate")]
+        },
+
         // ───────── Not unified yet: declared so a later slice flips the flag ─────────
 
         new("GetTimesheets", "ts get") { Note = "MCP reshapes the row; CLI returns the API shape." },
-        new("CreateTimesheet", "ts create") { Note = "No shared create orchestration yet (#57)." },
         new("ListIterations", "iteration list") { Note = "Separate projections." },
         new("GetSuggestedTimesheets", "ts suggest") { Note = "Separate projections." },
         new("SearchClients", "client search") { Note = "Separate projections." },

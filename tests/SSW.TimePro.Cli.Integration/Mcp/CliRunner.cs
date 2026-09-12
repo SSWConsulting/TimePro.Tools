@@ -29,6 +29,7 @@ public static class CliRunner
         services.AddSingleton<LeaveCreateService>();
         services.AddSingleton<LeaveUpdateService>();
         services.AddSingleton<LeaveBalanceImportService>();
+        services.AddSingleton<TimesheetCreateService>();
         services.AddSingleton<TimesheetUpdateService>();
         services.AddSingleton<TimesheetAcceptService>();
 

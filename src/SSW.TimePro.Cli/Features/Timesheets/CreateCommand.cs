@@ -1,10 +1,8 @@
 using System.ComponentModel;
-using System.Globalization;
 using SSW.TimePro.Cli.Features.Rates;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using SSW.TimePro.Cli.Infrastructure.Output;
-using SSW.TimePro.Cli.Shared;
 using SSW.TimePro.Cli.Shared.Models;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -16,6 +14,7 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
 {
     private readonly ITimeProApiClient _api;
     private readonly IConfigService _config;
+    private readonly TimesheetCreateService _creates;
 
     public class Settings : CommandSettings
     {
@@ -76,10 +75,11 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
         public bool Json { get; set; }
     }
 
-    public CreateCommand(ITimeProApiClient api, IConfigService config)
+    public CreateCommand(ITimeProApiClient api, IConfigService config, TimesheetCreateService creates)
     {
         _api = api;
         _config = config;
+        _creates = creates;
     }
 
     protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
@@ -97,12 +97,6 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
             return 1;
         }
 
-        var date = settings.Date is not null
-            ? DateOnly.ParseExact(settings.Date, "yyyy-MM-dd", CultureInfo.InvariantCulture)
-            : DateOnly.FromDateTime(DateTime.Today);
-
-        var startTime = settings.Start ?? "09:00";
-        var endTime = settings.End ?? "17:00";
         if (!LessOption.TryParse(settings.Less, out var lessMinutes, out var lessError))
         {
             if (settings.Json)
@@ -112,100 +106,48 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
             return 1;
         }
 
-        var lessMins = lessMinutes ?? 0;
-
-        // Resolve location from WFH defaults if not specified
-        var location = settings.Location;
-        if (string.IsNullOrEmpty(location))
-        {
-            var global = _config.LoadGlobalConfig();
-            var dayName = date.DayOfWeek.ToString();
-            location = global.WfhDays.Contains(dayName, StringComparer.OrdinalIgnoreCase)
-                ? "Home"
-                : global.DefaultLocation;
-        }
-
-        location = LocationResolver.Resolve(location ?? "SSW");
-
-        var billableId = settings.Billable ?? "B";
+        var options = new TimesheetCreateOptions(
+            ClientId: settings.ClientId,
+            ProjectId: settings.ProjectId,
+            Date: settings.Date,
+            Start: settings.Start,
+            End: settings.End,
+            Description: settings.Description,
+            Location: settings.Location,
+            Category: settings.Category,
+            IterationId: settings.Iteration,
+            Billable: settings.Billable,
+            Less: lessMinutes);
 
         try
         {
-            // Resolve the sell price from the client rate. When no active rate exists the API rejects
-            // the timesheet (it can't derive a sell price), so offer to set one before continuing.
-            var rate = await _api.GetClientRateAsync(
-                tenant.EmployeeId, settings.ClientId, date, CancellationToken.None);
+            var prepared = await _creates.PrepareAsync(tenant.EmployeeId, options, cancellationToken);
 
-            var rateActive = rate?.Rate is not null
-                && (string.IsNullOrEmpty(rate.ExpiryDate) || RateResolver.IsActive(DateTime.Parse(rate.ExpiryDate), date));
-
-            decimal? sellPrice;
-            if (rateActive)
+            if (prepared.NoActiveRate)
             {
-                sellPrice = RateResolver.SellPriceFor(billableId, rate!.Rate ?? 0m, rate.PrepaidRate ?? 0m);
-            }
-            else
-            {
-                sellPrice = await ResolveMissingRateAsync(
-                    tenant.EmployeeId, settings.ClientId, billableId,
+                var sellPrice = await ResolveMissingRateAsync(
+                    tenant.EmployeeId, settings.ClientId, settings.Billable ?? "B",
                     settings.Yes, settings.Json, settings.RejectIfRateExpired, cancellationToken);
                 if (sellPrice is null)
                     return 1; // rejected, user cancelled, or non-interactive with no rate set
+
+                prepared = await _creates.PrepareAsync(
+                    tenant.EmployeeId, options with { SellPrice = sellPrice }, cancellationToken);
             }
 
-            // Auto-resolve category when not explicitly specified
-            var categoryId = settings.Category
-                ?? ResolveCategoryFromRepoMapping(settings.ClientId, settings.ProjectId)
-                ?? await ResolveCategoryFromRecentTimesheets(
-                    tenant.EmployeeId, settings.ClientId, settings.ProjectId, date);
+            var plan = prepared.Plan!;
 
-            var request = new TimesheetRequest
-            {
-                EmpId = tenant.EmployeeId,
-                ClientId = settings.ClientId,
-                ProjectId = settings.ProjectId,
-                IterationId = settings.Iteration,
-                DateCreated = date.ToString("yyyy-MM-dd"),
-                TimeStart = $"{date:yyyy-MM-dd}T{startTime}:00",
-                TimeEnd = $"{date:yyyy-MM-dd}T{endTime}:00",
-                TimeLess = lessMins > 0 ? lessMins / 60m : null,
-                Note = settings.Description,
-                LocationId = location,
-                CategoryId = categoryId,
-                BillableId = billableId,
-                SellPrice = sellPrice,
-            };
-
-            // Show preview
             if (!settings.Json)
-            {
-                AnsiConsole.MarkupLine("[bold]Creating timesheet:[/]");
-                AnsiConsole.MarkupLine($"  Date:     {date:yyyy-MM-dd} ({date:dddd})");
-                AnsiConsole.MarkupLine($"  Client:   {Markup.Escape(settings.ClientId)}");
-                AnsiConsole.MarkupLine($"  Project:  {Markup.Escape(settings.ProjectId)}");
-                AnsiConsole.MarkupLine($"  Time:     {startTime} - {endTime}");
-                AnsiConsole.MarkupLine($"  Location: {Markup.Escape(location ?? "?")}");
-                AnsiConsole.MarkupLine($"  Billable: {request.BillableId}");
-                if (categoryId is not null)
-                    AnsiConsole.MarkupLine($"  Category: {Markup.Escape(categoryId)}{(settings.Category is null ? " [dim](auto-resolved)[/]" : "")}");
-                if (sellPrice is not null)
-                    AnsiConsole.MarkupLine($"  Sell price: ${sellPrice:F2}");
-                if (!string.IsNullOrEmpty(settings.Description))
-                    AnsiConsole.MarkupLine($"  Notes:    {Markup.Escape(settings.Description)}");
-                AnsiConsole.WriteLine();
-            }
+                WritePreview(plan, settings);
 
-            if (!settings.Yes && !settings.Json)
-            {
-                if (!AnsiConsole.Confirm("Create this timesheet?"))
-                    return 1;
-            }
+            if (!settings.Yes && !settings.Json && !AnsiConsole.Confirm("Create this timesheet?"))
+                return 1;
 
-            var response = await _api.CreateTimesheetAsync(request, CancellationToken.None);
+            var result = await _creates.ApplyAsync(plan, cancellationToken);
 
-            if (response is { Success: false })
+            if (!result.Success)
             {
-                var failure = response.Message ?? "Failed to create timesheet";
+                var failure = result.Message ?? "Failed to create timesheet";
                 if (settings.Json)
                     OutputHelper.WriteJsonError(failure);
                 else
@@ -213,24 +155,20 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
                 return 1;
             }
 
-            // SaveTimesheet usually answers with an empty body, so read the row back to report its id.
-            var created = response?.TimesheetId is not null
-                ? await TimesheetLookup.ReadByIdAsync(_api, tenant.EmployeeId, date, response.TimesheetId.Value, cancellationToken)
-                : await TimesheetLookup.ReadCreatedAsync(_api, tenant.EmployeeId, date, request, cancellationToken);
-
-            var result = new TimesheetWriteResult
-            {
-                TimesheetId = response?.TimesheetId ?? created?.TimeId,
-                Message = response?.Message,
-                Timesheet = created
-            };
-
             if (settings.Json)
                 OutputHelper.WriteJson(result);
             else
                 OutputHelper.WriteSuccess($"Timesheet created{(result.TimesheetId is not null ? $" (ID: {result.TimesheetId})" : "")}");
 
             return 0;
+        }
+        catch (TimesheetValidationException ex)
+        {
+            if (settings.Json)
+                OutputHelper.WriteJsonError(ex.Message);
+            else
+                OutputHelper.WriteError(ex.Message);
+            return 1;
         }
         catch (ApiException ex)
         {
@@ -258,6 +196,25 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
             }
             return 1;
         }
+    }
+
+    private static void WritePreview(TimesheetCreatePlan plan, Settings settings)
+    {
+        var request = plan.Request;
+        AnsiConsole.MarkupLine("[bold]Creating timesheet:[/]");
+        AnsiConsole.MarkupLine($"  Date:     {plan.Date:yyyy-MM-dd} ({plan.Date:dddd})");
+        AnsiConsole.MarkupLine($"  Client:   {Markup.Escape(request.ClientId)}");
+        AnsiConsole.MarkupLine($"  Project:  {Markup.Escape(request.ProjectId)}");
+        AnsiConsole.MarkupLine($"  Time:     {plan.Start} - {plan.End}");
+        AnsiConsole.MarkupLine($"  Location: {Markup.Escape(request.LocationId ?? "?")}");
+        AnsiConsole.MarkupLine($"  Billable: {request.BillableId}");
+        if (request.CategoryId is not null)
+            AnsiConsole.MarkupLine($"  Category: {Markup.Escape(request.CategoryId)}{(settings.Category is null ? " [dim](auto-resolved)[/]" : "")}");
+        if (request.SellPrice is not null)
+            AnsiConsole.MarkupLine($"  Sell price: ${request.SellPrice:F2}");
+        if (!string.IsNullOrEmpty(request.Note))
+            AnsiConsole.MarkupLine($"  Notes:    {Markup.Escape(request.Note)}");
+        AnsiConsole.WriteLine();
     }
 
     /// <summary>
@@ -310,42 +267,5 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
         }, ct);
         OutputHelper.WriteSuccess($"Rate created: ${rate:F2}.");
         return RateResolver.SellPriceFor(billableId, rate, prepaid);
-    }
-
-    /// <summary>
-    /// Look up categoryId from repo-mappings.json for the given client/project.
-    /// </summary>
-    private string? ResolveCategoryFromRepoMapping(string clientId, string projectId)
-    {
-        var mappings = _config.LoadRepoMappings();
-        var match = mappings.FirstOrDefault(m =>
-            string.Equals(m.ClientId, clientId, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(m.ProjectId, projectId, StringComparison.OrdinalIgnoreCase) &&
-            !string.IsNullOrEmpty(m.CategoryId));
-        return match?.CategoryId;
-    }
-
-    /// <summary>
-    /// Look up categoryId from recent timesheets for the same employee + client + project.
-    /// Searches the past 14 days for a match.
-    /// </summary>
-    private async Task<string?> ResolveCategoryFromRecentTimesheets(
-        string empId, string clientId, string projectId, DateOnly aroundDate)
-    {
-        var filter = new TimesheetSummaryFilter
-        {
-            StartDate = aroundDate.AddDays(-14).ToString("yyyy-MM-dd"),
-            EndDate = aroundDate.ToString("yyyy-MM-dd"),
-            EmployeeIds = [empId],
-            ClientIds = [clientId],
-            ProjectIds = [projectId]
-        };
-
-        var entries = await _api.QueryTimesheetsAsync(filter, CancellationToken.None);
-        return entries
-            .Where(e => !string.IsNullOrEmpty(e.CategoryId))
-            .OrderByDescending(e => e.TimesheetDate)
-            .FirstOrDefault()
-            ?.CategoryId;
     }
 }

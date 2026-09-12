@@ -15,8 +15,9 @@ public sealed class McpToolHost
     public McpToolHost(ITimeProApiClient api, IConfigService config)
     {
         var updates = new TimesheetUpdateService(api);
+        var creates = new TimesheetCreateService(api, config);
 
-        Timesheets = new TimesheetMcpTools(api, config, updates, new TimesheetAcceptService(api, updates));
+        Timesheets = new TimesheetMcpTools(api, config, creates, updates, new TimesheetAcceptService(api, updates));
         Lookups = new LookupMcpTools(api, config);
         Leave = new LeaveMcpTools(api, config, new LeaveCreateService(api), new LeaveUpdateService(api));
         Accounting = new AccountingMcpTools(api, config, new LeaveBalanceImportService(api));

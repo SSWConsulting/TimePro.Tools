@@ -8,6 +8,7 @@ namespace SSW.TimePro.Cli.Integration.Mcp;
 /// Runs a CLI command and its MCP tool against identical, freshly reset Northwind state and
 /// compares the complete parsed documents plus the HTTP traffic each produced.
 /// </summary>
+[Collection(CliConsole.Collection)]
 public class CliMcpParityTests : TestBase
 {
     public static TheoryData<int> ExecutableRows()

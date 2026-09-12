@@ -174,17 +174,6 @@ def call_tool(process, name, arguments):
     return payload
 
 
-def create_tool(process, name, arguments):
-    try:
-        return call_tool(process, name, arguments)
-    except SmokeFailure as failure:
-        raise SmokeFailure(
-            f"{failure}\n"
-            "    The MCP write path is not yet the CLI's: create_timesheet omits the sell price "
-            "the CLI resolves from the client rate, so TimePro rejects it."
-        ) from failure
-
-
 def assert_non_production(tp_command):
     info = subprocess.run(
         tp_command + ["tenant", "info", "--tenant", TENANT, "--json"],
@@ -255,10 +244,9 @@ def main():
         before = call_tool(process, "get_timesheets", {"date": date})
         print(f"  {len(before)} existing entries on {date}")
 
-        # The write goes through MCP on purpose. create_timesheet does not send a sell price, so
-        # a server that cannot derive one answers 400 and this gate stays red until the shared
-        # create orchestration lands.
-        create_tool(
+        # The write goes through MCP on purpose: create_timesheet and `tp ts create` share one
+        # service, so this is the gate on that service against a real server.
+        create_result = call_tool(
             process,
             "create_timesheet",
             {
@@ -282,6 +270,11 @@ def main():
 
         created = matches[0]
         created_id = created["timeId"]
+        reported_id = create_result.get("timesheetId")
+        if reported_id not in (None, created_id):
+            raise SmokeFailure(
+                f"create_timesheet reported id {reported_id} but the row read back is {created_id}"
+            )
         for field, expected in (
             ("clientId", CLIENT_ID),
             ("projectId", PROJECT_ID),

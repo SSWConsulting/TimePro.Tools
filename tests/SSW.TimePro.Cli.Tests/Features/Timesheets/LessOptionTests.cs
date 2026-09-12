@@ -87,6 +87,7 @@ public class LessOptionTests
         var services = new ServiceCollection();
         services.AddSingleton(api);
         services.AddSingleton(config);
+        services.AddSingleton<TimesheetCreateService>();
         services.AddSingleton<TimesheetUpdateService>();
 
         var app = new CommandApp(new TypeRegistrar(services));

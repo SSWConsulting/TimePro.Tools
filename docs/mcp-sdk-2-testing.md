@@ -60,7 +60,12 @@ public repository, so get them from `tp project list --client NWIND --tenant ssw
 2. **tools/list count** — 18 tools with the accounting feature off, 47 with
    `tp feature accounting enable`. Anything else is a regression, not a client quirk.
 3. **One read** — ask for this week's timesheets (`get_timesheets`) and a Northwind lookup
-   (`get_projects_for_client` with `NWIND`). Output should be the same JSON text the CLI prints.
+   (`get_projects_for_client` with `NWIND`). Do **not** compare `get_timesheets` against
+   `tp ts get --json`: the two have always differed, and deliberately so — MCP returns a flat array
+   and skips weekends, the CLI returns an envelope grouped by day including weekends (recorded in
+   the parity table as "MCP reshapes the row; CLI returns the API shape"). Compare instead against
+   the shape in `tests/SSW.TimePro.Cli.Integration/Goldens/Mcp/Tools/GetTimesheets.populated.json`,
+   or against the same tool call on the installed 0.3.x release with identical arguments.
 4. **One write** — create one timesheet on the iteration-using Northwind project with the note
    `MCP SDK2 client check, safe to delete`, confirm it reads back, then delete it. Do not create
    leave requests and do not import leave balances.
@@ -75,13 +80,17 @@ public repository, so get them from `tp project list --client NWIND --tenant ssw
 
 ## What the harness cannot see — look for these explicitly
 
-- **Approval prompts.** Every tool here is currently unannotated, so clients fall back to their
-  default of treating each call as potentially destructive. Confirm each client does prompt before
-  `create_timesheet` / `update_timesheet` / `delete_timesheet` / `update_leave`, and note whether
-  reads prompt too (they will until the annotation follow-up lands).
-- **Annotation rendering.** Nothing is marked `ReadOnly`/`Destructive` yet, so nothing should show
-  a read-only or destructive badge. If a client renders one anyway it is inferring from the name,
-  which is worth knowing before the annotation PR.
+- **Approval prompts.** Two tools are annotated today: `get_leave_balance_status`
+  (`readOnlyHint: true`, `destructiveHint: false`) and, on the accounting surface,
+  `import_leave_balances` (`destructiveHint: true`, `idempotentHint: true`, `readOnlyHint: false`).
+  Everything else is unannotated, so clients fall back to their default of treating each call as
+  potentially destructive. Confirm each client prompts before `create_timesheet` /
+  `update_timesheet` / `delete_timesheet` / `update_leave`, and note whether reads prompt too
+  (they will until the annotation follow-up widens the coverage).
+- **Annotation rendering.** For those same two tools, check the badge the client shows matches the
+  advertised annotation: `get_leave_balance_status` read-only, `import_leave_balances` destructive.
+  For every other tool there is nothing to render, so a badge means the client is inferring from
+  the name — worth knowing before the annotation PR.
 - **Tool description truncation.** Several descriptions are long; check how each client's tool
   picker displays them.
 - **Stdout hygiene in practice.** The harness fails loudly on non-protocol stdout. In a real client

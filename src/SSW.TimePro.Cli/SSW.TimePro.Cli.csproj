@@ -9,9 +9,9 @@
     <ToolCommandName>tp</ToolCommandName>
     <PackageId>SSW.TimePro.Cli</PackageId>
     <!-- Major.minor only. The release workflow appends the patch from the latest
-         GitHub Release for this prefix, e.g. 0.2.7, via -p:Version=. Local builds default to <VersionPrefix>.0. -->
-    <VersionPrefix>0.2</VersionPrefix>
-    <!-- Give local builds a full three-part version (0.2.0) rather than the bare "0.2"
+         GitHub Release for this prefix, e.g. 0.3.1, via -p:Version=. Local builds default to <VersionPrefix>.0. -->
+    <VersionPrefix>0.3</VersionPrefix>
+    <!-- Give local builds a full three-part version (0.3.0) rather than the bare "0.2"
          MSBuild would otherwise use. A CI -p:Version= takes precedence over this. -->
     <Version Condition="'$(Version)' == ''">$(VersionPrefix).0</Version>
     <Authors>SSW</Authors>

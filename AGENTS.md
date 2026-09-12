@@ -53,7 +53,7 @@ Run `tp --help` for full command list. Key commands:
 - `tp leave update ID --start 2026-04-01 --end 2026-04-01 --note "..." --yes` - Update leave while preserving omitted API-returned fields (`--dry-run --json` previews the full payload)
 - `tp leave cancel ID --reason "..." --yes` - Cancel leave
 - `tp leave list --filter UPCOMING --json` - List leave
-- `tp leave balance --emp-id JEK` - Leave-usage signal (days since last leave + hours taken in last 12 months)
+- `tp leave balance --emp-id BOB` - Leave-usage signal (days since last leave + hours taken in last 12 months)
 - `tp leave balances status` - When leave balances were last imported from Xero, and whether they are stale
 - `tp leave balances import ./LeaveBalances.csv --yes` - Import company-wide leave balances from a Xero CSV export (leave admins only)
 - `tp feature accounting enable` - Enable accounting skills and accounting MCP tools
@@ -92,6 +92,15 @@ On the `--json` path, failures emit a structured envelope to **stdout** so stdou
 This covers Spectre parse/binding failures too (unknown command, unbindable argument), not just errors a command raises itself: `Program.cs` installs `CommandLineErrorHandler` as the Spectre exception handler, which checks argv for `--json` because these failures happen before settings binding. Command-line errors exit 1; an unexpected exception keeps Spectre's -1.
 
 The same handler renders connection failures (refused, timeout, DNS): `tenant` and `apiUrl` are added under `error`, and the stderr text names the active tenant config file, its `apiUrl`, and `tp tenant set`.
+
+API failures go through `OutputHelper.WriteApiError`, which fills `detail` from the response body
+(problem details `errors`/`detail`/`message`/`title`, bare JSON strings, otherwise the raw body
+truncated to 500 chars). New `catch (ApiException)` blocks should use it rather than formatting the
+message by hand.
+
+Unknown commands get a "did you mean" hint from `CommandCatalog`, a hand-mirrored copy of the
+registrations in `CliConfiguration`. `CommandCatalogTests` walks the real `--help` tree and fails
+when they drift, so a new command goes in both places.
 
 ### MCP tools + tenant resolution
 

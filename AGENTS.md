@@ -216,6 +216,24 @@ dotnet test tests/SSW.TimePro.Cli.Integration/
 scripts/security/nuget-audit.sh
 ```
 
+## Definition of Done
+
+A change is done when all of these hold, not when the code compiles:
+
+- Both test projects pass, and every changed behaviour has a unit or WireMock test that fails without the fix.
+- The change was exercised by running the CLI from source against the `ssw-staging` tenant, and the commands and trimmed output are in the PR body.
+- The diff was grepped for private data (see Privacy below) and for comment noise.
+- The PR body says what was verified by execution and what only by inspection, and names anything left out.
+- Release notes are not edited in feature PRs; the release PR builds them from the full tag-to-main range.
+
+## Writing Skills and Instructions
+
+Skill templates live in `Features/Skills/Templates/` and are rendered by `tp skills create`. Keep them
+lean: a short root that names the trigger, the commands to run first, and the rules that the CLI cannot
+enforce itself. Do not restate `--help` or write step-by-step recipes for things an agent can work out
+from `--json` output. Descriptions in `SkillModelBuilder` are one "Use when ..." sentence. Bump
+`CurrentSkillVersion` whenever a template or description changes so installed copies report as outdated.
+
 ## Production Release Discipline
 
 Before creating any new version, read `release-notes/AGENTS.md` and follow it.

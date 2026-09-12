@@ -16,28 +16,28 @@ public static class SkillModelBuilder
     public const string DeveloperTimesheetDiagnosticsName = "timepro-dev-timesheet-diagnostics";
     public const string DeveloperFinanceDiagnosticsName = "timepro-dev-finance-diagnostics";
     public const string EnvironmentCompareName = "timepro-env-compare";
-    public const int CurrentSkillVersion = 3;
+    public const int CurrentSkillVersion = 4;
 
     private const string TimesheetsDescription =
-        "Manage SSW TimePro timesheets with the tp CLI — view/accept/create entries, repo mappings, bookings, leave, and daily scrum. Use when entering, fixing, or reviewing timesheets.";
+        "Use when entering, fixing, accepting or reviewing TimePro timesheets, repo-to-project mappings, or daily scrum notes with the tp CLI.";
 
     private const string AccountingDescription =
-        "Explore SSW TimePro financial data via the tp CLI — read-only invoices, receipts, rates and reconciliation reports, plus explicitly approved Xero leave-balance imports. Use for accountant-style questions. For raw HTTP/curl access (when tp isn't installed), use the timepro-accounting skill instead.";
+        "Use for accountant questions about TimePro invoices, receipts, rates, prepaid balances or reconciliation, and for Xero leave-balance imports. Read-only apart from the import. Without tp installed, use timepro-accounting instead.";
 
     private const string TenantSetupDescription =
-        "Set up and switch TimePro tenant profiles with the tp CLI, including switching the active session to ssw-staging and using process-local --tenant/--env overrides without changing the active tenant.";
+        "Use when logging in to TimePro, switching the active tenant, or running one command against another tenant or environment with --tenant/--env.";
 
     private const string DeveloperDiagnosticsDescription =
-        "Developer workflow for reproducing, diagnosing, and verifying TimePro bugs across local, staging, and production with the tp CLI first, environment-aware safety rules, App Insights follow-up, and explicit permission before non-read-only production actions.";
+        "Use when reproducing or diagnosing a TimePro bug across local, staging and production, starting with tp CLI evidence before App Insights.";
 
     private const string DeveloperTimesheetDiagnosticsDescription =
-        "Developer workflow for diagnosing TimePro suggested-timesheet, CRM booking, and saved-timesheet bugs with CLI-first evidence, App Insights follow-up, and production read-only safety boundaries.";
+        "Use when diagnosing a TimePro suggested-timesheet, CRM booking, or saved-timesheet bug.";
 
     private const string DeveloperFinanceDiagnosticsDescription =
-        "Developer workflow for diagnosing TimePro invoice, credit note, client rate, prepaid, tax, and external-sync bugs with CLI-first evidence, accounting MCP pointers, and production read-only safety boundaries.";
+        "Use when diagnosing a TimePro invoice, credit note, client rate, prepaid, tax, or external-sync bug.";
 
     private const string EnvironmentCompareDescription =
-        "Compare TimePro tenant and environment behaviour for consistency across local, staging, and production using read-only tp CLI evidence, normalized JSON diffs, and clear production safety boundaries.";
+        "Use when checking whether TimePro local, staging and production return the same data or behaviour for the same read-only command.";
 
     public static IReadOnlyList<SkillDefinition> Catalog { get; } =
     [

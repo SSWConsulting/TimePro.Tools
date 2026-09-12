@@ -49,13 +49,15 @@ Each skill is written to:
 <base>/skills/<name>/SKILL.md
 ```
 
-The frontmatter always includes `name` and `description`. When the model has
+The frontmatter always includes `name` and `description`. Keep the description to one
+sentence naming the exact trigger ("Use when ...") rather than listing capabilities: agents
+load a skill by matching its description, and broad descriptions pull in the wrong skill. When the model has
 allowed tools, it also includes a comma-separated `allowed-tools` line:
 
 ```yaml
 ---
 name: timepro-timesheets
-description: Manage SSW TimePro timesheets with the tp CLI...
+description: Use when entering, fixing, accepting or reviewing TimePro timesheets...
 allowed-tools: Bash(tp *), Bash(sl *)
 ---
 ```

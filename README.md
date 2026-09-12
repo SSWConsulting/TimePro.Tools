@@ -119,7 +119,7 @@ tp ts get 2026-03-12       # Specific date
 | `tp tenant list` | List all stored tenants |
 | `tp ts get [DATE]` | View timesheets (supports `--week`, `--detailed`, `--json`) |
 | `tp ts create` | Create a new timesheet (see options below) |
-| `tp ts update ID` | Update a timesheet (partial — only specified fields) |
+| `tp ts update ID` | Update a timesheet (partial — only specified fields, including `--iteration`) |
 | `tp ts delete ID` | Delete a timesheet |
 | `tp ts suggest [DATE]` | View suggested timesheets |
 | `tp ts accept ID` | Accept a suggested timesheet |
@@ -227,6 +227,19 @@ tp ts update 42 --date 2026-03-16 --end 19:00 --less 120 --yes
 ```
 
 `--less` takes whole minutes (`--less 90`, not `--less 1.5`). Pass `--less 0` to clear the deduction.
+
+To fix a wrong iteration without deleting and recreating the row:
+
+```bash
+tp ts update 42 --date 2026-03-16 --iteration "Sprint 5" --yes
+tp ts accept 43 --iteration 3402 --yes
+```
+
+`--iteration` takes an iteration name or ID (`tp iter list --project <ID>` shows both). Accepting a
+suggestion on a project that uses iterations fails before the API call when none can be resolved.
+
+`ts create`, `ts update` and `ts accept` return the saved entry on `--json`, so there is no need to
+re-read the week to find the row you just wrote.
 
 ### Leave Management
 

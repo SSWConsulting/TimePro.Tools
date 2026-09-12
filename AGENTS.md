@@ -47,6 +47,7 @@ Run `tp --help` for full command list. Key commands:
 - `tp ts get --week` - View week's timesheets
 - `tp ts create ...` - Create timesheet
 - `tp ts check --week --json` - Leave-aware weekly coverage check (see below)
+- `tp ts update ID --iteration "Sprint 5"` - Update in place, by iteration name or ID (see below)
 - `tp project recent` - Surface projects recently logged against (likely picks for new entries)
 - `tp leave create --start 2026-03-30 --end 2026-03-30 --type 1 --note "..." --approved-by "email" --cc "e1,e2" --yes` - Create leave (`--dry-run --json` validates without writing)
 - `tp leave update ID --start 2026-04-01 --end 2026-04-01 --note "..." --yes` - Update leave while preserving omitted API-returned fields (`--dry-run --json` previews the full payload)
@@ -62,6 +63,27 @@ Run `tp --help` for full command list. Key commands:
 ### Leave-aware `tp ts check`
 
 `ts check` merges approved leave + public holidays into weekly coverage. A full-day leave day is `covered` (never an error); a partial-day leave only expects the remaining hours. The `--json` output gives per-day `covered` / `coverReason` (`logged`, `leave-full`, `leave-partial`, `holiday`, `missing`), `leaveHours` / `leaveType`, and a top-level `allCovered`. Fetch/merge logic lives in the shared `WeekCoverageService`; the rules are in the pure, unit-tested `CheckEvaluator`. Exit code 1 when errors are found (CI-friendly).
+
+### Timesheet writes
+
+`SaveTimesheet?isEdit=true` replaces the whole row, so every update must read the entry back and
+re-send the fields the caller omitted. `TimesheetUpdateService` owns that read-merge (including
+resolving an iteration by name or ID) and `TimesheetAcceptService` owns accept; the `ts update` /
+`ts accept` commands and the `UpdateTimesheet` / `AcceptSuggestedTimesheet` MCP tools are adapters
+over them. Never build a `TimesheetRequest` for an edit anywhere else.
+
+`ts update` and `ts delete` refuse suggested entries locally (`tp ts accept <id>` first) rather than
+letting the API answer a bare 400; the MCP delete tool shares that check. Accept fails before the API
+call when the project uses iterations and none can be resolved, listing the available ones.
+
+Accept with an iteration is two calls (accept, then update), so it can half-succeed. When the
+accepted row cannot be identified unambiguously the iteration is not applied and the result carries
+`iterationApplied: false` plus a `warning` whose recovery is always `tp ts update`, never a second
+accept — accepting twice would duplicate the entry.
+
+`ts create`, `ts update` and `ts accept` return the saved entry on `--json`
+(`{"success":true,"timesheetId":N,"timesheet":{...}}`). The API usually answers writes with an empty
+body, so the entry is re-read; callers no longer need a follow-up `ts get --week`.
 
 ### `--json` error envelope
 

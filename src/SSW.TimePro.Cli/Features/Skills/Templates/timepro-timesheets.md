@@ -46,6 +46,7 @@ tp ts create --client NWIND --project 1I776Q --iteration 3402 \
 tp ts update <ID> --location Home --yes
 tp ts update <ID> --description "Updated notes" --yes
 tp ts update <ID> --end 19:00 --less 120 --yes
+tp ts update <ID> --iteration "Checkout API" --yes
 
 # Repo mappings
 tp map list

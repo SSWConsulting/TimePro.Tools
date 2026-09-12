@@ -150,6 +150,7 @@ public class CommandLineErrorHandlerTests
         var services = new ServiceCollection();
         services.AddSingleton(api);
         services.AddSingleton(config);
+        services.AddSingleton<TimesheetUpdateService>();
 
         var jsonRequested = CommandLineErrorHandler.IsJsonRequested(args);
         var app = new CommandApp(new TypeRegistrar(services));

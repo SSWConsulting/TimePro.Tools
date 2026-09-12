@@ -203,20 +203,32 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
 
             var response = await _api.CreateTimesheetAsync(request, CancellationToken.None);
 
-            if (settings.Json)
+            if (response is { Success: false })
             {
-                OutputHelper.WriteJson(response ?? new TimesheetResponse { Success = true });
-            }
-            else if (response is null || response.Success)
-            {
-                // API returns empty body on success
-                OutputHelper.WriteSuccess($"Timesheet created{(response?.TimesheetId is not null ? $" (ID: {response.TimesheetId})" : "")}");
-            }
-            else
-            {
-                OutputHelper.WriteError(response.Message ?? "Failed to create timesheet");
+                var failure = response.Message ?? "Failed to create timesheet";
+                if (settings.Json)
+                    OutputHelper.WriteJsonError(failure);
+                else
+                    OutputHelper.WriteError(failure);
                 return 1;
             }
+
+            // SaveTimesheet usually answers with an empty body, so read the row back to report its id.
+            var created = response?.TimesheetId is not null
+                ? await TimesheetLookup.ReadByIdAsync(_api, tenant.EmployeeId, date, response.TimesheetId.Value, cancellationToken)
+                : await TimesheetLookup.ReadCreatedAsync(_api, tenant.EmployeeId, date, request, cancellationToken);
+
+            var result = new TimesheetWriteResult
+            {
+                TimesheetId = response?.TimesheetId ?? created?.TimeId,
+                Message = response?.Message,
+                Timesheet = created
+            };
+
+            if (settings.Json)
+                OutputHelper.WriteJson(result);
+            else
+                OutputHelper.WriteSuccess($"Timesheet created{(result.TimesheetId is not null ? $" (ID: {result.TimesheetId})" : "")}");
 
             return 0;
         }

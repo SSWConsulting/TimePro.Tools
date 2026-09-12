@@ -15,6 +15,8 @@ public class TimesheetMcpTools
 {
     private readonly ITimeProApiClient _api;
     private readonly IConfigService _config;
+    private readonly TimesheetUpdateService _updates;
+    private readonly TimesheetAcceptService _accepts;
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -23,10 +25,16 @@ public class TimesheetMcpTools
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
 
-    public TimesheetMcpTools(ITimeProApiClient api, IConfigService config)
+    public TimesheetMcpTools(
+        ITimeProApiClient api,
+        IConfigService config,
+        TimesheetUpdateService updates,
+        TimesheetAcceptService accepts)
     {
         _api = api;
         _config = config;
+        _updates = updates;
+        _accepts = accepts;
     }
 
     [McpServerTool]
@@ -132,37 +140,61 @@ public class TimesheetMcpTools
     }
 
     [McpServerTool]
-    [Description("Update an existing timesheet. Only specify fields you want to change.")]
+    [Description("Update an existing timesheet. Only specify fields you want to change; everything else is preserved. Returns the entry as saved.")]
     public async Task<string> UpdateTimesheet(
         [Description("Timesheet ID")] int timesheetId,
         [Description("New location")] string? location = null,
         [Description("New notes/description")] string? description = null,
         [Description("New billable type: B, BPP, W")] string? billableId = null,
+        [Description("New iteration/sprint, by name or ID. Use ListIterations to see the options.")] string? iteration = null,
+        [Description("Date the timesheet is on (yyyy-MM-dd). Speeds up the lookup; otherwise recent weeks are searched.")] string? date = null,
         CancellationToken ct = default)
     {
         var tenant = _config.LoadActiveTenantConfig();
         if (tenant?.EmployeeId is null)
             return """{"error": "Not logged in"}""";
 
-        var request = new TimesheetRequest
+        try
         {
-            TimeId = timesheetId,
-            EmpId = tenant.EmployeeId,
-            LocationId = location,
-            Note = description,
-            BillableId = billableId
-        };
+            var result = await _updates.UpdateAsync(
+                timesheetId,
+                tenant.EmployeeId,
+                new TimesheetUpdateOptions(
+                    Location: location,
+                    Description: description,
+                    Billable: billableId,
+                    Iteration: iteration,
+                    Date: date),
+                ct);
 
-        var response = await _api.UpdateTimesheetAsync(request, ct);
-        return JsonSerializer.Serialize(response, JsonOpts);
+            return JsonSerializer.Serialize(result, JsonOpts);
+        }
+        catch (TimesheetValidationException ex)
+        {
+            return JsonSerializer.Serialize(new { error = ex.Message }, JsonOpts);
+        }
     }
 
     [McpServerTool]
-    [Description("Delete a timesheet entry.")]
+    [Description("Delete a timesheet entry. Suggestions cannot be deleted; accept one first.")]
     public async Task<string> DeleteTimesheet(
         [Description("Timesheet ID")] int timesheetId,
+        [Description("Date the timesheet is on (yyyy-MM-dd). Speeds up the lookup; otherwise recent weeks are searched.")] string? date = null,
         CancellationToken ct = default)
     {
+        var tenant = _config.LoadActiveTenantConfig();
+        if (tenant?.EmployeeId is null)
+            return """{"error": "Not logged in"}""";
+
+        try
+        {
+            await TimesheetLookup.EnsureDeletableAsync(_api, tenant.EmployeeId, timesheetId, date, ct);
+        }
+        catch (TimesheetValidationException ex)
+        {
+            return JsonSerializer.Serialize(new { error = ex.Message }, JsonOpts);
+        }
+
         await _api.DeleteTimesheetAsync(timesheetId, ct);
         return JsonSerializer.Serialize(new { success = true, timesheetId }, JsonOpts);
     }
@@ -231,16 +263,33 @@ public class TimesheetMcpTools
     }
 
     [McpServerTool]
-    [Description("Accept a suggested timesheet, converting it into a real timesheet.")]
+    [Description("Accept a suggested timesheet, converting it into a real timesheet. Returns the entry as saved.")]
     public async Task<string> AcceptSuggestedTimesheet(
         [Description("Suggested timesheet ID")] int suggestedId,
         [Description("Override location")] string? location = null,
         [Description("Override notes")] string? notes = null,
+        [Description("Iteration/sprint for the accepted timesheet, by name or ID. Required for projects that use iterations.")] string? iteration = null,
+        [Description("Date the suggestion is on (yyyy-MM-dd). Speeds up the lookup; otherwise recent weeks are searched.")] string? date = null,
         CancellationToken ct = default)
     {
-        var response = await _api.AcceptSuggestedTimesheetAsync(
-            suggestedId, location, notes, null, ct);
-        return JsonSerializer.Serialize(response, JsonOpts);
+        var tenant = _config.LoadActiveTenantConfig();
+        if (tenant?.EmployeeId is null)
+            return """{"error": "Not logged in"}""";
+
+        try
+        {
+            var result = await _accepts.AcceptAsync(
+                suggestedId,
+                tenant.EmployeeId,
+                new TimesheetAcceptOptions(location, notes, iteration, date),
+                ct);
+
+            return JsonSerializer.Serialize(result, JsonOpts);
+        }
+        catch (TimesheetValidationException ex)
+        {
+            return JsonSerializer.Serialize(new { error = ex.Message }, JsonOpts);
+        }
     }
 
     private static string ResolveEmpId(string? empId, string? employeeId, string defaultEmpId)

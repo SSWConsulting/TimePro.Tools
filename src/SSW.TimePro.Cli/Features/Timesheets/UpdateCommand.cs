@@ -1,10 +1,7 @@
 using System.ComponentModel;
-using System.Globalization;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using SSW.TimePro.Cli.Infrastructure.Output;
-using SSW.TimePro.Cli.Shared;
-using SSW.TimePro.Cli.Shared.Models;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -13,8 +10,8 @@ namespace SSW.TimePro.Cli.Features.Timesheets;
 [Description("Update an existing timesheet entry")]
 public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
 {
-    private readonly ITimeProApiClient _api;
     private readonly IConfigService _config;
+    private readonly TimesheetUpdateService _updates;
 
     public class Settings : CommandSettings
     {
@@ -50,6 +47,10 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
         [Description("New project ID")]
         public string? ProjectId { get; set; }
 
+        [CommandOption("--iteration <NAME_OR_ID>")]
+        [Description("New iteration/sprint, by name or ID")]
+        public string? Iteration { get; set; }
+
         [CommandOption("--category <CAT>")]
         [Description("New category ID")]
         public string? Category { get; set; }
@@ -75,10 +76,10 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
         public bool Json { get; set; }
     }
 
-    public UpdateCommand(ITimeProApiClient api, IConfigService config)
+    public UpdateCommand(IConfigService config, TimesheetUpdateService updates)
     {
-        _api = api;
         _config = config;
+        _updates = updates;
     }
 
     protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
@@ -86,7 +87,11 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
         var tenant = _config.LoadActiveTenantConfig();
         if (tenant?.EmployeeId is null)
         {
-            OutputHelper.WriteError("Not logged in. Run 'tp login --tenant <id>' first.");
+            const string message = "Not logged in. Run 'tp login --tenant <id>' first.";
+            if (settings.Json)
+                OutputHelper.WriteJsonError(message);
+            else
+                OutputHelper.WriteError(message);
             return 1;
         }
 
@@ -99,208 +104,72 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
             return 1;
         }
 
+        var options = new TimesheetUpdateOptions(
+            Location: settings.Location,
+            Description: settings.Description,
+            Start: settings.Start,
+            End: settings.End,
+            Less: lessMinutes,
+            ClientId: settings.ClientId,
+            ProjectId: settings.ProjectId,
+            Category: settings.Category,
+            Billable: settings.Billable,
+            SellPrice: settings.SellPrice,
+            Iteration: settings.Iteration,
+            Date: settings.Date);
+
         try
         {
-            // Find the existing timesheet so we can send a full payload.
-            // The SaveTimesheet API requires all fields even for edits.
-            var existing = await FindTimesheetAsync(tenant.EmployeeId, settings.TimesheetId, settings.Date);
-            if (existing is null)
-            {
-                OutputHelper.WriteError($"Timesheet #{settings.TimesheetId} not found. Try passing --date to narrow the search.");
-                return 1;
-            }
+            var plan = await _updates.PrepareAsync(
+                settings.TimesheetId, tenant.EmployeeId, options, cancellationToken);
 
-            // Parse the date from the existing timesheet (may be yyyy-MM-dd or ISO datetime)
-            var existingDateStr = existing.Date?.Split('T')[0] ?? existing.StartTime?.Split('T')[0]
-                ?? throw new InvalidOperationException("Cannot determine date for existing timesheet");
-            var dateOnly = DateOnly.ParseExact(existingDateStr, "yyyy-MM-dd", CultureInfo.InvariantCulture);
-
-            // The list GET returns neither CategoryID nor the sell-price snapshot — resolve both
-            // from the query API entry for this timesheet.
-            var existingEntry = await GetExistingEntryAsync(tenant.EmployeeId, dateOnly, settings.TimesheetId);
-            var categoryId = settings.Category ?? existingEntry?.CategoryId;
-
-            // The list endpoint usually returns the iteration name but not its ID. SaveTimesheet
-            // requires the ID in its full edit payload, so resolve it before updating.
-            var targetProjectId = settings.ProjectId ?? existing.ProjectId ?? "";
-            var projectChanged = settings.ProjectId is not null
-                && !string.Equals(settings.ProjectId, existing.ProjectId, StringComparison.OrdinalIgnoreCase);
-            var iterationId = projectChanged ? null : existing.IterationId;
-            if (iterationId is null && !string.IsNullOrEmpty(targetProjectId))
-            {
-                var iterations = await _api.GetIterationsAsync(targetProjectId, cancellationToken);
-                if (iterations.Count > 0)
-                {
-                    iterationId = iterations
-                        .FirstOrDefault(i => string.Equals(
-                            i.IterationName,
-                            existing.Iteration,
-                            StringComparison.OrdinalIgnoreCase))
-                        ?.IterationId;
-
-                    if (iterationId is null)
-                    {
-                        var message = $"Unable to resolve iteration '{existing.Iteration ?? "(none)"}' for project '{targetProjectId}'.";
-                        if (settings.Json)
-                            OutputHelper.WriteJsonError(message);
-                        else
-                            OutputHelper.WriteError(message);
-                        return 1;
-                    }
-                }
-            }
-
-            // Build the full request from the existing timesheet, applying overrides
-            var request = new TimesheetRequest
-            {
-                TimeId = settings.TimesheetId,
-                EmpId = tenant.EmployeeId,
-                ClientId = settings.ClientId ?? existing.ClientId ?? "",
-                ProjectId = targetProjectId,
-                IterationId = iterationId,
-                DateCreated = existingDateStr,
-                TimeStart = settings.Start is not null
-                    ? $"{existingDateStr}T{settings.Start}:00"
-                    : existing.StartTime,
-                TimeEnd = settings.End is not null
-                    ? $"{existingDateStr}T{settings.End}:00"
-                    : existing.EndTime,
-                TimeLess = lessMinutes is not null
-                    ? lessMinutes.Value / 60m
-                    : existing.Less > 0 ? existing.Less : null,
-                Note = settings.Description ?? existing.Notes,
-                LocationId = settings.Location is not null
-                    ? LocationResolver.Resolve(settings.Location)
-                    : existing.LocationId,
-                CategoryId = categoryId,
-                BillableId = settings.Billable ?? existing.BillableId ?? "B",
-            };
-
-            // A timesheet's sell price is its own snapshot once created — independent of the client
-            // rate — so a manager can e.g. discount one line without touching the rate or future
-            // timesheets. Preserve the existing snapshot (SaveTimesheet requires a sell price); only
-            // change it when --sell-price is given.
-            request.SellPrice = settings.SellPrice ?? existingEntry?.SellPrice;
-
-            var changes = new List<string>();
-            if (settings.Location is not null)
-                changes.Add($"Location -> {LocationResolver.Resolve(settings.Location)}");
-            if (settings.Description is not null)
-                changes.Add($"Description -> {(settings.Description.Length > 50 ? settings.Description[..50] + "..." : settings.Description)}");
-            if (settings.Start is not null)
-                changes.Add($"Start -> {settings.Start}");
-            if (settings.End is not null)
-                changes.Add($"End -> {settings.End}");
-            if (lessMinutes is not null)
-                changes.Add($"Less -> {lessMinutes} minutes");
-            if (settings.ClientId is not null)
-                changes.Add($"Client -> {settings.ClientId}");
-            if (settings.ProjectId is not null)
-                changes.Add($"Project -> {settings.ProjectId}");
-            if (settings.Category is not null)
-                changes.Add($"Category -> {settings.Category}");
-            if (settings.Billable is not null)
-                changes.Add($"Billable -> {settings.Billable}");
-            if (settings.SellPrice is not null)
-                changes.Add($"Sell price -> ${settings.SellPrice:F2}");
-
-            if (changes.Count == 0)
-            {
-                OutputHelper.WriteInfo("No changes specified. Use --location, --description, --less, etc.");
-                return 0;
-            }
-
-            // Show preview
             if (!settings.Json)
             {
                 AnsiConsole.MarkupLine($"[bold]Updating timesheet #{settings.TimesheetId}:[/]");
-                AnsiConsole.MarkupLine($"  [dim]{Markup.Escape(existing.Client ?? "?")} | {Markup.Escape(existing.Project ?? "?")} ({existingDateStr})[/]");
-                foreach (var change in changes)
+                AnsiConsole.MarkupLine($"  [dim]{Markup.Escape(plan.Existing.Client ?? "?")} | {Markup.Escape(plan.Existing.Project ?? "?")} ({plan.Date:yyyy-MM-dd})[/]");
+                foreach (var change in plan.Changes)
                     AnsiConsole.MarkupLine($"  {Markup.Escape(change)}");
                 AnsiConsole.WriteLine();
-            }
 
-            if (!settings.Yes && !settings.Json)
-            {
-                if (!AnsiConsole.Confirm("Apply these changes?"))
+                if (!settings.Yes && !AnsiConsole.Confirm("Apply these changes?"))
                     return 1;
             }
 
-            var response = await _api.UpdateTimesheetAsync(request, CancellationToken.None);
+            var result = await _updates.ApplyAsync(plan, cancellationToken);
 
-            if (settings.Json)
+            if (!result.Success)
             {
-                OutputHelper.WriteJson(response);
-            }
-            else if (response is null || response.Success)
-            {
-                OutputHelper.WriteSuccess($"Timesheet #{settings.TimesheetId} updated");
-            }
-            else
-            {
-                OutputHelper.WriteError(response.Message ?? "Failed to update timesheet");
+                var message = result.Message ?? "Failed to update timesheet";
+                if (settings.Json)
+                    OutputHelper.WriteJsonError(message);
+                else
+                    OutputHelper.WriteError(message);
                 return 1;
             }
 
+            if (settings.Json)
+                OutputHelper.WriteJson(result);
+            else
+                OutputHelper.WriteSuccess($"Timesheet #{settings.TimesheetId} updated");
+
             return 0;
+        }
+        catch (TimesheetValidationException ex)
+        {
+            if (settings.Json)
+                OutputHelper.WriteJsonError(ex.Message);
+            else
+                OutputHelper.WriteError(ex.Message);
+            return 1;
         }
         catch (ApiException ex)
         {
+            var detail = ApiErrorParser.ExtractDetail(ex.ResponseBody);
             if (settings.Json)
-                OutputHelper.WriteJsonError($"API error: {ex.Message}", ex.StatusCode);
+                OutputHelper.WriteJsonError($"API error: {ex.Message}", ex.StatusCode, detail);
             else
                 OutputHelper.WriteError($"API error ({ex.StatusCode}): {ex.Message}");
             return 1;
         }
-    }
-
-    /// <summary>
-    /// Searches for a timesheet by ID. If a date hint is provided, searches that day.
-    /// Otherwise searches the last 4 weeks day-by-day until found.
-    /// </summary>
-    private async Task<TimesheetItem?> FindTimesheetAsync(string empId, int timesheetId, string? dateHint)
-    {
-        if (dateHint is not null)
-        {
-            var date = DateOnly.ParseExact(dateHint, "yyyy-MM-dd", CultureInfo.InvariantCulture);
-            var timesheets = await _api.GetTimesheetsAsync(empId, date, CancellationToken.None);
-            return timesheets.FirstOrDefault(t => t.TimeId == timesheetId);
-        }
-
-        // Search last 4 weeks
-        var today = DateOnly.FromDateTime(DateTime.Today);
-        for (var d = today; d >= today.AddDays(-28); d = d.AddDays(-1))
-        {
-            if (d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
-                continue;
-
-            var timesheets = await _api.GetTimesheetsAsync(empId, d, CancellationToken.None);
-            var match = timesheets.FirstOrDefault(t => t.TimeId == timesheetId);
-            if (match is not null)
-                return match;
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// The GET /api/Timesheets/GetTimesheetListViewModel endpoint does not return
-    /// CategoryID. We use the query/summary API to resolve it.
-    /// </summary>
-    /// <summary>
-    /// The query-API entry for an existing timesheet. Unlike the list GET, it carries the
-    /// CategoryID and the sell-price snapshot, both of which the SaveTimesheet edit payload needs.
-    /// </summary>
-    private async Task<TimesheetSummaryEntry?> GetExistingEntryAsync(string empId, DateOnly date, int timesheetId)
-    {
-        var filter = new TimesheetSummaryFilter
-        {
-            StartDate = date.ToString("yyyy-MM-dd"),
-            EndDate = date.ToString("yyyy-MM-dd"),
-            EmployeeIds = [empId]
-        };
-
-        var entries = await _api.QueryTimesheetsAsync(filter, CancellationToken.None);
-        return entries.FirstOrDefault(e => e.TimeId == timesheetId);
     }
 }

@@ -43,6 +43,7 @@ public class McpHostCommand : AsyncCommand<McpHostCommand.Settings>
         builder.Services.AddSingleton<LeaveCreateService>();
         builder.Services.AddSingleton<LeaveUpdateService>();
         builder.Services.AddSingleton<LeaveBalanceImportService>();
+        builder.Services.AddSingleton<TimesheetCreateService>();
         builder.Services.AddSingleton<TimesheetUpdateService>();
         builder.Services.AddSingleton<TimesheetAcceptService>();
 

@@ -33,8 +33,10 @@ public static class McpToolCatalog
             EmptyBody = "[]"
         },
 
+        // The note and start time match the day's existing row so the empty-body read-back
+        // actually finds the entry it claims to have created.
         new("CreateTimesheet", "populated", (h, ct) => h.Timesheets.CreateTimesheet(
-            Client, Project, Date, description: "Checkout API", iterationId: 3402, ct: ct))
+            Client, Project, Date, description: "Product search", iterationId: 3402, ct: ct))
         {
             PrimaryRoute = "/api/Timesheets/SaveTimesheet",
             PrimaryMethod = "POST"

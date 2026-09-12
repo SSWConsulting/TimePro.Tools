@@ -129,9 +129,11 @@ public class McpTimesheetWriteTests : TestBase
     private TimesheetMcpTools CreateTools()
     {
         var updates = new TimesheetUpdateService(ApiClient);
+        var config = new StubConfigService(TestTenant);
         return new TimesheetMcpTools(
             ApiClient,
-            new StubConfigService(TestTenant),
+            config,
+            new TimesheetCreateService(ApiClient, config),
             updates,
             new TimesheetAcceptService(ApiClient, updates));
     }

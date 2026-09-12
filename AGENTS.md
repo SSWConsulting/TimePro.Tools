@@ -109,6 +109,18 @@ resolving an iteration by name or ID) and `TimesheetAcceptService` owns accept; 
 `ts accept` commands and the `UpdateTimesheet` / `AcceptSuggestedTimesheet` MCP tools are adapters
 over them. Never build a `TimesheetRequest` for an edit anywhere else.
 
+`TimesheetCreateService` is the same prepare/apply pair for new entries and owns every resolution a
+create needs: sell price from the client rate for the billable type, category from the repo mapping
+then the last fortnight's entries, location from the WFH defaults, deducted minutes to hours, and the
+read-back that turns an empty write response into the saved row. `ts create` and the
+`CreateTimesheet` MCP tool are adapters over it; never build a `TimesheetRequest` for a create
+elsewhere either.
+
+The API cannot price a row for a client with no active rate, so `PrepareAsync` stops and reports it
+rather than resolving it. Creating a rate stays with the caller: `ts create` keeps its interactive
+prompt, and MCP returns the `tp rate create` recovery command. Neither the service nor MCP ever
+writes a rate.
+
 `ts update` and `ts delete` refuse suggested entries locally (`tp ts accept <id>` first) rather than
 letting the API answer a bare 400; the MCP delete tool shares that check. Accept fails before the API
 call when the project uses iterations and none can be resolved, listing the available ones.

@@ -13,6 +13,7 @@ public static class ConfigPaths
     public static string GlobalConfigFile => Path.Combine(ConfigHome, "config.json");
     public static string TenantsDir => Path.Combine(ConfigHome, "tenants");
     public static string RepoMappingsFile => Path.Combine(ConfigHome, "repo-mappings.json");
+    public static string LogsDir => Path.Combine(ConfigHome, "logs");
 
     public static string TenantConfigFile(string tenantId) =>
         Path.Combine(TenantsDir, $"{tenantId.ToLowerInvariant()}.json");

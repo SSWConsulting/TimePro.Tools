@@ -11,15 +11,20 @@ public sealed class TimeProConnectionException : Exception
         string? tenantFile,
         string? tenantId,
         string apiUrl,
-        Exception? innerException = null)
+        Exception? innerException = null,
+        string? requestId = null)
         : base(message, innerException)
     {
         TenantFile = tenantFile;
         TenantId = tenantId;
         ApiUrl = apiUrl;
+        RequestId = requestId;
     }
 
     public string? TenantFile { get; }
     public string? TenantId { get; }
     public string ApiUrl { get; }
+
+    /// <summary>Correlation id this client sent on the attempt that never got a response.</summary>
+    public string? RequestId { get; }
 }

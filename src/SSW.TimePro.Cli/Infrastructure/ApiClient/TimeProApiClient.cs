@@ -1,7 +1,9 @@
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using SSW.TimePro.Cli.Infrastructure.Cli;
 using SSW.TimePro.Cli.Infrastructure.Config;
+using SSW.TimePro.Cli.Infrastructure.Telemetry;
 using SSW.TimePro.Cli.Shared.Models;
 
 namespace SSW.TimePro.Cli.Infrastructure.ApiClient;
@@ -416,10 +418,10 @@ public class TimeProApiClient : ITimeProApiClient
         if (query.Count > 0) url += "?" + string.Join("&", query);
 
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        ConfigureRequest(request);
+        var requestId = ConfigureRequest(request);
 
-        using var response = await SendAsync(request, ct);
-        await EnsureSuccessAsync(response, ct);
+        using var response = await SendAsync(request, requestId, ct);
+        await EnsureSuccessAsync(response, requestId, ct);
 
         return await response.Content.ReadAsByteArrayAsync(ct);
     }
@@ -753,7 +755,8 @@ public class TimeProApiClient : ITimeProApiClient
 
     // ───────────────────────── HTTP Helpers ─────────────────────────
 
-    private void ConfigureRequest(HttpRequestMessage request)
+    /// <summary>Returns the request id generated for this attempt.</summary>
+    private string ConfigureRequest(HttpRequestMessage request)
     {
         var tenant = _tenantProvider.GetCurrentTenant()
             ?? throw new InvalidOperationException(
@@ -764,25 +767,53 @@ public class TimeProApiClient : ITimeProApiClient
         request.Headers.TryAddWithoutValidation("x-timepro-tenant-id", tenant.TenantId);
         request.Headers.TryAddWithoutValidation("x-timepro-api-key", tenant.ApiKey);
         request.Headers.TryAddWithoutValidation("x-timepro-api-name", tenant.AppName);
+
+        var invocation = ClientContext.Current;
+        var requestId = Guid.NewGuid().ToString();
+
+        request.Headers.TryAddWithoutValidation("User-Agent", ClientHeaders.UserAgent(BuildInfo.Version));
+        request.Headers.TryAddWithoutValidation(
+            ClientHeaders.Surface, invocation?.Surface ?? ClientSurface.Cli);
+        request.Headers.TryAddWithoutValidation(
+            ClientHeaders.Command, invocation?.Command ?? CommandPathResolver.Unknown);
+        request.Headers.TryAddWithoutValidation(ClientHeaders.RequestId, requestId);
+
+        return requestId;
     }
 
-    private async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+    private async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request, string requestId, CancellationToken ct)
     {
+        var method = request.Method.Method;
+        var route = RouteTemplate.From(request.RequestUri);
+
         try
         {
-            return await _http.SendAsync(request, ct);
+            var response = await _http.SendAsync(request, ct);
+            RecordAttempt(ClientHeaders.ResolveRequestId(response, requestId), method, route, (int)response.StatusCode);
+            return response;
         }
         catch (HttpRequestException ex)
         {
-            throw ConnectionFailure(ex.Message, ex);
+            RecordAttempt(requestId, method, route, status: null);
+            throw ConnectionFailure(ex.Message, requestId, ex);
         }
         catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
         {
-            throw ConnectionFailure($"Request to {request.RequestUri} timed out", ex);
+            RecordAttempt(requestId, method, route, status: null);
+            throw ConnectionFailure($"Request to {request.RequestUri} timed out", requestId, ex);
         }
     }
 
-    private TimeProConnectionException ConnectionFailure(string message, Exception inner)
+    private static void RecordAttempt(string requestId, string method, string route, int? status)
+    {
+        ClientContext.Current?.Record(new RequestRecord(requestId, method, route, status));
+
+        if (ClientContext.Verbose)
+            Console.Error.WriteLine($"{method} {route} -> {status?.ToString() ?? "no response"} (request id: {requestId})");
+    }
+
+    private TimeProConnectionException ConnectionFailure(string message, string requestId, Exception inner)
     {
         var tenant = _tenantProvider.GetCurrentTenant();
         return new TimeProConnectionException(
@@ -790,16 +821,17 @@ public class TimeProApiClient : ITimeProApiClient
             tenant?.ConfigName,
             tenant?.TenantId,
             tenant?.ApiUrl ?? "unknown",
-            inner);
+            inner,
+            requestId);
     }
 
     private async Task<T?> GetAsync<T>(string relativeUrl, CancellationToken ct)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, relativeUrl);
-        ConfigureRequest(request);
+        var requestId = ConfigureRequest(request);
 
-        using var response = await SendAsync(request, ct);
-        await EnsureSuccessAsync(response, ct);
+        using var response = await SendAsync(request, requestId, ct);
+        await EnsureSuccessAsync(response, requestId, ct);
 
         return await response.Content.ReadFromJsonAsync<T>(ReadJsonOptions, ct);
     }
@@ -807,10 +839,10 @@ public class TimeProApiClient : ITimeProApiClient
     private async Task<T?> GetAsyncAllowEmptyBody<T>(string relativeUrl, CancellationToken ct)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, relativeUrl);
-        ConfigureRequest(request);
+        var requestId = ConfigureRequest(request);
 
-        using var response = await SendAsync(request, ct);
-        await EnsureSuccessAsync(response, ct);
+        using var response = await SendAsync(request, requestId, ct);
+        await EnsureSuccessAsync(response, requestId, ct);
 
         var content = await response.Content.ReadAsStringAsync(ct);
         if (string.IsNullOrWhiteSpace(content))
@@ -822,10 +854,10 @@ public class TimeProApiClient : ITimeProApiClient
     private async Task<byte[]> GetBytesAsync(string relativeUrl, CancellationToken ct)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, relativeUrl);
-        ConfigureRequest(request);
+        var requestId = ConfigureRequest(request);
 
-        using var response = await SendAsync(request, ct);
-        await EnsureSuccessAsync(response, ct);
+        using var response = await SendAsync(request, requestId, ct);
+        await EnsureSuccessAsync(response, requestId, ct);
 
         return await response.Content.ReadAsByteArrayAsync(ct);
     }
@@ -836,10 +868,10 @@ public class TimeProApiClient : ITimeProApiClient
         {
             Content = JsonContent.Create(body, options: WriteJsonOptions)
         };
-        ConfigureRequest(request);
+        var requestId = ConfigureRequest(request);
 
-        using var response = await SendAsync(request, ct);
-        await EnsureSuccessAsync(response, ct);
+        using var response = await SendAsync(request, requestId, ct);
+        await EnsureSuccessAsync(response, requestId, ct);
 
         // Some endpoints return empty body on success (e.g. SaveTimesheet)
         var content = await response.Content.ReadAsStringAsync(ct);
@@ -859,10 +891,10 @@ public class TimeProApiClient : ITimeProApiClient
         {
             Content = new StringContent(content, Encoding.UTF8, contentType)
         };
-        ConfigureRequest(request);
+        var requestId = ConfigureRequest(request);
 
-        using var response = await SendAsync(request, ct);
-        await EnsureSuccessAsync(response, ct);
+        using var response = await SendAsync(request, requestId, ct);
+        await EnsureSuccessAsync(response, requestId, ct);
 
         var body = await response.Content.ReadAsStringAsync(ct);
         if (string.IsNullOrWhiteSpace(body))
@@ -877,22 +909,23 @@ public class TimeProApiClient : ITimeProApiClient
         {
             Content = JsonContent.Create(body, options: WriteJsonOptions)
         };
-        ConfigureRequest(request);
+        var requestId = ConfigureRequest(request);
 
-        using var response = await SendAsync(request, ct);
-        await EnsureSuccessAsync(response, ct);
+        using var response = await SendAsync(request, requestId, ct);
+        await EnsureSuccessAsync(response, requestId, ct);
     }
 
     private async Task DeleteAsync(string relativeUrl, CancellationToken ct)
     {
         using var request = new HttpRequestMessage(HttpMethod.Delete, relativeUrl);
-        ConfigureRequest(request);
+        var requestId = ConfigureRequest(request);
 
-        using var response = await SendAsync(request, ct);
-        await EnsureSuccessAsync(response, ct);
+        using var response = await SendAsync(request, requestId, ct);
+        await EnsureSuccessAsync(response, requestId, ct);
     }
 
-    private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken ct)
+    private static async Task EnsureSuccessAsync(
+        HttpResponseMessage response, string requestId, CancellationToken ct)
     {
         if (response.IsSuccessStatusCode)
             return;
@@ -901,6 +934,7 @@ public class TimeProApiClient : ITimeProApiClient
         throw new ApiException(
             (int)response.StatusCode,
             $"TimePro API returned {(int)response.StatusCode} {response.ReasonPhrase}",
-            body);
+            body,
+            ClientHeaders.ResolveRequestId(response, requestId));
     }
 }

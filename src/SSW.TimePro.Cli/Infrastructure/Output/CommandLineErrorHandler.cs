@@ -75,12 +75,15 @@ public static class CommandLineErrorHandler
                 failure.Message,
                 detail: ConnectionErrorPresenter.BuildDetail(failure),
                 tenant: failure.TenantFile ?? failure.TenantId,
-                apiUrl: failure.ApiUrl);
+                apiUrl: failure.ApiUrl,
+                requestId: failure.RequestId);
         }
 
         OutputHelper.WriteError(failure.Message);
         foreach (var line in ConnectionErrorPresenter.BuildContextLines(failure))
             OutputHelper.WriteErrorDetail(line);
+
+        OutputHelper.WriteRequestId(failure.RequestId);
 
         return CommandLineErrorExitCode;
     }

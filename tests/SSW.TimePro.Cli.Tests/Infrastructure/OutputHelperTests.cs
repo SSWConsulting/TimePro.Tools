@@ -1,4 +1,5 @@
 using FluentAssertions;
+using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Output;
 using System.Text.Json;
 using Xunit;
@@ -51,6 +52,30 @@ public class OutputHelperTests
         error.GetProperty("code").ValueKind.Should().Be(JsonValueKind.Null);
         error.GetProperty("detail").ValueKind.Should().Be(JsonValueKind.Null);
         error.GetProperty("message").GetString().Should().Be("Not logged in.");
+    }
+
+    [Fact]
+    public void WriteApiError_AddsRequestId_WithoutDroppingCoreKeys()
+    {
+        var failure = new ApiException(404, "TimePro API returned 404 Not Found", "{\"detail\":\"no such invoice\"}", "req-abc-123");
+
+        var output = CaptureStdout(() => OutputHelper.WriteApiError(failure, useJson: true));
+
+        using var doc = JsonDocument.Parse(output);
+        var error = doc.RootElement.GetProperty("error");
+        error.GetProperty("requestId").GetString().Should().Be("req-abc-123");
+        error.GetProperty("code").GetInt32().Should().Be(404);
+        error.GetProperty("message").GetString().Should().Contain("404");
+        error.GetProperty("detail").GetString().Should().Be("no such invoice");
+    }
+
+    [Fact]
+    public void WriteJsonError_OmitsRequestId_WhenNoHttpAttemptWasMade()
+    {
+        var output = CaptureStdout(() => OutputHelper.WriteJsonError("Not logged in."));
+
+        using var doc = JsonDocument.Parse(output);
+        doc.RootElement.GetProperty("error").TryGetProperty("requestId", out _).Should().BeFalse();
     }
 
     [Fact]

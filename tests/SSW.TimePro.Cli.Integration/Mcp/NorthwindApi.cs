@@ -201,7 +201,17 @@ public static class NorthwindApi
 
     // ───────────────────────── Timesheets ─────────────────────────
 
-    public static List<TimesheetItem> Day(bool isSuggested = false) =>
+    private static DateOnly RequestedDate(WireMock.IRequestMessage request) =>
+        request.Query?.TryGetValue("date", out var values) == true
+        && DateOnly.TryParse(values.FirstOrDefault(), out var date)
+            ? date
+            : DateOnly.Parse(AnyDate);
+
+    /// <summary>
+    /// The day's entries, dated to <paramref name="date"/> so a fixture read for a Saturday does
+    /// not answer with Monday rows.
+    /// </summary>
+    public static List<TimesheetItem> Day(DateOnly date, bool isSuggested = false) =>
     [
         new()
         {
@@ -218,9 +228,9 @@ public static class NorthwindApi
             Location = "Home",
             LocationId = "Home",
             Notes = "Product search",
-            Date = "2026-03-16T00:00:00",
-            StartTime = "2026-03-16T09:00:00",
-            EndTime = "2026-03-16T17:00:00",
+            Date = $"{date:yyyy-MM-dd}T00:00:00",
+            StartTime = $"{date:yyyy-MM-dd}T09:00:00",
+            EndTime = $"{date:yyyy-MM-dd}T17:00:00",
             BillableId = "B",
             IsBillable = true,
             Less = 0.5m,
@@ -246,9 +256,9 @@ public static class NorthwindApi
             Location = "SSW",
             LocationId = "SSW",
             Notes = "Order history",
-            Date = "2026-03-16T00:00:00",
-            StartTime = "2026-03-16T13:00:00",
-            EndTime = "2026-03-16T14:00:00",
+            Date = $"{date:yyyy-MM-dd}T00:00:00",
+            StartTime = $"{date:yyyy-MM-dd}T13:00:00",
+            EndTime = $"{date:yyyy-MM-dd}T14:00:00",
             BillableId = "B",
             IsBillable = true,
             Less = 0m,
@@ -262,7 +272,12 @@ public static class NorthwindApi
 
     private static void StubTimesheets(WireMockServer server)
     {
-        Json(server, "/api/Timesheets/GetTimesheetListViewModel", "GET", Day());
+        server.Given(Request.Create().WithPath("/api/Timesheets/GetTimesheetListViewModel").UsingGet())
+            .AtPriority(BaselinePriority)
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody(request => JsonSerializer.Serialize(Day(RequestedDate(request)), Body)));
 
         Json(server, "/api/timesheetSummary/GetTableSummarydata", "POST", new List<TimesheetSummaryEntry>
         {

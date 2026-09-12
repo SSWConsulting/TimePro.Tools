@@ -37,9 +37,13 @@ public static class ToolIlScanner
                 if (!CallsInto(method, dependency))
                     continue;
 
-                var owner = Owner(method, toolMethods);
-                if (owner is not null)
-                    callers.Add(owner);
+                // Fail closed: an unattributable caller would otherwise let a private helper reach
+                // the API client with no tool name for the allowlist to catch.
+                callers.Add(Owner(method, toolMethods)
+                    ?? throw new InvalidOperationException(
+                        $"{method.DeclaringType!.Name}.{method.Name} calls {dependency.Name} but "
+                        + "belongs to no MCP tool method. Move the call into a shared service, or "
+                        + "inline it into the tool so the allowlist can name it."));
             }
         }
 

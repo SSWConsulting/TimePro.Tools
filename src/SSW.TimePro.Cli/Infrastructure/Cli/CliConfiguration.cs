@@ -80,6 +80,7 @@ public static class CliConfiguration
 {
     public static void Configure(IConfigurator config)
     {
+        config.UseStrictParsing();
         config.SetApplicationName("tp");
         config.SetApplicationVersion($"{BuildInfo.Version}+{BuildInfo.Commit}");
 

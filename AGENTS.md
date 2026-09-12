@@ -121,6 +121,11 @@ Unknown commands get a "did you mean" hint from `CommandCatalog`, a hand-mirrore
 registrations in `CliConfiguration`. `CommandCatalogTests` walks the real `--help` tree and fails
 when they drift, so a new command goes in both places.
 
+`CliConfiguration` turns on Spectre's strict parsing, so an unknown or mistyped option is a parse
+error through the same handler instead of being silently dropped. That means a command only accepts
+`--json` if its settings declare it; the envelope is still produced for the parse error, because
+`jsonRequested` is read off argv.
+
 ### MCP tools + tenant resolution
 
 Default MCP tools cover timesheets, lookups, and leave. Accounting MCP tools are feature-gated behind `tp feature accounting enable`. Before enabling or changing MCP features, ask the user what the MCP use-case is (timesheets, accounting reconciliation, Excel/CSV comparison, Xero/other MCP composition, diagnostics, etc.) so the tool surface can be adjusted deliberately.

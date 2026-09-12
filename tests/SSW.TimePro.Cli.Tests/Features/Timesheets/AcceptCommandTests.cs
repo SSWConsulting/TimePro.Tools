@@ -212,7 +212,7 @@ public class AcceptCommandTests
         TimeId = 99,
         EmpId = "TST",
         ClientId = "NWIND",
-        ProjectId = "4HCG7J",
+        ProjectId = "NW0001",
         LocationId = "SSW",
         Notes = "Order history",
         Date = "2026-03-16T00:00:00",

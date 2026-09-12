@@ -1,0 +1,33 @@
+{
+  "clientId": "NWIND",
+  "credited": {
+    "exGst": 100,
+    "gst": 10,
+    "incGst": 110
+  },
+  "creditingCreditNoteCount": 1,
+  "currencyId": "AUD",
+  "drawdownTimesheetCount": 1,
+  "drawnDown": {
+    "exGst": 600,
+    "gst": 60,
+    "incGst": 660
+  },
+  "exchangeRate": 1,
+  "invoiceId": 108,
+  "invoiceType": "P",
+  "original": {
+    "exGst": 1000,
+    "gst": 100,
+    "incGst": 1100
+  },
+  "reconciliationDeltaExGst": -100,
+  "reconciliationDeltaIncGst": -100,
+  "remaining": {
+    "exGst": 400,
+    "gst": 30,
+    "incGst": 430
+  },
+  "remainingExGstSource": "api/ClientInvoice/GetByClientId/{clientId}.remainingPrepaidCredit",
+  "salesTaxPct": 10
+}

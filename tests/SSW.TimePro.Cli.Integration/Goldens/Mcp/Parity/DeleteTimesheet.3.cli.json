@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": null,
+    "detail": null,
+    "message": "Timesheet 4243 is a suggestion and cannot be deleted. Accept it first: tp ts accept 4243"
+  }
+}

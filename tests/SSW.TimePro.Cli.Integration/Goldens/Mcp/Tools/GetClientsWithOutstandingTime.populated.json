@@ -1,0 +1,15 @@
+[
+  {
+    "billable": 600,
+    "clientId": "NWIND",
+    "coName": "Northwind Traders",
+    "dateUpdated": "2026-03-16T00:00:00",
+    "earliestUnAllocatedTimesheetDate": "2026-03-16T00:00:00",
+    "empId": "BOB",
+    "firstName": "Bob",
+    "os": 600,
+    "state": "QLD",
+    "suburb": "Brisbane",
+    "surname": "Northwind"
+  }
+]

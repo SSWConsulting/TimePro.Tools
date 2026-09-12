@@ -1,0 +1,17 @@
+{
+  "data": [
+    {
+      "clientId": "NWIND",
+      "clientName": "Northwind Traders",
+      "countOfInv": 3,
+      "createdOn": "2026-01-01T00:00:00",
+      "id": 42,
+      "isActive": true,
+      "lastInvEndDate": "2026-03-31T00:00:00",
+      "note": "Monthly retainer",
+      "sellTotal": 1100,
+      "unit": "month"
+    }
+  ],
+  "total": 1
+}

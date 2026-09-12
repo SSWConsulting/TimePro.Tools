@@ -1,0 +1,19 @@
+[
+  {
+    "billableId": "B",
+    "categoryId": "WEBDEV",
+    "categoryName": "Web development",
+    "clientId": "NWIND",
+    "clientName": "Northwind Traders",
+    "description": "Product search",
+    "empId": "BOB",
+    "employeeName": "Bob Northwind",
+    "note": "Product search",
+    "projectId": "1I776Q",
+    "projectName": "Northwind Traders",
+    "sellPrice": 175,
+    "timeId": 4242,
+    "timesheetDate": "2026-03-16",
+    "totalHours": 7.5
+  }
+]

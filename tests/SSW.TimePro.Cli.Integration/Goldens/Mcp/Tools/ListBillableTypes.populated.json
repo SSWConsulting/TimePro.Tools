@@ -1,0 +1,14 @@
+[
+  {
+    "text": "Billable",
+    "value": "B"
+  },
+  {
+    "text": "Prepaid",
+    "value": "BPP"
+  },
+  {
+    "text": "Write-off",
+    "value": "W"
+  }
+]

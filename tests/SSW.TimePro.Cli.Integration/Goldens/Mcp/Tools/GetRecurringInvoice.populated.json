@@ -1,0 +1,36 @@
+{
+  "canGenerateNow": true,
+  "clientId": "NWIND",
+  "countOfInv": 3,
+  "createdBy": "BOB",
+  "createdOn": "2026-01-01T00:00:00",
+  "dateEnd": "2026-12-31T00:00:00",
+  "dateStart": "2026-01-01T00:00:00",
+  "firstInvPeriod": 1,
+  "id": 42,
+  "lastInvEndDate": "2026-03-31T00:00:00",
+  "lastInvPeriod": 1,
+  "nextInvoicePeriodEnd": "2026-04-30T00:00:00",
+  "nextInvoicePeriodStart": "2026-04-01T00:00:00",
+  "note": "Monthly retainer",
+  "products": [
+    {
+      "createdBy": "BOB",
+      "createdOn": "2026-01-01T00:00:00",
+      "id": 1,
+      "prodId": "PREPAID",
+      "prodName": "Prepaid block",
+      "qty": 1,
+      "recurringInvoiceId": 42,
+      "salesTaxAmt": 100,
+      "salesTaxPct": 10,
+      "sellAmt": 1000,
+      "sellTotal": 1000
+    }
+  ],
+  "sellAmt": 1000,
+  "sellTaxAmt": 100,
+  "sellTotal": 1100,
+  "subsequentInvPeriod": 1,
+  "unit": "month"
+}

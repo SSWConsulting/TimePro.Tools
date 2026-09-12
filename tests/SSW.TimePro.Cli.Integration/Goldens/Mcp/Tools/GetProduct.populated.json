@@ -1,0 +1,25 @@
+{
+  "allowDiscount": true,
+  "allowDiscount2": false,
+  "dateCreated": "2026-01-01T00:00:00",
+  "dateUpdated": "2026-01-01T00:00:00",
+  "displayOnWeb": false,
+  "head": "Prepaid",
+  "isTraining": false,
+  "productId": "PREPAID",
+  "productName": "Prepaid block",
+  "skus": [
+    {
+      "costAmt": 0,
+      "dateCreated": "2026-01-01T00:00:00",
+      "dateUpdated": "2026-01-01T00:00:00",
+      "displayOnWeb": false,
+      "isPrepaid": true,
+      "productId": "PREPAID",
+      "rrpAmt": 1000,
+      "sellAmt": 1000,
+      "skuId": "PREPAID-10",
+      "skuName": "Prepaid 10 hours"
+    }
+  ]
+}

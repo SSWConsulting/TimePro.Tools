@@ -5,9 +5,15 @@ namespace SSW.TimePro.Cli.Infrastructure.Config;
 /// </summary>
 public static class ConfigPaths
 {
-    private static readonly string ConfigHome = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".config", "timepro-cli");
+    /// <summary>
+    /// Overrides the config root. Exists so tests and MCP hosts can run against an isolated
+    /// config directory instead of the developer's real <c>~/.config/timepro-cli</c>.
+    /// </summary>
+    public const string ConfigDirEnvVar = "TIMEPRO_CLI_CONFIG_DIR";
+
+    private static readonly string ConfigHome = Resolve(
+        Environment.GetEnvironmentVariable(ConfigDirEnvVar),
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
 
     public static string Root => ConfigHome;
     public static string GlobalConfigFile => Path.Combine(ConfigHome, "config.json");
@@ -17,6 +23,15 @@ public static class ConfigPaths
 
     public static string TenantConfigFile(string tenantId) =>
         Path.Combine(TenantsDir, $"{tenantId.ToLowerInvariant()}.json");
+
+    internal static string Resolve(string? configDirOverride, string userProfile)
+    {
+        if (string.IsNullOrWhiteSpace(configDirOverride))
+            return Path.Combine(userProfile, ".config", "timepro-cli");
+
+        var expanded = Paths.PathExpander.ExpandHomeDirectory(configDirOverride.Trim());
+        return Path.GetFullPath(expanded);
+    }
 
     /// <summary>
     /// Ensures all config directories exist.

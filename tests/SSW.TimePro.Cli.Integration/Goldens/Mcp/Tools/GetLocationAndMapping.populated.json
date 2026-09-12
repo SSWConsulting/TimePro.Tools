@@ -1,0 +1,10 @@
+{
+  "defaultLocation": "Office",
+  "repoMapping": {
+    "categoryId": "WEBDEV",
+    "clientId": "NWIND",
+    "projectId": "1I776Q",
+    "projectName": "Northwind Traders"
+  },
+  "wfhDays": []
+}

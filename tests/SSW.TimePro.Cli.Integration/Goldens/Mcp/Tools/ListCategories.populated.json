@@ -1,0 +1,12 @@
+[
+  {
+    "categoryId": "WEBDEV",
+    "categoryName": "Web development",
+    "isNonWorking": false
+  },
+  {
+    "categoryId": "TRAIN",
+    "categoryName": "Training",
+    "isNonWorking": false
+  }
+]

@@ -1,0 +1,17 @@
+[
+  {
+    "categoryId": "WEBDEV",
+    "empId": "BOB",
+    "invoiceId": 108,
+    "invoiceProdId": 1,
+    "prodName": "Prepaid block",
+    "qty": 1,
+    "salesTaxAmt": 100,
+    "salesTaxPct": 10,
+    "sellAmt": 1000,
+    "sellTotal": 1000,
+    "skuId": "PREPAID-10",
+    "skuName": "Prepaid 10 hours",
+    "type": "S"
+  }
+]

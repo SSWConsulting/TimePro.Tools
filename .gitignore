@@ -68,3 +68,4 @@ src/**/.agents/
 
 ## Generated reports
 Reports/
+__pycache__/

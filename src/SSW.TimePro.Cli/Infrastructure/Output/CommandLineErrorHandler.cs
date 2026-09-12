@@ -1,10 +1,12 @@
+using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using Spectre.Console.Cli;
 
 namespace SSW.TimePro.Cli.Infrastructure.Output;
 
 /// <summary>
-/// Turns Spectre parse/binding failures into the same contract the commands themselves honour:
-/// the JSON error envelope on stdout when <c>--json</c> was asked for, human text on stderr otherwise.
+/// Turns Spectre parse/binding failures, and connection failures escaping a command, into the same
+/// contract the commands themselves honour: the JSON error envelope on stdout when <c>--json</c> was
+/// asked for, human text on stderr otherwise.
 /// </summary>
 public static class CommandLineErrorHandler
 {
@@ -32,6 +34,9 @@ public static class CommandLineErrorHandler
 
     public static int Handle(Exception exception, bool jsonRequested)
     {
+        if (FindConnectionFailure(exception) is { } connectionFailure)
+            return HandleConnectionFailure(connectionFailure, jsonRequested);
+
         var commandLineError = exception as CommandAppException;
 
         if (jsonRequested)
@@ -53,5 +58,36 @@ public static class CommandLineErrorHandler
         }
 
         return commandLineError is not null ? CommandLineErrorExitCode : UnexpectedErrorExitCode;
+    }
+
+    private static int HandleConnectionFailure(TimeProConnectionException failure, bool jsonRequested)
+    {
+        if (jsonRequested)
+        {
+            OutputHelper.WriteJsonError(
+                failure.Message,
+                detail: ConnectionErrorPresenter.BuildDetail(failure),
+                tenant: failure.TenantFile ?? failure.TenantId,
+                apiUrl: failure.ApiUrl);
+        }
+
+        OutputHelper.WriteError(failure.Message);
+        foreach (var line in ConnectionErrorPresenter.BuildContextLines(failure))
+            OutputHelper.WriteErrorDetail(line);
+
+        return CommandLineErrorExitCode;
+    }
+
+    private static TimeProConnectionException? FindConnectionFailure(Exception? exception)
+    {
+        while (exception is not null)
+        {
+            if (exception is TimeProConnectionException connectionFailure)
+                return connectionFailure;
+
+            exception = exception.InnerException;
+        }
+
+        return null;
     }
 }

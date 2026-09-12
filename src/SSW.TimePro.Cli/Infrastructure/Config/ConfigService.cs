@@ -109,7 +109,11 @@ public class ConfigService : IConfigService
             return null;
 
         var json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<TenantConfig>(json, JsonOptions);
+        var tenant = JsonSerializer.Deserialize<TenantConfig>(json, JsonOptions);
+        if (tenant is not null)
+            tenant.ConfigName = Path.GetFileNameWithoutExtension(path);
+
+        return tenant;
     }
 
     public void SaveTenantConfig(TenantConfig config)
@@ -161,7 +165,10 @@ public class ConfigService : IConfigService
                 var json = File.ReadAllText(file);
                 var tenant = JsonSerializer.Deserialize<TenantConfig>(json, JsonOptions);
                 if (tenant is not null)
+                {
+                    tenant.ConfigName = Path.GetFileNameWithoutExtension(file);
                     tenants.Add(tenant);
+                }
             }
             catch
             {
@@ -169,7 +176,7 @@ public class ConfigService : IConfigService
             }
         }
 
-        return tenants;
+        return tenants.OrderBy(t => t.ConfigName, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
     private string RepoMappingsFile => Path.Combine(_basePath, "repo-mappings.json");

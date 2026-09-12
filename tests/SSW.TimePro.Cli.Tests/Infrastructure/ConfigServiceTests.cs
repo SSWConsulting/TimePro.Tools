@@ -102,6 +102,25 @@ public class ConfigServiceTests : IDisposable
     }
 
     [Fact]
+    public void LoadedTenants_CarryTheConfigFileName_NotTheTenantId()
+    {
+        WriteTenantFile("northwind-staging", "northwind", "https://api.staging-sswtimepro.com");
+        WriteTenantFile("northwind-prod", "northwind", "https://api.sswtimepro.com");
+
+        _service.LoadTenantConfig("northwind-staging")!.ConfigName.Should().Be("northwind-staging");
+        _service.ListTenants().Select(t => t.ConfigName)
+            .Should().Equal("northwind-prod", "northwind-staging");
+    }
+
+    private void WriteTenantFile(string fileName, string tenantId, string apiUrl)
+    {
+        Directory.CreateDirectory(Path.Combine(_tempDir, "tenants"));
+        File.WriteAllText(
+            Path.Combine(_tempDir, "tenants", $"{fileName}.json"),
+            $$"""{"tenantId":"{{tenantId}}","apiUrl":"{{apiUrl}}","apiKey":"test-key"}""");
+    }
+
+    [Fact]
     public void LoadTenantConfig_WhenNotExists_ReturnsNull()
     {
         var result = _service.LoadTenantConfig("nonexistent");

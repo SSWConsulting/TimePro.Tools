@@ -88,12 +88,75 @@ public sealed class TenantOverrideResolverTests : IDisposable
             .Should().Be(expected);
     }
 
-    private void SaveTenant(string tenantId)
+    [Fact]
+    public void ResolveTenantOverride_ProductionEnvironmentUsesProductionConfig()
+    {
+        SaveTenant("northwind", production: true);
+
+        var tenant = TenantOverrideResolver.ResolveTenantOverride(
+            _config,
+            new TenantOverrideOptions("northwind", "prod"),
+            out var error);
+
+        error.Should().BeNull();
+        tenant!.ConfigName.Should().Be("northwind");
+    }
+
+    [Fact]
+    public void ResolveTenantOverride_ProductionEnvironmentPrefersProductionSuffixedConfig()
+    {
+        SaveTenant("northwind");
+        SaveTenant("northwind-prod", production: true);
+
+        var tenant = TenantOverrideResolver.ResolveTenantOverride(
+            _config,
+            new TenantOverrideOptions("northwind", "prod"),
+            out var error);
+
+        error.Should().BeNull();
+        tenant!.ConfigName.Should().Be("northwind-prod");
+    }
+
+    [Fact]
+    public void ResolveTenantOverride_ProductionEnvironmentFailsWhenNoProductionConfigExists()
+    {
+        SaveTenant("northwind");
+
+        var tenant = TenantOverrideResolver.ResolveTenantOverride(
+            _config,
+            new TenantOverrideOptions("northwind", "prod"),
+            out var error);
+
+        tenant.Should().BeNull();
+        error.Should().Contain("northwind.json");
+        error.Should().Contain("https://api.staging-sswtimepro.com");
+        error.Should().Contain("tp tenant list");
+    }
+
+    [Theory]
+    [InlineData("staging")]
+    [InlineData("local")]
+    [InlineData("uat")]
+    public void ResolveTenantOverride_NonProductionEnvironmentFailsWhenConfigPointsAtProduction(string environment)
+    {
+        SaveTenant($"northwind-{environment}", production: true);
+
+        var tenant = TenantOverrideResolver.ResolveTenantOverride(
+            _config,
+            new TenantOverrideOptions("northwind", environment),
+            out var error);
+
+        tenant.Should().BeNull();
+        error.Should().Contain($"northwind-{environment}.json");
+        error.Should().Contain("production");
+    }
+
+    private void SaveTenant(string tenantId, bool production = false)
     {
         _config.SaveTenantConfig(new TenantConfig
         {
             TenantId = tenantId,
-            ApiUrl = "https://api.staging-sswtimepro.com",
+            ApiUrl = production ? "https://api.sswtimepro.com" : "https://api.staging-sswtimepro.com",
             ApiKey = "test-key"
         });
     }

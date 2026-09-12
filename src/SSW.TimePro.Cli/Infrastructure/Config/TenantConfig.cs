@@ -26,6 +26,13 @@ public class TenantConfig
     public string AppName { get; set; } = "SSW-TimePro-CLI";
 
     /// <summary>
+    /// Config file name without extension. This, not <see cref="TenantId"/>, is what
+    /// <c>activeTenant</c> and <c>tp tenant set</c> refer to.
+    /// </summary>
+    [JsonIgnore]
+    public string? ConfigName { get; set; }
+
+    /// <summary>
     /// Returns the URL where the user can find their API token.
     /// </summary>
     public string GetTokenPageUrl()
@@ -33,14 +40,16 @@ public class TenantConfig
         return $"https://{TenantId}.sswtimepro.com/b/admin/api-key";
     }
 
+    private static readonly string[] ProductionHosts = ["api.sswtimepro.com"];
+
     /// <summary>
-    /// Whether this is pointing at a production API.
+    /// Whether this is pointing at a production API. Matched on the URL's host, so a staging or
+    /// local server cannot pass by carrying a production hostname in its path or query.
     /// </summary>
     [JsonIgnore]
     public bool IsProduction =>
-        ApiUrl.Contains("api.sswtimepro.com", StringComparison.OrdinalIgnoreCase)
-        && !ApiUrl.Contains("staging", StringComparison.OrdinalIgnoreCase)
-        && !ApiUrl.Contains("local", StringComparison.OrdinalIgnoreCase);
+        Uri.TryCreate(ApiUrl, UriKind.Absolute, out var uri)
+        && ProductionHosts.Contains(uri.Host, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Safe-to-display view that omits secrets such as the API key.
@@ -49,6 +58,7 @@ public class TenantConfig
     {
         return new TenantConfigSummary
         {
+            File = ConfigName,
             TenantId = TenantId,
             ApiUrl = ApiUrl,
             EmployeeId = EmployeeId,
@@ -61,6 +71,7 @@ public class TenantConfig
 
 public class TenantConfigSummary
 {
+    public string? File { get; set; }
     public string TenantId { get; set; } = string.Empty;
     public string ApiUrl { get; set; } = string.Empty;
     public string? EmployeeId { get; set; }

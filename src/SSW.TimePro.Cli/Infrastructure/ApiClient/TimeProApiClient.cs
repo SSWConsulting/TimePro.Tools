@@ -418,7 +418,7 @@ public class TimeProApiClient : ITimeProApiClient
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         ConfigureRequest(request);
 
-        using var response = await _http.SendAsync(request, ct);
+        using var response = await SendAsync(request, ct);
         await EnsureSuccessAsync(response, ct);
 
         return await response.Content.ReadAsByteArrayAsync(ct);
@@ -766,12 +766,39 @@ public class TimeProApiClient : ITimeProApiClient
         request.Headers.TryAddWithoutValidation("x-timepro-api-name", tenant.AppName);
     }
 
+    private async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+    {
+        try
+        {
+            return await _http.SendAsync(request, ct);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw ConnectionFailure(ex.Message, ex);
+        }
+        catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
+        {
+            throw ConnectionFailure($"Request to {request.RequestUri} timed out", ex);
+        }
+    }
+
+    private TimeProConnectionException ConnectionFailure(string message, Exception inner)
+    {
+        var tenant = _tenantProvider.GetCurrentTenant();
+        return new TimeProConnectionException(
+            message,
+            tenant?.ConfigName,
+            tenant?.TenantId,
+            tenant?.ApiUrl ?? "unknown",
+            inner);
+    }
+
     private async Task<T?> GetAsync<T>(string relativeUrl, CancellationToken ct)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, relativeUrl);
         ConfigureRequest(request);
 
-        using var response = await _http.SendAsync(request, ct);
+        using var response = await SendAsync(request, ct);
         await EnsureSuccessAsync(response, ct);
 
         return await response.Content.ReadFromJsonAsync<T>(ReadJsonOptions, ct);
@@ -782,7 +809,7 @@ public class TimeProApiClient : ITimeProApiClient
         using var request = new HttpRequestMessage(HttpMethod.Get, relativeUrl);
         ConfigureRequest(request);
 
-        using var response = await _http.SendAsync(request, ct);
+        using var response = await SendAsync(request, ct);
         await EnsureSuccessAsync(response, ct);
 
         var content = await response.Content.ReadAsStringAsync(ct);
@@ -797,7 +824,7 @@ public class TimeProApiClient : ITimeProApiClient
         using var request = new HttpRequestMessage(HttpMethod.Get, relativeUrl);
         ConfigureRequest(request);
 
-        using var response = await _http.SendAsync(request, ct);
+        using var response = await SendAsync(request, ct);
         await EnsureSuccessAsync(response, ct);
 
         return await response.Content.ReadAsByteArrayAsync(ct);
@@ -811,7 +838,7 @@ public class TimeProApiClient : ITimeProApiClient
         };
         ConfigureRequest(request);
 
-        using var response = await _http.SendAsync(request, ct);
+        using var response = await SendAsync(request, ct);
         await EnsureSuccessAsync(response, ct);
 
         // Some endpoints return empty body on success (e.g. SaveTimesheet)
@@ -834,7 +861,7 @@ public class TimeProApiClient : ITimeProApiClient
         };
         ConfigureRequest(request);
 
-        using var response = await _http.SendAsync(request, ct);
+        using var response = await SendAsync(request, ct);
         await EnsureSuccessAsync(response, ct);
 
         var body = await response.Content.ReadAsStringAsync(ct);
@@ -852,7 +879,7 @@ public class TimeProApiClient : ITimeProApiClient
         };
         ConfigureRequest(request);
 
-        using var response = await _http.SendAsync(request, ct);
+        using var response = await SendAsync(request, ct);
         await EnsureSuccessAsync(response, ct);
     }
 
@@ -861,7 +888,7 @@ public class TimeProApiClient : ITimeProApiClient
         using var request = new HttpRequestMessage(HttpMethod.Delete, relativeUrl);
         ConfigureRequest(request);
 
-        using var response = await _http.SendAsync(request, ct);
+        using var response = await SendAsync(request, ct);
         await EnsureSuccessAsync(response, ct);
     }
 

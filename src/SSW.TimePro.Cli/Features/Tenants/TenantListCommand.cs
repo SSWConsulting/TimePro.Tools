@@ -34,31 +34,59 @@ public class TenantListCommand : Command<TenantListCommand.Settings>
             return 0;
         }
 
-        var summaries = tenants.Select(t => t.ToSummary()).ToList();
+        var activeFile = _config.LoadActiveTenantConfig()?.ConfigName ?? global.ActiveTenant;
+        var items = tenants.Select(t => TenantListItem.From(t, activeFile)).ToList();
 
-        OutputHelper.Render(summaries, settings.Json, list =>
+        OutputHelper.Render(items, settings.Json, list =>
         {
             var table = new Table()
                 .AddColumn("")
+                .AddColumn("File")
                 .AddColumn("Tenant")
                 .AddColumn("Employee")
                 .AddColumn("Name")
+                .AddColumn("Env")
                 .AddColumn("API URL");
 
             foreach (var t in list)
             {
-                var active = t.TenantId == global.ActiveTenant ? "[green]*[/]" : " ";
                 table.AddRow(
-                    active,
+                    t.IsActive ? "[green]*[/]" : " ",
+                    Markup.Escape(t.File ?? "-"),
                     Markup.Escape(t.TenantId),
                     Markup.Escape(t.EmployeeId ?? "-"),
                     Markup.Escape(t.EmployeeName ?? "-"),
+                    t.IsProduction ? "[red]prod[/]" : "[green]non-prod[/]",
                     Markup.Escape(t.ApiUrl));
             }
 
             AnsiConsole.Write(table);
+            AnsiConsole.MarkupLine("[grey]* = active. Switch with 'tp tenant set <file>'.[/]");
         });
 
         return 0;
     }
+}
+
+public sealed record TenantListItem(
+    string? File,
+    bool IsActive,
+    string TenantId,
+    string ApiUrl,
+    bool IsProduction,
+    string? EmployeeId,
+    string? EmployeeName,
+    string AppName)
+{
+    public static TenantListItem From(TenantConfig tenant, string? activeTenantFile) =>
+        new(
+            File: tenant.ConfigName,
+            IsActive: tenant.ConfigName is not null
+                && string.Equals(tenant.ConfigName, activeTenantFile, StringComparison.OrdinalIgnoreCase),
+            TenantId: tenant.TenantId,
+            ApiUrl: tenant.ApiUrl,
+            IsProduction: tenant.IsProduction,
+            EmployeeId: tenant.EmployeeId,
+            EmployeeName: tenant.EmployeeName,
+            AppName: tenant.AppName);
 }

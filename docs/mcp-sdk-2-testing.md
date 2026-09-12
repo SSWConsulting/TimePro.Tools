@@ -47,6 +47,9 @@ VS Code / Copilot (`.vscode/mcp.json` or the user `mcp.json`) take the same
 Register it under a distinct name (`timepro-sdk2`) so the existing `timepro` entry stays untouched
 and can be compared side by side.
 
+Identify the server by that registered name, not by `serverInfo.version`: every local build reports
+`0.3.0.0` (`<VersionPrefix>.0`), so the SDK 2 worktree and a locally built `main` look the same there.
+
 ## Per-client checklist
 
 Run all of these against `ssw-staging`. Northwind (`NWIND`) is the only client to touch. Pick one

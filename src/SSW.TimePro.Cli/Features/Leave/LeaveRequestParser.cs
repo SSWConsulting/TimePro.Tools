@@ -5,18 +5,19 @@ namespace SSW.TimePro.Cli.Features.Leave;
 
 internal static class LeaveRequestParser
 {
-    public const string DefaultStartTime = "09:00:00";
-    public const string DefaultEndTime = "18:00:00";
+    public static readonly TimeOnly DefaultStartTime = new(9, 0);
+    public static readonly TimeOnly DefaultEndTime = new(18, 0);
 
     private static readonly TimeOnly EndOfDay = new(23, 59, 0);
+    private static readonly string[] WorkdayTimeFormats = ["H:mm:ss", "H:mm"];
 
+    /// <summary>Partial-day windows pass their workday times; null means all-day (00:00-23:59).</summary>
     public static bool TryParseDateRange(
         string start,
         string end,
         TimeZoneInfo timeZone,
-        bool allDay,
-        string userStartTime,
-        string userEndTime,
+        TimeOnly? partialDayStart,
+        TimeOnly? partialDayEnd,
         out DateTimeOffset startDate,
         out DateTimeOffset endDate,
         out string? error)
@@ -25,16 +26,13 @@ internal static class LeaveRequestParser
         endDate = default;
         error = null;
 
-        var startTimeOfDay = allDay ? TimeOnly.MinValue : ParseTimeOfDay(userStartTime, DefaultStartTime);
-        var endTimeOfDay = allDay ? EndOfDay : ParseTimeOfDay(userEndTime, DefaultEndTime);
-
-        if (!TryParseBoundary(start, timeZone, startTimeOfDay, out startDate))
+        if (!TryParseBoundary(start, timeZone, partialDayStart ?? TimeOnly.MinValue, partialDayStart.HasValue, out startDate))
         {
             error = $"Invalid start date: '{start}'. Use yyyy-MM-dd format.";
             return false;
         }
 
-        if (!TryParseBoundary(end, timeZone, endTimeOfDay, out endDate))
+        if (!TryParseBoundary(end, timeZone, partialDayEnd ?? EndOfDay, partialDayEnd.HasValue, out endDate))
         {
             error = $"Invalid end date: '{end}'. Use yyyy-MM-dd format.";
             return false;
@@ -43,16 +41,36 @@ internal static class LeaveRequestParser
         return true;
     }
 
-    /// <summary>Mirrors the server rule so dry-run rejects what the real call would reject.</summary>
-    public static bool TryValidatePartialDayTimes(DateTimeOffset startDate, DateTimeOffset endDate, out string? error)
+    public static bool TryParseWorkdayTime(string? value, TimeOnly fallback, string label, out TimeOnly time, out string? error)
     {
-        if (!IsOnHourOrHalfHour(startDate))
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            time = fallback;
+            error = null;
+            return true;
+        }
+
+        if (TimeOnly.TryParseExact(value.Trim(), WorkdayTimeFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out time))
+        {
+            error = null;
+            return true;
+        }
+
+        time = fallback;
+        error = $"Invalid workday {label} time: '{value}'. Use HH:mm or HH:mm:ss.";
+        return false;
+    }
+
+    /// <summary>Mirrors the server rule so dry-run rejects what the real call would reject.</summary>
+    public static bool TryValidatePartialDayTimes(TimeOnly startTime, TimeOnly endTime, out string? error)
+    {
+        if (!IsOnHourOrHalfHour(startTime))
         {
             error = "Start time must be on the hour or half-hour.";
             return false;
         }
 
-        if (!IsOnHourOrHalfHour(endDate))
+        if (!IsOnHourOrHalfHour(endTime))
         {
             error = "End time must be on the hour or half-hour.";
             return false;
@@ -60,12 +78,6 @@ internal static class LeaveRequestParser
 
         error = null;
         return true;
-    }
-
-    public static string NormalizeTime(string? time, string defaultValue)
-    {
-        var normalized = string.IsNullOrWhiteSpace(time) ? defaultValue : time.Trim();
-        return normalized.Length == 5 ? normalized + ":00" : normalized;
     }
 
     public static List<string> ParseOptionalEmployees(string? optionalEmp) =>
@@ -114,6 +126,7 @@ internal static class LeaveRequestParser
         string value,
         TimeZoneInfo timeZone,
         TimeOnly timeOfDay,
+        bool forceTimeOfDay,
         out DateTimeOffset result)
     {
         if (DateOnly.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateOnly))
@@ -122,18 +135,16 @@ internal static class LeaveRequestParser
             return true;
         }
 
-        return TryParseDateTime(value, timeZone, timeOfDay, out result);
+        if (!TryParseDateTime(value, timeZone, timeOfDay, out result))
+            return false;
+
+        if (forceTimeOfDay)
+            result = new DateTimeOffset(result.Date.Add(timeOfDay.ToTimeSpan()), result.Offset);
+
+        return true;
     }
 
-    private static TimeOnly ParseTimeOfDay(string? value, string fallback)
-    {
-        var normalized = NormalizeTime(value, fallback);
-        return TimeOnly.TryParseExact(normalized, "HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed)
-            ? parsed
-            : TimeOnly.Parse(fallback, CultureInfo.InvariantCulture);
-    }
-
-    private static bool IsOnHourOrHalfHour(DateTimeOffset value) =>
+    private static bool IsOnHourOrHalfHour(TimeOnly value) =>
         value.Minute is 0 or 30 && value.Second == 0 && value.Millisecond == 0;
 
     private static DateTimeOffset ToDateTimeOffset(DateOnly date, TimeOnly time, TimeZoneInfo timeZone)

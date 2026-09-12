@@ -271,6 +271,110 @@ public class UpdateCommandTests
         api.ShouldNotHaveReceived(nameof(ITimeProApiClient.UpdateLeaveAsync));
     }
 
+    [Fact]
+    public async Task Update_WhenExistingPartialDayEndTimeIsNotOnTheHourOrHalfHour_DoesNotCallUpdateApi()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureExistingLeave(api, allDay: false);
+        var app = CreateApp(api);
+
+        var exitCode = await app.RunAsync([
+            "update",
+            LeaveId,
+            "--end-time", "16:20",
+            "--json"
+        ], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(1);
+        api.ShouldNotHaveReceived(nameof(ITimeProApiClient.UpdateLeaveAsync));
+    }
+
+    [Fact]
+    public async Task Update_WhenDryRunOnExistingPartialDayWithInvalidEndTime_FailsLikeTheRealCall()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureExistingLeave(api, allDay: false);
+        var app = CreateApp(api);
+
+        var exitCode = await app.RunAsync([
+            "update",
+            LeaveId,
+            "--end-time", "16:20",
+            "--dry-run",
+            "--json"
+        ], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(1);
+        api.ShouldNotHaveReceived(nameof(ITimeProApiClient.UpdateLeaveAsync));
+    }
+
+    [Fact]
+    public async Task Update_WhenExistingPartialDayEndTimeChanges_MovesTheBoundaryWithIt()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureExistingLeave(api, allDay: false);
+        UpdateLeaveRequest? request = null;
+        api.UpdateLeaveAsync(Arg.Do<UpdateLeaveRequest>(value => request = value), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+        var app = CreateApp(api);
+
+        var exitCode = await app.RunAsync([
+            "update",
+            LeaveId,
+            "--end-time", "16:30",
+            "--json"
+        ], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(0);
+        request.Should().NotBeNull();
+        request!.AllDay.Should().BeFalse();
+        request.UserEndTime.Should().Be("16:30:00");
+        request.StartDate.Should().Be("2026-03-30T07:30:00.0000000+10:00");
+        request.EndDate.Should().Be("2026-03-30T16:30:00.0000000+10:00");
+    }
+
+    [Fact]
+    public async Task Update_WhenWorkdayTimeHasASingleDigitHour_IsAccepted()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureExistingLeave(api);
+        UpdateLeaveRequest? request = null;
+        api.UpdateLeaveAsync(Arg.Do<UpdateLeaveRequest>(value => request = value), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+        var app = CreateApp(api);
+
+        var exitCode = await app.RunAsync([
+            "update",
+            LeaveId,
+            "--half-day",
+            "--start-time", "8:30",
+            "--json"
+        ], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(0);
+        request.Should().NotBeNull();
+        request!.UserStartTime.Should().Be("08:30:00");
+        request.StartDate.Should().Be("2026-03-30T08:30:00.0000000+00:00");
+    }
+
+    [Fact]
+    public async Task Update_WhenWorkdayTimeIsUnparseable_DoesNotCallUpdateApi()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureExistingLeave(api);
+        var app = CreateApp(api);
+
+        var exitCode = await app.RunAsync([
+            "update",
+            LeaveId,
+            "--start-time", "half eight",
+            "--json"
+        ], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(1);
+        api.ShouldNotHaveReceived(nameof(ITimeProApiClient.UpdateLeaveAsync));
+    }
+
     private static void ConfigureExistingLeave(ITimeProApiClient api, bool allDay = true)
     {
         api.GetLeaveAsync(
@@ -293,8 +397,8 @@ public class UpdateCommandTests
                         {
                             Id = LeaveId,
                             RequestedEmpId = "TST",
-                            StartDate = "2026-03-30T00:00:00+10:00",
-                            EndDate = "2026-03-30T23:59:00+10:00",
+                            StartDate = allDay ? "2026-03-30T00:00:00+10:00" : "2026-03-30T07:30:00+10:00",
+                            EndDate = allDay ? "2026-03-30T23:59:00+10:00" : "2026-03-30T16:00:00+10:00",
                             UserStartTime = "07:30",
                             UserEndTime = "16:00",
                             Note = "Original plans",

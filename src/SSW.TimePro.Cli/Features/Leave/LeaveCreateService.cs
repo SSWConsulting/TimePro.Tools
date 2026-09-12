@@ -60,20 +60,36 @@ public sealed class LeaveCreateService
         }
 
         var allDay = !options.HalfDay;
-        var userStartTime = LeaveRequestParser.NormalizeTime(
-            options.StartTime,
-            LeaveRequestParser.DefaultStartTime);
-        var userEndTime = LeaveRequestParser.NormalizeTime(
-            options.EndTime,
-            LeaveRequestParser.DefaultEndTime);
+
+        if (!LeaveRequestParser.TryParseWorkdayTime(
+                options.StartTime,
+                LeaveRequestParser.DefaultStartTime,
+                "start",
+                out var userStartTime,
+                out var startTimeError))
+        {
+            throw new LeaveCreateValidationException(startTimeError!);
+        }
+
+        if (!LeaveRequestParser.TryParseWorkdayTime(
+                options.EndTime,
+                LeaveRequestParser.DefaultEndTime,
+                "end",
+                out var userEndTime,
+                out var endTimeError))
+        {
+            throw new LeaveCreateValidationException(endTimeError!);
+        }
+
+        if (!allDay && !LeaveRequestParser.TryValidatePartialDayTimes(userStartTime, userEndTime, out var timeError))
+            throw new LeaveCreateValidationException(timeError!);
 
         if (!LeaveRequestParser.TryParseDateRange(
                 options.Start,
                 options.End,
                 requestTimeZone,
-                allDay,
-                userStartTime,
-                userEndTime,
+                allDay ? null : userStartTime,
+                allDay ? null : userEndTime,
                 out var startDate,
                 out var endDate,
                 out var dateError))
@@ -90,9 +106,6 @@ public sealed class LeaveCreateService
         if (options.HalfDay && startDate.Date != endDate.Date)
             throw new LeaveCreateValidationException("Partial-day leave must start and end on the same day");
 
-        if (!allDay && !LeaveRequestParser.TryValidatePartialDayTimes(startDate, endDate, out var timeError))
-            throw new LeaveCreateValidationException(timeError!);
-
         var leaveTypeId = await ResolveLeaveTypeAsync(options.Type, ct);
         if (leaveTypeId is null)
             throw new LeaveCreateValidationException($"Unknown leave type: '{options.Type}'.");
@@ -104,8 +117,8 @@ public sealed class LeaveCreateService
             EndDate = endDate.ToString("o"),
             LeaveTypeId = leaveTypeId.Value,
             Note = options.Note.Trim(),
-            UserStartTime = userStartTime,
-            UserEndTime = userEndTime,
+            UserStartTime = userStartTime.ToString("HH:mm:ss"),
+            UserEndTime = userEndTime.ToString("HH:mm:ss"),
             AllDay = allDay,
             OptionalEmp = LeaveRequestParser.ParseOptionalEmployees(options.Cc),
             ApprovedBy = options.ApprovedBy?.Trim(),

@@ -207,20 +207,41 @@ public class InfoCommand : AsyncCommand<InfoCommand.Settings>
         }
     }
 
-    private static string UpdateCommandFor(SkillVersionStatus skill)
-    {
-        if (skill.Global)
-            return "tp skills create . --global";
+    private static string UpdateCommandFor(SkillVersionStatus skill) =>
+        UpdateCommandFor(skill, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
 
-        if (!string.IsNullOrWhiteSpace(skill.Path))
+    internal static string UpdateCommandFor(SkillVersionStatus skill, string homeDirectory)
+    {
+        var baseDir = InstallBaseDirectory(skill.Path);
+
+        if (skill.Global)
         {
-            var marker = $"{Path.DirectorySeparatorChar}skills{Path.DirectorySeparatorChar}";
-            var index = skill.Path.IndexOf(marker, StringComparison.Ordinal);
-            if (index > 0)
-                return $"tp skills create {skill.Path[..index]}";
+            var target = baseDir is null ? null : HomeRelativeTarget(baseDir, homeDirectory);
+            return $"tp skills create {Quote(target) ?? "<agent-dir>"} --global";
         }
 
-        return "tp skills create .agents";
+        return baseDir is null ? "tp skills create .agents" : $"tp skills create {Quote(baseDir)}";
+    }
+
+    private static string? Quote(string? target) =>
+        target is not null && target.Any(char.IsWhiteSpace) ? $"'{target}'" : target;
+
+    private static string? InstallBaseDirectory(string? skillPath)
+    {
+        if (string.IsNullOrWhiteSpace(skillPath))
+            return null;
+
+        var marker = $"{Path.DirectorySeparatorChar}skills{Path.DirectorySeparatorChar}";
+        var index = skillPath.IndexOf(marker, StringComparison.Ordinal);
+        return index > 0 ? skillPath[..index] : null;
+    }
+
+    private static string? HomeRelativeTarget(string baseDir, string homeDirectory)
+    {
+        var relative = Path.GetRelativePath(homeDirectory, baseDir);
+        return relative == "." || relative.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relative)
+            ? null
+            : relative;
     }
 
     private static string FormatDate(DateTimeOffset? value) =>

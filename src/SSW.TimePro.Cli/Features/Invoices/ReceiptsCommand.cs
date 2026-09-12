@@ -75,10 +75,7 @@ public class ReceiptsCommand : AsyncCommand<ReceiptsCommand.Settings>
         }
         catch (ApiException ex)
         {
-            if (settings.Json)
-                OutputHelper.WriteJsonError($"API error: {ex.Message}", ex.StatusCode);
-            else
-                OutputHelper.WriteError($"API error ({ex.StatusCode}): {ex.Message}");
+            OutputHelper.WriteApiError(ex, settings.Json);
             return 1;
         }
     }

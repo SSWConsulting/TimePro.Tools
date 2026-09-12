@@ -164,11 +164,7 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
         }
         catch (ApiException ex)
         {
-            var detail = ApiErrorParser.ExtractDetail(ex.ResponseBody);
-            if (settings.Json)
-                OutputHelper.WriteJsonError($"API error: {ex.Message}", ex.StatusCode, detail);
-            else
-                OutputHelper.WriteError($"API error ({ex.StatusCode}): {ex.Message}");
+            OutputHelper.WriteApiError(ex, settings.Json);
             return 1;
         }
     }

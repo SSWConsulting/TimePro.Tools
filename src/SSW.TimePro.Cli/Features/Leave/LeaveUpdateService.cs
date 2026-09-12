@@ -32,10 +32,14 @@ public sealed class LeaveUpdateValidationException(string message) : Exception(m
 /// </summary>
 public sealed class LeaveUpdateService
 {
-    private const int PageSize = 100;
     private readonly ITimeProApiClient _api;
+    private readonly LeaveLookup _lookup;
 
-    public LeaveUpdateService(ITimeProApiClient api) => _api = api;
+    public LeaveUpdateService(ITimeProApiClient api, LeaveLookup lookup)
+    {
+        _api = api;
+        _lookup = lookup;
+    }
 
     public async Task<LeaveUpdatePlan> PrepareAsync(
         string leaveId,
@@ -53,9 +57,14 @@ public sealed class LeaveUpdateService
             throw new LeaveUpdateValidationException("Use either cc or clearCc, not both");
 
         var normalizedLeaveId = parsedLeaveId.ToString();
-        var existing = await FindLeaveAsync(normalizedLeaveId, employeeId, ct)
+        var existing = await _lookup.FindAsync(normalizedLeaveId, employeeId, ct)
             ?? throw new LeaveUpdateValidationException(
                 $"Leave {normalizedLeaveId} was not found for employee {employeeId}");
+
+        if (LeaveStatusRules.IsTerminal(existing.LeaveStatus))
+            throw new LeaveUpdateValidationException(
+                $"Leave {normalizedLeaveId} is {existing.StatusName} and can no longer be updated. "
+                + "Create a new leave request instead.");
 
         var changes = DescribeChanges(options);
         if (changes.Count == 0)
@@ -183,38 +192,6 @@ public sealed class LeaveUpdateService
 
     public Task ApplyAsync(LeaveUpdatePlan plan, CancellationToken ct = default) =>
         _api.UpdateLeaveAsync(plan.Request, ct);
-
-    private async Task<LeaveEntry?> FindLeaveAsync(
-        string leaveId,
-        string employeeId,
-        CancellationToken ct)
-    {
-        foreach (var filter in new[] { "UPCOMING", "PAST" })
-        {
-            var pageNumber = 1;
-            while (true)
-            {
-                var response = await _api.GetLeaveAsync(
-                    filter,
-                    pageNumber,
-                    PageSize,
-                    employeeId,
-                    ct);
-                var page = response?.Leaves;
-                var match = page?.Items.FirstOrDefault(entry =>
-                    entry.Id.Equals(leaveId, StringComparison.OrdinalIgnoreCase));
-                if (match is not null)
-                    return match;
-
-                if (page is null || pageNumber >= page.TotalPages)
-                    break;
-
-                pageNumber++;
-            }
-        }
-
-        return null;
-    }
 
     private async Task<int?> ResolveLeaveTypeAsync(string typeInput, CancellationToken ct)
     {

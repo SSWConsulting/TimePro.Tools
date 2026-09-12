@@ -15,6 +15,7 @@ public class LeaveMcpTools
     private readonly IConfigService _config;
     private readonly LeaveCreateService _leaveCreateService;
     private readonly LeaveUpdateService _leaveUpdateService;
+    private readonly LeaveListService _leaveListService;
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -27,18 +28,20 @@ public class LeaveMcpTools
         ITimeProApiClient api,
         IConfigService config,
         LeaveCreateService leaveCreateService,
-        LeaveUpdateService leaveUpdateService)
+        LeaveUpdateService leaveUpdateService,
+        LeaveListService leaveListService)
     {
         _api = api;
         _config = config;
         _leaveCreateService = leaveCreateService;
         _leaveUpdateService = leaveUpdateService;
+        _leaveListService = leaveListService;
     }
 
     [McpServerTool]
     [Description("List EasyLeave entries. Use empId for one person; employeeId is accepted as an alias. Omit both to return all visible leave.")]
     public async Task<string> GetLeaveEntries(
-        [Description("Filter: UPCOMING (default) or PAST")] string filter = "UPCOMING",
+        [Description("Filter: UPCOMING (default), PAST or ALL")] string filter = "UPCOMING",
         [Description("Number of entries to return")] int limit = 10,
         [Description("empId to filter by")] string? empId = null,
         [Description("Alias for empId")] string? employeeId = null,
@@ -47,14 +50,20 @@ public class LeaveMcpTools
         if (_config.LoadActiveTenantConfig() is null)
             return """{"error":"Not logged in. Run 'tp login --tenant <id>' first."}""";
 
-        var response = await _api.GetLeaveAsync(
-            filter.ToUpperInvariant(),
-            pageNumber: 1,
-            pageSize: limit,
-            employeeId: ResolveEmpId(empId, employeeId),
-            ct);
+        try
+        {
+            var response = await _leaveListService.ListAsync(
+                filter,
+                limit,
+                ResolveEmpId(empId, employeeId),
+                ct);
 
-        return JsonSerializer.Serialize(response?.Leaves?.Items ?? [], JsonOpts);
+            return JsonSerializer.Serialize(response.Leaves?.Items ?? [], JsonOpts);
+        }
+        catch (LeaveFilterValidationException ex)
+        {
+            return JsonSerializer.Serialize(new { error = ex.Message }, JsonOpts);
+        }
     }
 
     [McpServerTool]

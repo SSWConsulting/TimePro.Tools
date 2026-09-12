@@ -76,6 +76,8 @@ var services = new ServiceCollection();
 services.AddSingleton<IConfigService>(configService);
 services.AddSingleton<ITenantProvider, DefaultTenantProvider>();
 services.AddHttpClient<ITimeProApiClient, TimeProApiClient>();
+services.AddSingleton<SSW.TimePro.Cli.Features.Leave.LeaveLookup>();
+services.AddSingleton<SSW.TimePro.Cli.Features.Leave.LeaveListService>();
 services.AddSingleton<SSW.TimePro.Cli.Features.Leave.LeaveCreateService>();
 services.AddSingleton<SSW.TimePro.Cli.Features.Leave.LeaveUpdateService>();
 services.AddSingleton<SSW.TimePro.Cli.Features.Leave.LeaveBalanceImportService>();

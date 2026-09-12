@@ -127,11 +127,11 @@ tp ts get 2026-03-12       # Specific date
 | `tp ts check` | Leave-aware week validation: gaps, overlaps, missing descriptions, under/over hours; approved leave/holidays count as covered (`--week N`, `--json`) |
 | `tp ts copy` | Copy timesheets from one day to another |
 | `tp bk list` | List CRM bookings/appointments |
-| `tp leave list` | List leave entries (`--filter UPCOMING\|PAST`) |
+| `tp leave list` | List leave entries (`--filter UPCOMING\|PAST\|ALL`) |
 | `tp leave balance` | Show leave-usage signal (`--emp-id`): days since last leave + hours taken in last 12 months |
 | `tp leave create` | Create a leave request (see options and `--dry-run` below) |
 | `tp leave update ID` | Update a leave request while preserving unspecified API-returned fields; supports `--dry-run` |
-| `tp leave cancel ID` | Cancel a leave request (`--reason`) |
+| `tp leave cancel ID` | Cancel a leave request (`--reason`); the server finishes it asynchronously, so use `--wait` to poll |
 | `tp leave balances status` | Show when leave balances were last imported from Xero and whether they are stale |
 | `tp leave balances import PATH` | Import leave balances for all employees from a Xero CSV export (leave admins only) |
 | `tp cl search QUERY` | Search for clients |
@@ -247,6 +247,9 @@ re-read the week to find the row you just wrote.
 # List upcoming leave
 tp leave list --filter UPCOMING --json
 
+# List both past and upcoming leave (ALL is merged client-side)
+tp leave list --filter ALL --json
+
 # Create a full-day leave request
 tp leave create --start 2026-03-30 --end 2026-03-30 --type 1 \
   --note "Returning from MVP Summit" --yes
@@ -267,6 +270,9 @@ tp leave update <ID> --start 2026-04-01 --end 2026-04-01 \
 
 # Cancel a leave request
 tp leave cancel <ID> --reason "Plans changed" --yes
+
+# Cancel and wait for the server to finish (default 120s, exits 2 on timeout)
+tp leave cancel <ID> --reason "Plans changed" --yes --wait
 
 # Check whether the stored leave balances are still current
 tp leave balances status --json
@@ -294,6 +300,17 @@ explicit. Use `--clear-approved-by` or `--clear-cc` to remove those values, and
 `--half-day` / `--full-day` to change the day mode. Both create and update support
 `--dry-run`; combine it with `--json` to inspect the exact API payload without creating
 or changing leave.
+
+`--filter` accepts `UPCOMING`, `PAST` or `ALL`; anything else fails with the valid values
+rather than returning an empty list. The API itself only knows `UPCOMING` and `PAST`, so
+`ALL` runs both and merges them. `leave update` refuses requests that are `Declined`,
+`Cancelled` or `PendingCancellation` before building a payload, and `leave cancel` refuses
+one that is already cancelled or pending cancellation.
+
+**Cancellation is asynchronous.** `tp leave cancel` returns as soon as the server accepts
+the request; the entry reads `PendingCancellation` and only becomes `Cancelled` a few
+minutes later. Pass `--wait` (optionally `--wait 300`) to poll every 10 seconds until it
+reads `Cancelled` — that exits 0 on success and 2 on timeout, reporting the last status seen.
 
 **Leave balances (Xero sync).** `tp leave balances import` uploads the raw Xero "Leave
 Balances" CSV export and replaces the balances stored in TimePro for every employee it can

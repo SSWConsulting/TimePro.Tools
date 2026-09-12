@@ -26,6 +26,8 @@ public static class CliRunner
         services.AddSingleton(api);
         services.AddSingleton(config);
         services.AddSingleton<ITenantProvider, DefaultTenantProvider>();
+        services.AddSingleton<LeaveLookup>();
+        services.AddSingleton<LeaveListService>();
         services.AddSingleton<LeaveCreateService>();
         services.AddSingleton<LeaveUpdateService>();
         services.AddSingleton<LeaveBalanceImportService>();

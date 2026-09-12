@@ -18,7 +18,12 @@ public sealed class McpToolHost
 
         Timesheets = new TimesheetMcpTools(api, config, updates, new TimesheetAcceptService(api, updates));
         Lookups = new LookupMcpTools(api, config);
-        Leave = new LeaveMcpTools(api, config, new LeaveCreateService(api), new LeaveUpdateService(api));
+        Leave = new LeaveMcpTools(
+            api,
+            config,
+            new LeaveCreateService(api),
+            new LeaveUpdateService(api, new LeaveLookup(api)),
+            new LeaveListService(api));
         Accounting = new AccountingMcpTools(api, config, new LeaveBalanceImportService(api));
     }
 

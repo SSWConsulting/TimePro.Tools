@@ -311,6 +311,40 @@ public static class NorthwindApi
         LeaveType = new LeaveTypeInfo { Id = 1, Name = "Annual Leave", IsActive = true }
     };
 
+    /// <summary>
+    /// Serves a different row on the PAST filter, so the ALL filter's merge and de-duplication
+    /// are actually exercised instead of being handed the same entry twice.
+    /// </summary>
+    public static void StubDistinctPastLeave(WireMockServer server)
+    {
+        var past = LeaveEntryFixture();
+        past.Id = "1a3c8f8b-2222-4444-8888-bbbbbbbbbbbb";
+        past.StartDate = "2026-02-02T00:00:00+10:00";
+        past.EndDate = "2026-02-02T23:59:00+10:00";
+        past.Note = "Public holiday";
+
+        server.Given(Request.Create()
+                .WithPath("/api/leave/")
+                .WithParam("leaveFilter", "PAST")
+                .UsingGet())
+            .AtPriority(OverridePriority)
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody(JsonSerializer.Serialize(new LeaveListResponse
+                {
+                    CancelledCount = 0,
+                    Leaves = new PaginatedList<LeaveEntry>
+                    {
+                        PageNumber = 1,
+                        PageSize = 10,
+                        TotalItems = 1,
+                        TotalPages = 1,
+                        Items = [past]
+                    }
+                }, Body)));
+    }
+
     private static void StubLeave(WireMockServer server)
     {
         Json(server, "/api/leave/", "GET", new LeaveListResponse

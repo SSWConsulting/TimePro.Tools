@@ -53,7 +53,7 @@
       "name": "accept_suggested_timesheet"
     },
     {
-      "description": "Validate a week of timesheets for gaps and issues (leave-aware). Returns per-day coverage with hours, leave, issues, plus allCovered. week: 0=this week (default), -1=last week. The single most useful tool for confirming a week is complete before submitting.",
+      "description": "Validate a week of timesheets for gaps and issues (leave-aware). Returns per-day coverage with hours, leave, issues, plus allCovered and pendingSuggestions. week: 0=this week (default), -1=last week. The single most useful tool for confirming a week is complete before submitting.",
       "execution": {
         "taskSupport": "optional"
       },
@@ -532,7 +532,7 @@
           },
           "filter": {
             "default": "UPCOMING",
-            "description": "Filter: UPCOMING (default) or PAST",
+            "description": "Filter: UPCOMING (default), PAST or ALL",
             "type": "string"
           },
           "limit": {

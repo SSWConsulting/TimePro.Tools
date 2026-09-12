@@ -119,6 +119,23 @@ public static class McpToolCatalog
             EmptyBody = """{"leaves":{"pageNumber":1,"pageSize":10,"totalItems":0,"totalPages":0,"items":[]},"cancelledCount":0}"""
         },
 
+        new("GetLeaveEntries", "past", (h, ct) => h.Leave.GetLeaveEntries("PAST", 10, Emp, ct: ct))
+        {
+            HasApiErrorCase = false
+        },
+
+        new("GetLeaveEntries", "all", (h, ct) => h.Leave.GetLeaveEntries("ALL", 10, Emp, ct: ct))
+        {
+            HasApiErrorCase = false,
+            Arrange = NorthwindApi.StubDistinctPastLeave
+        },
+
+        new("GetLeaveEntries", "invalidFilter",
+            (h, ct) => h.Leave.GetLeaveEntries("YESTERDAY", 10, Emp, ct: ct))
+        {
+            HasApiErrorCase = false
+        },
+
         new("GetLeaveBalance", "populated", (h, ct) => h.Leave.GetLeaveBalance(Emp, ct: ct))
         {
             PrimaryRoute = $"/api/leave/stats/{Emp}",

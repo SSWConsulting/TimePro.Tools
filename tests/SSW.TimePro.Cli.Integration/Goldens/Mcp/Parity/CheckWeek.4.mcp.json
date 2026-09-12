@@ -90,6 +90,7 @@
   "empId": "BOB",
   "errors": 0,
   "infos": 5,
+  "pendingSuggestions": 5,
   "warnings": 0,
   "weekEnd": "{{weekday4}}",
   "weekStart": "{{weekday0}}"

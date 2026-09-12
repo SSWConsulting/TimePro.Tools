@@ -36,16 +36,23 @@ public static partial class ClientHeaders
         return VersionToken().IsMatch(trimmed) ? trimmed : "0.0.0";
     }
 
+    /// <summary>
+    /// Prefers the id the server echoed, but only when it is a plain token: it comes from outside
+    /// and is printed to the terminal and written to the local log.
+    /// </summary>
     public static string ResolveRequestId(HttpResponseMessage response, string fallback)
     {
         foreach (var name in EchoHeaders)
         {
-            if (response.Headers.TryGetValues(name, out var values))
-            {
-                var echoed = values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
-                if (echoed is not null)
-                    return echoed.Trim();
-            }
+            if (!response.Headers.TryGetValues(name, out var values))
+                continue;
+
+            var echoed = values
+                .Select(v => v?.Trim())
+                .FirstOrDefault(v => !string.IsNullOrEmpty(v) && v.Length <= 128 && RequestIdToken().IsMatch(v));
+
+            if (echoed is not null)
+                return echoed;
         }
 
         return fallback;
@@ -53,4 +60,7 @@ public static partial class ClientHeaders
 
     [GeneratedRegex(@"^[A-Za-z0-9.\-]{1,40}$")]
     private static partial Regex VersionToken();
+
+    [GeneratedRegex(@"^[A-Za-z0-9._:\-]+$")]
+    private static partial Regex RequestIdToken();
 }

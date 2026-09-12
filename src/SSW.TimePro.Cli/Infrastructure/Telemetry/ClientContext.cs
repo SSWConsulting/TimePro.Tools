@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace SSW.TimePro.Cli.Infrastructure.Telemetry;
 
 public static class ClientSurface
@@ -42,8 +44,10 @@ public sealed class ClientInvocation
 /// Ambient command context for outgoing API calls. AsyncLocal rather than a static field because
 /// MCP tool calls can overlap in one process and must not see each other's command name.
 /// </summary>
-public static class ClientContext
+public static partial class ClientContext
 {
+    public const string UnknownTool = "unknown";
+
     private static readonly AsyncLocal<ClientInvocation?> CurrentInvocation = new();
 
     public static ClientInvocation? Current => CurrentInvocation.Value;
@@ -53,8 +57,24 @@ public static class ClientContext
 
     public static ClientInvocation BeginCli(string command) => Begin(ClientSurface.Cli, command);
 
-    public static ClientInvocation BeginMcpTool(string toolName) =>
-        Begin(ClientSurface.Mcp, $"mcp:{toolName}");
+    /// <summary>
+    /// The tool name arrives from the MCP client, so it is whitelisted before it becomes a header
+    /// value: a newline in it would otherwise break every subsequent request.
+    /// </summary>
+    public static ClientInvocation BeginMcpTool(string? toolName) =>
+        Begin(ClientSurface.Mcp, $"mcp:{SafeToolName(toolName)}");
+
+    internal static string SafeToolName(string? toolName)
+    {
+        if (string.IsNullOrWhiteSpace(toolName) || toolName.Length > 64)
+            return UnknownTool;
+
+        var trimmed = toolName.Trim();
+        return ToolName().IsMatch(trimmed) ? trimmed.ToLowerInvariant() : UnknownTool;
+    }
+
+    [GeneratedRegex(@"^[A-Za-z0-9_-]+$")]
+    private static partial Regex ToolName();
 
     private static ClientInvocation Begin(string surface, string command)
     {

@@ -64,7 +64,12 @@ if (overrideTenant is not null)
 var invocation = ClientContext.BeginCli(CommandPathResolver.Resolve(tenantOverride.Args));
 
 if (verbose.Verbose && configService.LoadActiveTenantConfig() is { } verboseTenant)
-    Console.Error.WriteLine($"api host: {new Uri(verboseTenant.ApiUrl).Host} (tenant {verboseTenant.ConfigName ?? verboseTenant.TenantId})");
+{
+    var host = Uri.TryCreate(verboseTenant.ApiUrl, UriKind.Absolute, out var verboseUri)
+        ? verboseUri.Host
+        : verboseTenant.ApiUrl;
+    Console.Error.WriteLine($"api host: {host} (tenant {verboseTenant.ConfigName ?? verboseTenant.TenantId})");
+}
 
 // Configure DI
 var services = new ServiceCollection();
@@ -94,8 +99,8 @@ started.Stop();
 
 CommandLog.Record(
     invocation,
-    configService.LoadGlobalConfig(),
-    configService.LoadActiveTenantConfig(),
+    configService.LoadGlobalConfig,
+    configService.LoadActiveTenantConfig,
     started.ElapsedMilliseconds,
     exitCode);
 

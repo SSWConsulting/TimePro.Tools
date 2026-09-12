@@ -16,7 +16,7 @@ public static class McpInvocationFilter
     public static IMcpServerBuilder WithClientContext(this IMcpServerBuilder builder) =>
         builder.WithRequestFilters(filters => filters.AddCallToolFilter(next => async (context, ct) =>
         {
-            var invocation = ClientContext.BeginMcpTool(context.Params?.Name ?? "unknown");
+            var invocation = ClientContext.BeginMcpTool(context.Params?.Name);
             var started = Stopwatch.StartNew();
             string? failure = null;
 
@@ -43,20 +43,13 @@ public static class McpInvocationFilter
         long durationMs,
         string? failure)
     {
-        try
-        {
-            var config = context.Services?.GetService<IConfigService>();
-            CommandLog.Record(
-                invocation,
-                config?.LoadGlobalConfig(),
-                config?.LoadActiveTenantConfig(),
-                durationMs,
-                exitCode: null,
-                failure);
-        }
-        catch
-        {
-            // Diagnostics are best-effort, and stdout carries JSON-RPC frames only.
-        }
+        var config = context.Services?.GetService<IConfigService>();
+        CommandLog.Record(
+            invocation,
+            () => config?.LoadGlobalConfig(),
+            () => config?.LoadActiveTenantConfig(),
+            durationMs,
+            exitCode: null,
+            failure);
     }
 }

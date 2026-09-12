@@ -116,6 +116,34 @@ public class CommandLogWriterTests : IDisposable
     }
 
     [Fact]
+    public void Write_KeepsEveryLineIntact_WhenWritersOverlapAtTheRotationBoundary()
+    {
+        // Overlapping MCP tool calls and separate tp processes share one file.
+        var options = new CommandLogOptions { MaxBytes = 600, MaxFiles = 4 };
+        const int writers = 8;
+        const int perWriter = 25;
+
+        Parallel.For(0, writers, w =>
+        {
+            var writer = new CommandLogWriter(_directory, options);
+            for (var i = 0; i < perWriter; i++)
+                writer.Write(Entry($"ts get {w}-{i}"));
+        });
+
+        var reader = new CommandLogWriter(_directory, options);
+        var files = new[] { reader.CurrentFile }
+            .Concat(Enumerable.Range(1, options.MaxFiles - 1).Select(reader.ArchiveFile))
+            .Where(File.Exists);
+
+        var lines = files.SelectMany(File.ReadAllLines).Where(l => l.Length > 0).ToList();
+
+        lines.Should().NotBeEmpty();
+        foreach (var line in lines)
+            JsonDocument.Parse(line).RootElement.TryGetProperty("command", out _)
+                .Should().BeTrue("an interleaved write must not tear a line");
+    }
+
+    [Fact]
     public void Write_RestrictsTheLogToTheOwner()
     {
         if (OperatingSystem.IsWindows())

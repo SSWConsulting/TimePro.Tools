@@ -806,7 +806,8 @@ Each CLI invocation and each MCP tool call appends one JSON line to
 ```
 
 It records command names, route templates, statuses and timings — never arguments, request bodies,
-API keys, timesheet notes or employee IDs, and URL query strings are dropped entirely. The file is
+API keys, timesheet notes or employee IDs. Query strings are dropped entirely, and a call whose path
+carries an identifier logs its template (`/api/employees/{empId}`), never the value. The file is
 owner-only (`0600`), rolls at 2 MB keeping 5 files, drops entries older than 7 days when it rolls,
 and is **never uploaded anywhere**.
 

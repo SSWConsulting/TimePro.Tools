@@ -16,6 +16,39 @@ public class ClientContextTests
         ClientContext.Clear();
     }
 
+    [Theory]
+    [InlineData("update_timesheet", "mcp:update_timesheet")]
+    [InlineData("UpdateTimesheet", "mcp:updatetimesheet")]
+    [InlineData("get-leave", "mcp:get-leave")]
+    public void BeginMcpTool_AcceptsAPlainToolName(string tool, string expected)
+    {
+        ClientContext.BeginMcpTool(tool).Command.Should().Be(expected);
+        ClientContext.Clear();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("update\r\nx-injected: 1")]
+    [InlineData("update timesheet")]
+    [InlineData("update/timesheet")]
+    [InlineData("tööl")]
+    public void BeginMcpTool_RejectsANameThatCouldNotBeAHeaderValue(string? tool)
+    {
+        // The name arrives from the MCP client; a newline in it would break every later request.
+        ClientContext.BeginMcpTool(tool).Command.Should().Be($"mcp:{ClientContext.UnknownTool}");
+        ClientContext.Clear();
+    }
+
+    [Fact]
+    public void BeginMcpTool_RejectsAnOverlongName()
+    {
+        ClientContext.BeginMcpTool(new string('a', 65)).Command
+            .Should().Be($"mcp:{ClientContext.UnknownTool}");
+        ClientContext.Clear();
+    }
+
     [Fact]
     public async Task OverlappingMcpToolCalls_DoNotSeeEachOthersContext()
     {

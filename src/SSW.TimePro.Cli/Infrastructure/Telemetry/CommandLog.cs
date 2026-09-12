@@ -28,19 +28,34 @@ public static class CommandLog
             Requests = invocation.Requests
         };
 
+    /// <summary>
+    /// Records a finished invocation. Takes the config accessors rather than loaded config because
+    /// reading config can itself throw, and no diagnostic step may fail an otherwise good command.
+    /// </summary>
     public static void Record(
         ClientInvocation? invocation,
-        GlobalConfig? config,
-        TenantConfig? tenant,
+        Func<GlobalConfig?> loadConfig,
+        Func<TenantConfig?> loadTenant,
         long durationMs,
         int? exitCode,
         string? failure = null)
     {
-        if (invocation is null || config?.Telemetry.LocalLog is not true)
-            return;
+        try
+        {
+            if (invocation is null)
+                return;
 
-        new CommandLogWriter(ConfigPaths.LogsDir)
-            .Write(Build(invocation, BuildInfo.Version, tenant, durationMs, exitCode, failure));
+            // Absent or malformed telemetry config means the default, which is on.
+            if (loadConfig()?.Telemetry is { LocalLog: false })
+                return;
+
+            new CommandLogWriter(ConfigPaths.LogsDir)
+                .Write(Build(invocation, BuildInfo.Version, loadTenant(), durationMs, exitCode, failure));
+        }
+        catch
+        {
+            // Diagnostics are best-effort; never fail the command because of them.
+        }
     }
 
     private static string? HostOf(string? apiUrl) =>

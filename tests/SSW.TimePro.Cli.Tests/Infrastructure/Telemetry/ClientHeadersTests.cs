@@ -45,6 +45,28 @@ public class ClientHeadersTests
         ClientHeaders.ResolveRequestId(response, "locally-generated").Should().Be("locally-generated");
     }
 
+    [Theory]
+    [InlineData("has space")]
+    [InlineData("has\tcontrol")]
+    [InlineData("semi;colon")]
+    public void ResolveRequestId_IgnoresAnEchoThatIsNotAPlainToken(string echoed)
+    {
+        // The echo comes from outside and is printed to the terminal and written to the local log.
+        using var response = new HttpResponseMessage();
+        response.Headers.TryAddWithoutValidation("x-request-id", echoed);
+
+        ClientHeaders.ResolveRequestId(response, "locally-generated").Should().Be("locally-generated");
+    }
+
+    [Fact]
+    public void ResolveRequestId_IgnoresAnOverlongEcho()
+    {
+        using var response = new HttpResponseMessage();
+        response.Headers.TryAddWithoutValidation("x-request-id", new string('a', 129));
+
+        ClientHeaders.ResolveRequestId(response, "locally-generated").Should().Be("locally-generated");
+    }
+
     [Fact]
     public void ResolveRequestId_IgnoresAnEmptyEcho()
     {

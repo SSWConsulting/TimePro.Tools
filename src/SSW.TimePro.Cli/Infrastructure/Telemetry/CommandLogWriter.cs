@@ -51,9 +51,16 @@ public sealed class CommandLogWriter
 
             var line = JsonSerializer.Serialize(entry, LineOptions) + "\n";
 
+            // Overlapping MCP tool calls and separate tp processes share this file, so rotate and
+            // append as one critical section or two writers can rotate the same file twice.
+            using var _ = AcquireLock();
+
             var current = CurrentFile;
-            if (File.Exists(current) && new FileInfo(current).Length + line.Length > _options.MaxBytes)
+            if (File.Exists(current)
+                && new FileInfo(current).Length + Utf8NoBom.GetByteCount(line) > _options.MaxBytes)
+            {
                 Rotate();
+            }
 
             File.AppendAllText(current, line, Utf8NoBom);
             RestrictToOwner(current, directory: false);
@@ -61,6 +68,38 @@ public sealed class CommandLogWriter
         catch
         {
             // Diagnostics are best-effort; never fail the command because of them.
+        }
+    }
+
+    /// <summary>
+    /// Cross-process mutual exclusion via exclusive creation of a lock file, which works the same
+    /// on every platform. Gives up after a short wait rather than delaying the command.
+    /// </summary>
+    private IDisposable? AcquireLock()
+    {
+        var lockFile = Path.Combine(_directory, FileName + ".lock");
+        var deadline = DateTime.UtcNow.AddSeconds(2);
+
+        while (true)
+        {
+            try
+            {
+                return new FileStream(
+                    lockFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None,
+                    bufferSize: 1, FileOptions.DeleteOnClose);
+            }
+            catch (IOException) when (DateTime.UtcNow < deadline)
+            {
+                Thread.Sleep(15);
+            }
+            catch (IOException)
+            {
+                return null;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return null;
+            }
         }
     }
 

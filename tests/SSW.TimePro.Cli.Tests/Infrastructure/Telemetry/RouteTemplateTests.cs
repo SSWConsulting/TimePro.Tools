@@ -7,34 +7,54 @@ namespace SSW.TimePro.Cli.Tests.Infrastructure.Telemetry;
 public class RouteTemplateTests
 {
     [Theory]
-    [InlineData("https://api.northwind.example/api/v2/ClientInvoice/48219/receipts", "/api/v2/ClientInvoice/{id}/receipts")]
-    [InlineData("https://api.northwind.example/api/leave/6f3e1f2e-0b6f-4f0a-9f4e-2f5a1c8d9b77/cancel", "/api/leave/{id}/cancel")]
-    [InlineData("https://api.northwind.example/api/Timesheets/SaveTimesheet?isEdit=true", "/api/Timesheets/SaveTimesheet")]
-    public void From_ReplacesIdentifyingSegmentsAndDropsTheQuery(string url, string expected)
+    [InlineData("/api/employees/{empId}")]
+    [InlineData("/api/leave/stats/{employeeId}")]
+    [InlineData("/api/v2/clients/{clientId}/taxrates")]
+    public void Sanitize_KeepsAPlainTemplate(string template)
     {
-        RouteTemplate.From(new Uri(url)).Should().Be(expected);
+        RouteTemplate.Sanitize(template, new Uri("https://api.northwind.example/api/employees/BOB"))
+            .Should().Be(template);
+    }
+
+    [Theory]
+    [InlineData("/api/employees/BOB\nx-injected: 1")]
+    [InlineData("/api/employees/BOB?employeeID=BOB")]
+    [InlineData("/api/employees/Bob Northwind")]
+    [InlineData("not-a-route")]
+    public void Sanitize_DiscardsATemplateThatIsNotAPlainRoute(string template)
+    {
+        RouteTemplate.Sanitize(template, new Uri("https://api.northwind.example/api/employees/BOB"))
+            .Should().Be(RouteTemplate.Unknown);
     }
 
     [Fact]
-    public void From_DropsQueryParametersThatCarryEmployeeAndClientIds()
+    public void Sanitize_FallsBackToTheLiteralPath_WhenNoTemplateWasDeclared()
     {
-        var route = RouteTemplate.From(new Uri(
+        RouteTemplate.Sanitize(null, new Uri("https://api.northwind.example/api/leave/types"))
+            .Should().Be("/api/leave/types");
+    }
+
+    [Fact]
+    public void FromLiteralPath_DropsQueryParametersThatCarryEmployeeAndClientIds()
+    {
+        var route = RouteTemplate.FromLiteralPath(new Uri(
             "https://api.northwind.example/api/Timesheets/GetTimesheetListViewModel?employeeID=BOB&date=2026-03-30"));
 
         route.Should().Be("/api/Timesheets/GetTimesheetListViewModel");
         route.Should().NotContain("BOB");
     }
 
-    [Fact]
-    public void From_KeepsNonNumericSegments()
+    [Theory]
+    [InlineData("https://api.northwind.example/api/leave/", "/api/leave")]
+    [InlineData("https://api.northwind.example/api/recurring/invoices/", "/api/recurring/invoices")]
+    public void FromLiteralPath_NormalizesATrailingSlash(string url, string expected)
     {
-        RouteTemplate.From(new Uri("https://api.northwind.example/api/leave/balances/status"))
-            .Should().Be("/api/leave/balances/status");
+        RouteTemplate.FromLiteralPath(new Uri(url)).Should().Be(expected);
     }
 
     [Fact]
-    public void From_ReportsUnknown_ForAMissingUri()
+    public void FromLiteralPath_ReportsUnknown_ForAMissingUri()
     {
-        RouteTemplate.From(null).Should().Be("unknown");
+        RouteTemplate.FromLiteralPath(null).Should().Be(RouteTemplate.Unknown);
     }
 }

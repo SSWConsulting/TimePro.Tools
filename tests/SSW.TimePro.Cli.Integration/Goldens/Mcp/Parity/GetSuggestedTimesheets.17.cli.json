@@ -1,0 +1,33 @@
+[
+  {
+    "date": "2026-03-16",
+    "suggested": [
+      {
+        "billableId": "B",
+        "category": "Web development",
+        "client": "Northwind Traders",
+        "clientId": "NWIND",
+        "date": "2026-03-16T00:00:00",
+        "empId": "BOB",
+        "empName": "Bob Northwind",
+        "endTime": "2026-03-16T14:00:00",
+        "hasNotes": true,
+        "isBillable": true,
+        "isLeave": false,
+        "isLocked": false,
+        "isSuggested": true,
+        "iteration": "Order history",
+        "iterationId": 3403,
+        "less": 0,
+        "location": "SSW",
+        "locationId": "SSW",
+        "notes": "Order history",
+        "project": "Northwind Traders",
+        "projectId": "1I776Q",
+        "startTime": "2026-03-16T13:00:00",
+        "timeId": 4243,
+        "totalTime": 1
+      }
+    ]
+  }
+]

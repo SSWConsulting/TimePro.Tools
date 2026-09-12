@@ -1,4 +1,6 @@
 using FluentAssertions;
+using SSW.TimePro.Cli.Features.Mcp.Tools;
+using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Cli;
 using Xunit;
 
@@ -91,6 +93,18 @@ public class CliMcpParityTests : TestBase
 
         unmapped.Should().BeSubsetOf(McpCliParityTable.ToolsWithoutCliMirror,
             "the no-CLI-mirror allowlist may only shrink");
+    }
+
+    [Fact]
+    public void TimesheetTools_DoNotCallTheApiClientDirectly_ExceptWhereAllowlisted()
+    {
+        var direct = ToolIlScanner.MethodsCalling(typeof(TimesheetMcpTools), typeof(ITimeProApiClient));
+
+        direct.Should().BeSubsetOf(McpCliParityTable.TimesheetToolsUsingApiDirectly,
+            "a timesheet tool must orchestrate through the shared services, not the API client");
+
+        McpCliParityTable.TimesheetToolsUsingApiDirectly.Should().BeSubsetOf(direct,
+            "the allowlist may only shrink: remove entries that no longer call the API client");
     }
 
     private static bool Resolve(string commandPath)

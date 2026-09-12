@@ -143,6 +143,16 @@ stay apart on purpose — `rate get --json` answers a miss with the full `RateLo
 while the MCP tool still returns the raw response and a bare `null`; aligning them is a 0.4.0
 contract change, not a patch.
 
+### Shared timesheet reads
+
+`TimesheetLookup.ForRangeAsync` is the one per-day range read. The weekend policy is its explicit
+`WeekendPolicy` argument, not a duplicated loop: `ts get` includes Saturday and Sunday, the MCP
+`GetTimesheets` tool skips them (a weekend-only range answers empty without calling the API).
+`TimesheetLookup.RefreshAndReadSuggestedAsync` is the refresh-then-read behind `ts suggest` and
+`GetSuggestedTimesheets`; the refresh is a server-side write, so it happens once, in there.
+`WeekCheckResult` is the week-coverage document both `ts check --json` and `CheckWeek` serialise.
+The projections that remain per-surface are envelope shapes only, declared in the parity table.
+
 ### `--json` error envelope
 
 On the `--json` path, failures emit a structured envelope to **stdout** so stdout stays valid JSON: `{"error":{"code":<int|null>,"message":"...","detail":<string|null>}}` (all keys always present), with a non-zero exit code. Human-readable error/warning text goes to **stderr**.
@@ -306,6 +316,9 @@ tests fail until you do.
 - `McpStdioClient` launches the real `tp mcp` with `TIMEPRO_CLI_CONFIG_DIR` pointing at a throwaway
   config. `Goldens/Mcp/Discovery/` holds the `tools/list` snapshots with accounting off (18 tools)
   and on (47); `Goldens/Mcp/Calls/` holds `tools/call` envelopes.
+- `TimesheetToolsUsingApiDirectly` is the shrink-only allowlist of timesheet tools still calling
+  `ITimeProApiClient` themselves; `ToolIlScanner` reads the tools' IL (constructor inspection cannot
+  answer it, since the shared services take the client as an argument).
 - `McpCliParityTable` pairs every tool with its CLI command. Differences are declared per case as
   JSON paths — there is no generic normalisation — and `ExpectParity` flips to true as each slice
   lands. `ToolsWithoutCliMirror` may only shrink.

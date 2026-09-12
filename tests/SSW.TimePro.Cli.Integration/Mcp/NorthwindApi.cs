@@ -30,6 +30,9 @@ public static class NorthwindApi
 
     public const string AnyDate = "2026-03-16";
 
+    /// <summary>A Saturday: the CLI reads it, the MCP GetTimesheets tool skips it.</summary>
+    public const string WeekendDate = "2026-03-21";
+
     /// <summary>Baseline stubs sit below per-case overrides so a case can replace one route.</summary>
     public const int BaselinePriority = 10;
     public const int OverridePriority = 1;

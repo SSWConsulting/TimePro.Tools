@@ -33,6 +33,13 @@ public static class McpToolCatalog
             EmptyBody = "[]"
         },
 
+        // A Saturday: the tool's weekend policy answers with an empty array and never calls the API.
+        new("GetTimesheets", "weekendDate",
+            (h, ct) => h.Timesheets.GetTimesheets(NorthwindApi.WeekendDate, ct: ct))
+        {
+            HasApiErrorCase = false
+        },
+
         // The note and start time match the day's existing row so the empty-body read-back
         // actually finds the entry it claims to have created.
         new("CreateTimesheet", "populated", (h, ct) => h.Timesheets.CreateTimesheet(

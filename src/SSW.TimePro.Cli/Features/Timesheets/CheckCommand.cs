@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Text.Json.Serialization;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using SSW.TimePro.Cli.Infrastructure.Output;
@@ -59,42 +58,13 @@ public class CheckCommand : AsyncCommand<CheckCommand.Settings>
             var coverage = await WeekCoverageService.EvaluateWeekAsync(_api, empId, offset, cancellationToken);
 
             var dayChecks = coverage.Days;
-            var errors = coverage.Errors;
-            var warnings = coverage.Warnings;
-            var infos = coverage.Infos;
-            var allCovered = coverage.AllCovered;
             var monday = coverage.Monday;
             var friday = coverage.Friday;
 
-            var dayResults = dayChecks.Select(check => new DayJson
-            {
-                Date = check.Date.ToString("yyyy-MM-dd"),
-                DayOfWeek = check.Date.DayOfWeek.ToString(),
-                TotalHours = check.TotalHours,
-                TimesheetCount = check.TimesheetCount,
-                SuggestedCount = check.SuggestedCount,
-                LeaveHours = check.LeaveHours,
-                LeaveType = check.LeaveType,
-                Covered = check.Covered,
-                CoverReason = check.CoverReason,
-                Issues = check.Issues.Select(i => new IssueJson(i.Severity, i.Message)).ToList()
-            }).ToList();
-
-            var pendingSuggestions = CheckEvaluator.CountPendingSuggestions(dayChecks);
-            var summary = CheckEvaluator.Summarize(errors, warnings, infos, pendingSuggestions, allCovered, settings.Strict);
-
-            var result = new
-            {
-                empId,
-                weekStart = monday.ToString("yyyy-MM-dd"),
-                weekEnd = friday.ToString("yyyy-MM-dd"),
-                errors,
-                warnings,
-                infos,
-                allCovered,
-                pendingSuggestions,
-                days = dayResults
-            };
+            var result = WeekCheckResult.From(coverage);
+            var summary = CheckEvaluator.Summarize(
+                coverage.Errors, coverage.Warnings, coverage.Infos,
+                result.PendingSuggestions, coverage.AllCovered, settings.Strict);
 
             OutputHelper.Render(result, settings.Json, _ =>
             {
@@ -162,24 +132,4 @@ public class CheckCommand : AsyncCommand<CheckCommand.Settings>
 
     private static string ResolveEmpId(string? requestedEmpId, string defaultEmpId) =>
         string.IsNullOrWhiteSpace(requestedEmpId) ? defaultEmpId : requestedEmpId.Trim();
-
-    /// <summary>Per-day JSON shape. <see cref="LeaveType"/> is always emitted (null when no leave).</summary>
-    private sealed class DayJson
-    {
-        public string Date { get; init; } = string.Empty;
-        public string DayOfWeek { get; init; } = string.Empty;
-        public decimal TotalHours { get; init; }
-        public int TimesheetCount { get; init; }
-        public int SuggestedCount { get; init; }
-        public decimal LeaveHours { get; init; }
-
-        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-        public string? LeaveType { get; init; }
-
-        public bool Covered { get; init; }
-        public string CoverReason { get; init; } = string.Empty;
-        public IReadOnlyList<IssueJson> Issues { get; init; } = [];
-    }
-
-    private sealed record IssueJson(string Severity, string Message);
 }

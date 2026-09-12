@@ -132,22 +132,20 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
 
     private async Task<int> RenderRange(string empId, DateOnly start, DateOnly end, Settings settings, bool isWeek)
     {
-        // Fetch all days in range
-        var allTimesheets = new Dictionary<DateOnly, List<TimesheetItem>>();
-        for (var d = start; d <= end; d = d.AddDays(1))
-        {
-            var dayTimesheets = await _api.GetTimesheetsAsync(empId, d, CancellationToken.None);
-            allTimesheets[d] = dayTimesheets;
-        }
+        // The CLI shows weekend work; the MCP GetTimesheets tool skips it.
+        var fetched = await TimesheetLookup.ForRangeAsync(
+            _api, empId, start, end, WeekendPolicy.Include, CancellationToken.None);
+
+        var allTimesheets = fetched.ToDictionary(d => d.Date, d => d.Entries);
 
         if (settings.Json)
         {
-            var days = allTimesheets.Select(kvp => new
+            var days = fetched.Select(day => new
             {
-                date = kvp.Key.ToString("yyyy-MM-dd"),
-                dayOfWeek = kvp.Key.DayOfWeek.ToString(),
-                timesheets = kvp.Value,
-                totalHours = kvp.Value.Where(t => !t.IsSuggested).Sum(t => t.TotalTime)
+                date = day.Date.ToString("yyyy-MM-dd"),
+                dayOfWeek = day.Date.DayOfWeek.ToString(),
+                timesheets = day.Entries,
+                totalHours = day.Entries.Where(t => !t.IsSuggested).Sum(t => t.TotalTime)
             }).ToList();
 
             object jsonData = isWeek
@@ -170,7 +168,7 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
         return 0;
     }
 
-    private void RenderWeekCompact(DateOnly start, DateOnly end, Dictionary<DateOnly, List<TimesheetItem>> allTimesheets)
+    private void RenderWeekCompact(DateOnly start, DateOnly end, IReadOnlyDictionary<DateOnly, IReadOnlyList<TimesheetItem>> allTimesheets)
     {
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine($" [bold]Week of {start:MMM d} - {end:MMM d, yyyy}[/]");
@@ -228,7 +226,7 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
         AnsiConsole.WriteLine();
     }
 
-    private void RenderWeekDetailed(DateOnly start, DateOnly end, Dictionary<DateOnly, List<TimesheetItem>> allTimesheets)
+    private void RenderWeekDetailed(DateOnly start, DateOnly end, IReadOnlyDictionary<DateOnly, IReadOnlyList<TimesheetItem>> allTimesheets)
     {
         foreach (var (date, timesheets) in allTimesheets.OrderBy(x => x.Key))
         {
@@ -236,7 +234,7 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
         }
     }
 
-    private void RenderDayDetailed(DateOnly date, List<TimesheetItem> timesheets)
+    private void RenderDayDetailed(DateOnly date, IReadOnlyList<TimesheetItem> timesheets)
     {
         var realTimesheets = timesheets.Where(t => !t.IsSuggested).ToList();
         var dayTotal = realTimesheets.Sum(t => t.TotalTime);

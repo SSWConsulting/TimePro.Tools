@@ -6,6 +6,13 @@ namespace SSW.TimePro.Cli.Features.Timesheets;
 
 public sealed record TimesheetDay(DateOnly Date, IReadOnlyList<TimesheetItem> Entries);
 
+/// <summary>Whether a date range read covers Saturday and Sunday. The two surfaces answer differently.</summary>
+public enum WeekendPolicy
+{
+    Include,
+    Skip
+}
+
 /// <summary>
 /// Finding an entry and reading one back after a write. Both the read-merge update path and the
 /// empty-body write responses need a day's worth of entries, so the lookups are shared.
@@ -13,6 +20,48 @@ public sealed record TimesheetDay(DateOnly Date, IReadOnlyList<TimesheetItem> En
 public static class TimesheetLookup
 {
     private const int SearchDays = 28;
+
+    /// <summary>
+    /// Reads every day in <paramref name="start"/>..<paramref name="end"/> in order. Callers pass
+    /// their own <paramref name="weekends"/> policy: <c>ts get</c> shows weekend work, the MCP
+    /// GetTimesheets tool skips it.
+    /// </summary>
+    public static async Task<List<TimesheetDay>> ForRangeAsync(
+        ITimeProApiClient api,
+        string empId,
+        DateOnly start,
+        DateOnly end,
+        WeekendPolicy weekends,
+        CancellationToken ct = default)
+    {
+        var days = new List<TimesheetDay>();
+        for (var d = start; d <= end; d = d.AddDays(1))
+        {
+            if (weekends == WeekendPolicy.Skip && d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+                continue;
+
+            days.Add(new TimesheetDay(d, await api.GetTimesheetsAsync(empId, d, ct)));
+        }
+
+        return days;
+    }
+
+    /// <summary>
+    /// The suggestion read behind <c>ts suggest</c> and the MCP GetSuggestedTimesheets tool.
+    /// The refresh is a server-side write that regenerates the day's suggestions, so it happens
+    /// exactly once here rather than once per surface.
+    /// </summary>
+    public static async Task<TimesheetDay> RefreshAndReadSuggestedAsync(
+        ITimeProApiClient api,
+        string empId,
+        DateOnly date,
+        CancellationToken ct = default)
+    {
+        await api.RefreshSuggestedTimesheetsAsync(empId, date, ct);
+
+        var entries = await api.GetTimesheetsAsync(empId, date, ct);
+        return new TimesheetDay(date, entries.Where(t => t.IsSuggested).ToList());
+    }
 
     public static async Task<(TimesheetItem Item, TimesheetDay Day)?> FindAsync(
         ITimeProApiClient api,

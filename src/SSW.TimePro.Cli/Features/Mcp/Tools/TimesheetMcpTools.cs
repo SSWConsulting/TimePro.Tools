@@ -61,22 +61,18 @@ public class TimesheetMcpTools
             ? DateOnly.ParseExact(endDate, "yyyy-MM-dd")
             : start;
 
-        var allTimesheets = new List<object>();
-        for (var d = start; d <= end; d = d.AddDays(1))
-        {
-            if (d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
-                continue;
+        // Weekends are skipped, so a weekend-only range answers with an empty array and no call.
+        var days = await TimesheetLookup.ForRangeAsync(
+            _api, targetEmpId, start, end, WeekendPolicy.Skip, ct);
 
-            var dayTimesheets = await _api.GetTimesheetsAsync(targetEmpId, d, ct);
-            allTimesheets.AddRange(dayTimesheets.Select(t => new
-            {
-                t.TimeId, t.EmpId, t.EmpName, t.Client, t.ClientId, t.Project, t.ProjectId,
-                date = d.ToString("yyyy-MM-dd"),
-                t.StartTime, t.EndTime, t.TotalTime,
-                t.Location, t.BillableId, t.IsSuggested,
-                t.Notes, t.IsLocked, t.InvoiceId
-            }));
-        }
+        var allTimesheets = days.SelectMany(day => day.Entries.Select(t => new
+        {
+            t.TimeId, t.EmpId, t.EmpName, t.Client, t.ClientId, t.Project, t.ProjectId,
+            date = day.Date.ToString("yyyy-MM-dd"),
+            t.StartTime, t.EndTime, t.TotalTime,
+            t.Location, t.BillableId, t.IsSuggested,
+            t.Notes, t.IsLocked, t.InvoiceId
+        })).ToList();
 
         return JsonSerializer.Serialize(allTimesheets, JsonOpts);
     }
@@ -229,32 +225,7 @@ public class TimesheetMcpTools
         // Shared orchestration with `tp ts check` — fetch + leave-merge + per-day eval.
         var coverage = await WeekCoverageService.EvaluateWeekAsync(_api, targetEmpId, week, ct);
 
-        var result = new
-        {
-            empId = coverage.EmpId,
-            weekStart = coverage.Monday.ToString("yyyy-MM-dd"),
-            weekEnd = coverage.Friday.ToString("yyyy-MM-dd"),
-            errors = coverage.Errors,
-            warnings = coverage.Warnings,
-            infos = coverage.Infos,
-            allCovered = coverage.AllCovered,
-            pendingSuggestions = CheckEvaluator.CountPendingSuggestions(coverage.Days),
-            days = coverage.Days.Select(check => new
-            {
-                date = check.Date.ToString("yyyy-MM-dd"),
-                dayOfWeek = check.Date.DayOfWeek.ToString(),
-                totalHours = check.TotalHours,
-                timesheetCount = check.TimesheetCount,
-                suggestedCount = check.SuggestedCount,
-                leaveHours = check.LeaveHours,
-                leaveType = check.LeaveType,
-                covered = check.Covered,
-                coverReason = check.CoverReason,
-                issues = check.Issues.Select(i => new { i.Severity, i.Message })
-            })
-        };
-
-        return JsonSerializer.Serialize(result, JsonOpts);
+        return JsonSerializer.Serialize(WeekCheckResult.From(coverage), JsonOpts);
     }
 
     [McpServerTool]
@@ -267,13 +238,10 @@ public class TimesheetMcpTools
         if (tenant?.EmployeeId is null)
             return """{"error": "Not logged in"}""";
 
-        var dateOnly = DateOnly.ParseExact(date, "yyyy-MM-dd");
-        await _api.RefreshSuggestedTimesheetsAsync(tenant.EmployeeId, dateOnly, ct);
+        var day = await TimesheetLookup.RefreshAndReadSuggestedAsync(
+            _api, tenant.EmployeeId, DateOnly.ParseExact(date, "yyyy-MM-dd"), ct);
 
-        var all = await _api.GetTimesheetsAsync(tenant.EmployeeId, dateOnly, ct);
-        var suggested = all.Where(t => t.IsSuggested).ToList();
-
-        return JsonSerializer.Serialize(suggested, JsonOpts);
+        return JsonSerializer.Serialize(day.Entries, JsonOpts);
     }
 
     [McpServerTool]

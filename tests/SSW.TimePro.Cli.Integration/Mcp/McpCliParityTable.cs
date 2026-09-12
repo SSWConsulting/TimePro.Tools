@@ -66,6 +66,19 @@ public static class McpCliParityTable
         "ListAllSkus",
     };
 
+    /// <summary>
+    /// Timesheet tools that still reach for <c>ITimeProApiClient</c> themselves instead of going
+    /// through a shared service. Shrink-only: an entry leaves when its slice lands.
+    /// </summary>
+    public static IReadOnlySet<string> TimesheetToolsUsingApiDirectly { get; } = new HashSet<string>(StringComparer.Ordinal)
+    {
+        // The delete call itself; the suggestion pre-check is already shared.
+        "DeleteTimesheet",
+
+        // A pass-through of one endpoint on both surfaces, so there is nothing to share yet.
+        "ListIterations",
+    };
+
     public static IReadOnlyList<ParityRow> Rows { get; } =
     [
         // ───────── Mirrored pairs over a shared service ─────────
@@ -139,10 +152,8 @@ public static class McpCliParityTable
         {
             CliArgs = ["ts", "check", "--week", "0", "--json"],
             InvokeTool = (h, ct) => h.Timesheets.CheckWeek(0, ct: ct),
-            ExpectParity = false,
-            PermittedDifferences = ["$.tenant", "$.leaveType", "$.days[0].leaveType", "$.days[1].leaveType",
-                                    "$.days[2].leaveType", "$.days[3].leaveType", "$.days[4].leaveType"],
-            Note = "WeekCoverageService is shared; the envelopes still differ in null handling.",
+            ExpectParity = true,
+            Note = "WeekCoverageService and WeekCheckResult are both shared.",
             TokenizeCurrentWeek = true
         },
 
@@ -295,8 +306,54 @@ public static class McpCliParityTable
 
         // ───────── Not unified yet: declared so a later slice flips the flag ─────────
 
-        new("GetTimesheets", "ts get") { Note = "MCP reshapes the row; CLI returns the API shape." },
-        new("GetSuggestedTimesheets", "ts suggest") { Note = "Separate projections." },
+        new("GetTimesheets", "ts get")
+        {
+            CliArgs = ["ts", "get", "--from", Date, "--to", Date, "--json"],
+            InvokeTool = (h, ct) => h.Timesheets.GetTimesheets(Date, ct: ct),
+            ExpectParity = false,
+            PermittedDifferences = ["$"],
+            Note = "TimesheetLookup.ForRangeAsync is shared; the documents are different kinds — the "
+                 + "CLI answers a from/to envelope of days, MCP a flat array of reshaped rows.",
+            ExpectedRequests = [new("GET", "/api/Timesheets/GetTimesheetListViewModel")]
+        },
+
+        new("GetTimesheets", "ts get")
+        {
+            CliArgs = ["ts", "get", "--from", NorthwindApi.WeekendDate, "--to", NorthwindApi.WeekendDate, "--json"],
+            InvokeTool = (h, ct) => h.Timesheets.GetTimesheets(NorthwindApi.WeekendDate, ct: ct),
+            ExpectParity = false,
+            PermittedDifferences = ["$"],
+            Note = "The weekend policy, locked by the two goldens: the CLI reads the Saturday, MCP "
+                 + "skips it and returns an empty array without calling the API."
+        },
+
+        new("GetSuggestedTimesheets", "ts suggest")
+        {
+            CliArgs = ["ts", "suggest", Date, "--json"],
+            InvokeTool = (h, ct) => h.Timesheets.GetSuggestedTimesheets(Date, ct),
+            ExpectParity = false,
+
+            // Both documents are one-element arrays, so the diff lands per key rather than at the
+            // root: the CLI element is the {date, suggested} group, the MCP element is the entry.
+            PermittedDifferences =
+            [
+                "$[0].date", "$[0].suggested",
+                "$[0].timeId", "$[0].empId", "$[0].empName", "$[0].client", "$[0].clientId",
+                "$[0].project", "$[0].projectId", "$[0].iteration", "$[0].iterationId",
+                "$[0].startTime", "$[0].endTime", "$[0].totalTime", "$[0].less",
+                "$[0].location", "$[0].locationId", "$[0].category", "$[0].billableId",
+                "$[0].isBillable", "$[0].isSuggested", "$[0].isLeave", "$[0].isLocked",
+                "$[0].hasNotes", "$[0].notes", "$[0].inputSource",
+                "$[0].invoiceId", "$[0].invoiceType"
+            ],
+            Note = "The refresh-then-read is shared and happens once; the CLI groups the day's "
+                 + "suggestions under a date, MCP returns the entries alone.",
+            ExpectedRequests =
+            [
+                new("GET", "/api/Timesheets/RefreshSuggestedTimesheets"),
+                new("GET", "/api/Timesheets/GetTimesheetListViewModel")
+            ]
+        },
         new("GetLocationAndMapping", "location info") { Note = "MCP merges location defaults and repo mapping." },
         new("GetLeaveEntries", "leave list") { Note = "MCP returns the items array, CLI the envelope." },
         new("GetLeaveBalance", "leave balance") { Note = "Separate projections." },

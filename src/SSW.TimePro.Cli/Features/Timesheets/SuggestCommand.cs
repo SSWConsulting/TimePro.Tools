@@ -68,18 +68,14 @@ public class SuggestCommand : AsyncCommand<SuggestCommand.Settings>
                 dates.Add(date);
             }
 
-            var allSuggested = new List<(DateOnly Date, List<TimesheetItem> Items)>();
+            var allSuggested = new List<TimesheetDay>();
 
             foreach (var date in dates)
             {
-                // Refresh suggested timesheets first
-                await _api.RefreshSuggestedTimesheetsAsync(tenant.EmployeeId, date, CancellationToken.None);
-
-                // Fetch all timesheets and filter to suggested
-                var all = await _api.GetTimesheetsAsync(tenant.EmployeeId, date, CancellationToken.None);
-                var suggested = all.Where(t => t.IsSuggested).ToList();
-                if (suggested.Count > 0)
-                    allSuggested.Add((date, suggested));
+                var day = await TimesheetLookup.RefreshAndReadSuggestedAsync(
+                    _api, tenant.EmployeeId, date, CancellationToken.None);
+                if (day.Entries.Count > 0)
+                    allSuggested.Add(day);
             }
 
             if (settings.Json)
@@ -87,7 +83,7 @@ public class SuggestCommand : AsyncCommand<SuggestCommand.Settings>
                 OutputHelper.WriteJson(allSuggested.Select(d => new
                 {
                     date = d.Date.ToString("yyyy-MM-dd"),
-                    suggested = d.Items
+                    suggested = d.Entries
                 }));
                 return 0;
             }

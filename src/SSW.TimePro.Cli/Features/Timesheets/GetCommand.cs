@@ -80,14 +80,14 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
                     monday = monday.AddDays(-7);
                 var friday = monday.AddDays(4);
 
-                return await RenderWeek(empId, monday, friday, settings);
+                return await RenderRange(empId, monday, friday, settings, isWeek: true);
             }
 
             if (settings.From is not null && settings.To is not null)
             {
                 var from = DateOnly.ParseExact(settings.From, "yyyy-MM-dd", CultureInfo.InvariantCulture);
                 var to = DateOnly.ParseExact(settings.To, "yyyy-MM-dd", CultureInfo.InvariantCulture);
-                return await RenderWeek(empId, from, to, settings);
+                return await RenderRange(empId, from, to, settings, isWeek: false);
             }
 
             // Single day (--date option takes precedence over positional argument)
@@ -133,7 +133,7 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
         return 0;
     }
 
-    private async Task<int> RenderWeek(string empId, DateOnly start, DateOnly end, Settings settings)
+    private async Task<int> RenderRange(string empId, DateOnly start, DateOnly end, Settings settings, bool isWeek)
     {
         // Fetch all days in range
         var allTimesheets = new Dictionary<DateOnly, List<TimesheetItem>>();
@@ -145,18 +145,18 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
 
         if (settings.Json)
         {
-            var jsonData = new
+            var days = allTimesheets.Select(kvp => new
             {
-                weekStart = start.ToString("yyyy-MM-dd"),
-                weekEnd = end.ToString("yyyy-MM-dd"),
-                days = allTimesheets.Select(kvp => new
-                {
-                    date = kvp.Key.ToString("yyyy-MM-dd"),
-                    dayOfWeek = kvp.Key.DayOfWeek.ToString(),
-                    timesheets = kvp.Value,
-                    totalHours = kvp.Value.Where(t => !t.IsSuggested).Sum(t => t.TotalTime)
-                })
-            };
+                date = kvp.Key.ToString("yyyy-MM-dd"),
+                dayOfWeek = kvp.Key.DayOfWeek.ToString(),
+                timesheets = kvp.Value,
+                totalHours = kvp.Value.Where(t => !t.IsSuggested).Sum(t => t.TotalTime)
+            }).ToList();
+
+            object jsonData = isWeek
+                ? new { weekStart = start.ToString("yyyy-MM-dd"), weekEnd = end.ToString("yyyy-MM-dd"), days }
+                : new { from = start.ToString("yyyy-MM-dd"), to = end.ToString("yyyy-MM-dd"), days };
+
             OutputHelper.WriteJson(jsonData);
             return 0;
         }

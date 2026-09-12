@@ -174,7 +174,7 @@ Known sample: `1I776Q` (Northwind Traders) uses iterations for each sample miles
 
 ## Standard Day Format
 - Default hours: `--start 09:00 --end 18:00 --less 60` (= 8h billable).
-- The `--less` flag takes minutes on create and update. Pass `--less 0` on update to clear it.
+- The `--less` flag takes whole minutes on create and update (`--less 90`, not `--less 1.5`). Pass `--less 0` on update to clear it.
 - If `--end` is omitted it defaults to 17:00, which is only 8h gross with no break.
 
 ## Daily Scrum (`tp scrum`)

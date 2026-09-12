@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Spectre.Console;
+using Spectre.Console.Rendering;
 
 namespace SSW.TimePro.Cli.Infrastructure.Output;
 
@@ -63,6 +64,22 @@ public static class OutputHelper
     public static void WriteError(string message)
     {
         ErrorConsole.MarkupLine($"[red]Error:[/] {Markup.Escape(message)}");
+    }
+
+    /// <summary>
+    /// Writes a pre-rendered error (e.g. Spectre's parse-error diagram) to stderr.
+    /// </summary>
+    public static void WriteErrorRenderable(IRenderable renderable)
+    {
+        ErrorConsole.Write(renderable);
+    }
+
+    /// <summary>
+    /// Writes an unexpected exception, with stack trace, to stderr.
+    /// </summary>
+    public static void WriteErrorException(Exception exception)
+    {
+        ErrorConsole.WriteException(exception);
     }
 
     /// <summary>

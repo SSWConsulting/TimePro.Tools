@@ -60,8 +60,8 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
         public string? Billable { get; set; }
 
         [CommandOption("--less <MINUTES>")]
-        [Description("Break/less time in minutes")]
-        public int? Less { get; set; }
+        [Description("Break/less time in whole minutes, e.g. --less 90")]
+        public string? Less { get; set; }
 
         [CommandOption("--yes")]
         [Description("Skip confirmation prompt")]
@@ -103,7 +103,16 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
 
         var startTime = settings.Start ?? "09:00";
         var endTime = settings.End ?? "17:00";
-        var lessMins = settings.Less ?? 0;
+        if (!LessOption.TryParse(settings.Less, out var lessMinutes, out var lessError))
+        {
+            if (settings.Json)
+                OutputHelper.WriteJsonError(lessError!);
+            else
+                OutputHelper.WriteError(lessError!);
+            return 1;
+        }
+
+        var lessMins = lessMinutes ?? 0;
 
         // Resolve location from WFH defaults if not specified
         var location = settings.Location;

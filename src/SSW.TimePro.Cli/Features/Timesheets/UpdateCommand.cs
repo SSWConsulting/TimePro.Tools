@@ -39,8 +39,8 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
         public string? End { get; set; }
 
         [CommandOption("--less <MINUTES>")]
-        [Description("New break/less time in minutes. Use 0 to clear it")]
-        public int? Less { get; set; }
+        [Description("New break/less time in whole minutes, e.g. --less 90. Use 0 to clear it")]
+        public string? Less { get; set; }
 
         [CommandOption("--client <CLIENT>")]
         [Description("New client ID")]
@@ -90,12 +90,12 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
             return 1;
         }
 
-        if (settings.Less is < 0)
+        if (!LessOption.TryParse(settings.Less, out var lessMinutes, out var lessError))
         {
             if (settings.Json)
-                OutputHelper.WriteJsonError("--less must be zero or greater");
+                OutputHelper.WriteJsonError(lessError!);
             else
-                OutputHelper.WriteError("--less must be zero or greater");
+                OutputHelper.WriteError(lessError!);
             return 1;
         }
 
@@ -165,8 +165,8 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
                 TimeEnd = settings.End is not null
                     ? $"{existingDateStr}T{settings.End}:00"
                     : existing.EndTime,
-                TimeLess = settings.Less is not null
-                    ? settings.Less.Value / 60m
+                TimeLess = lessMinutes is not null
+                    ? lessMinutes.Value / 60m
                     : existing.Less > 0 ? existing.Less : null,
                 Note = settings.Description ?? existing.Notes,
                 LocationId = settings.Location is not null
@@ -191,8 +191,8 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
                 changes.Add($"Start -> {settings.Start}");
             if (settings.End is not null)
                 changes.Add($"End -> {settings.End}");
-            if (settings.Less is not null)
-                changes.Add($"Less -> {settings.Less} minutes");
+            if (lessMinutes is not null)
+                changes.Add($"Less -> {lessMinutes} minutes");
             if (settings.ClientId is not null)
                 changes.Add($"Client -> {settings.ClientId}");
             if (settings.ProjectId is not null)

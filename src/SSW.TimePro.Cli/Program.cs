@@ -122,8 +122,11 @@ var registrar = new TypeRegistrar(services);
 // Build command tree
 var app = new CommandApp(registrar);
 
+var jsonRequested = CommandLineErrorHandler.IsJsonRequested(tenantOverride.Args);
+
 app.Configure(config =>
 {
+    config.SetExceptionHandler((ex, _) => CommandLineErrorHandler.Handle(ex, jsonRequested));
     config.SetApplicationName("tp");
     config.SetApplicationVersion($"{BuildInfo.Version}+{BuildInfo.Commit}");
 

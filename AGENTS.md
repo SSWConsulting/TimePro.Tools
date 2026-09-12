@@ -67,6 +67,8 @@ Run `tp --help` for full command list. Key commands:
 
 On the `--json` path, failures emit a structured envelope to **stdout** so stdout stays valid JSON: `{"error":{"code":<int|null>,"message":"...","detail":<string|null>}}` (all keys always present), with a non-zero exit code. Human-readable error/warning text goes to **stderr**.
 
+This covers Spectre parse/binding failures too (unknown command, unbindable argument), not just errors a command raises itself: `Program.cs` installs `CommandLineErrorHandler` as the Spectre exception handler, which checks argv for `--json` because these failures happen before settings binding. Command-line errors exit 1; an unexpected exception keeps Spectre's -1.
+
 ### MCP tools + tenant resolution
 
 Default MCP tools cover timesheets, lookups, and leave. Accounting MCP tools are feature-gated behind `tp feature accounting enable`. Before enabling or changing MCP features, ask the user what the MCP use-case is (timesheets, accounting reconciliation, Excel/CSV comparison, Xero/other MCP composition, diagnostics, etc.) so the tool surface can be adjusted deliberately.

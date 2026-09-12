@@ -191,16 +191,49 @@ public static class McpCliParityTable
             ExpectParity = true
         },
 
+        new("GetProjectsForClient", "project list")
+        {
+            CliArgs = ["project", "list", "--client", NorthwindApi.ClientId, "--json"],
+            InvokeTool = (h, ct) => h.Lookups.GetProjectsForClient(NorthwindApi.ClientId, ct),
+            ExpectParity = true
+        },
+
+        new("GetClientRate", "rate get")
+        {
+            CliArgs = ["rate", "get", "--client", NorthwindApi.ClientId, "--date", Date, "--json"],
+            InvokeTool = (h, ct) => h.Lookups.GetClientRate(NorthwindApi.ClientId, Date, ct),
+            ExpectParity = false,
+            PermittedDifferences = ["$.found", "$.date"],
+            Note = "RateLookup is shared; MCP still returns the raw rate and a bare null on a miss. "
+                 + "Giving it the CLI's RateLookupResult shape is a 0.4.0 contract change."
+        },
+
+        new("ListIterations", "iteration list")
+        {
+            CliArgs = ["iteration", "list", "--project", NorthwindApi.ProjectId, "--json"],
+            InvokeTool = (h, ct) => h.Timesheets.ListIterations(NorthwindApi.ProjectId, ct),
+            ExpectParity = true
+        },
+
+        new("SearchClients", "client search")
+        {
+            CliArgs = ["client", "search", "Northwind", "--json"],
+            InvokeTool = (h, ct) => h.Lookups.SearchClients("Northwind", ct),
+            ExpectParity = true
+        },
+
+        new("GetCrmBookings", "booking list")
+        {
+            CliArgs = ["booking", "list", "--date", Date, "--json"],
+            InvokeTool = (h, ct) => h.Lookups.GetCrmBookings(Date, Date, ct),
+            ExpectParity = true
+        },
+
         // ───────── Not unified yet: declared so a later slice flips the flag ─────────
 
         new("GetTimesheets", "ts get") { Note = "MCP reshapes the row; CLI returns the API shape." },
         new("CreateTimesheet", "ts create") { Note = "No shared create orchestration yet (#57)." },
-        new("ListIterations", "iteration list") { Note = "Separate projections." },
         new("GetSuggestedTimesheets", "ts suggest") { Note = "Separate projections." },
-        new("SearchClients", "client search") { Note = "Separate projections." },
-        new("GetProjectsForClient", "project list") { Note = "Sentinel row and rate shape (#46)." },
-        new("GetClientRate", "rate get") { Note = "MCP returns the raw rate, CLI a lookup result (#46)." },
-        new("GetCrmBookings", "booking list") { Note = "Separate projections." },
         new("GetLocationAndMapping", "location info") { Note = "MCP merges location defaults and repo mapping." },
         new("GetLeaveEntries", "leave list") { Note = "MCP returns the items array, CLI the envelope." },
         new("GetLeaveBalance", "leave balance") { Note = "Separate projections." },

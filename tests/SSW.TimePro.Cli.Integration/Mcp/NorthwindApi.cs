@@ -105,6 +105,19 @@ public static class NorthwindApi
 
     // ───────────────────────── Lookups ─────────────────────────
 
+    public const string SentinelDisplayText = "Empty - Please add the project";
+
+    /// <summary>
+    /// The real dropdown endpoint leads with a placeholder row carrying no project ID; the fixture
+    /// keeps it so a surface that forwards it fails a golden instead of shipping.
+    /// </summary>
+    public static List<ProjectForSelect> ProjectDropdown =>
+    [
+        new() { Value = null, DisplayText = SentinelDisplayText, UseIteration = false },
+        new() { Value = ProjectId, DisplayText = ClientName, UseIteration = true },
+        new() { Value = "N8000J", DisplayText = "Upgrade - Northwind", UseIteration = false }
+    ];
+
     private static void StubLookups(WireMockServer server)
     {
         Json(server, "/api/Timesheets/GetClientListForAddTimesheet", "GET", new List<ClientSearchResult>
@@ -112,11 +125,7 @@ public static class NorthwindApi
             new() { Value = ClientId, Text = ClientName }
         });
 
-        Json(server, "/api/Projects/GetSelectListUsageDataProject", "GET", new List<ProjectForSelect>
-        {
-            new() { Value = ProjectId, DisplayText = ClientName, UseIteration = true },
-            new() { Value = "N8000J", DisplayText = "Upgrade - Northwind", UseIteration = false }
-        });
+        Json(server, "/api/Projects/GetSelectListUsageDataProject", "GET", ProjectDropdown);
 
         Json(server, "/api/Timesheets/GetClientRate", "GET", new ClientRateResponse
         {

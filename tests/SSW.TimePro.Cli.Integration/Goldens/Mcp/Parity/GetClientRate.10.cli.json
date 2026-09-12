@@ -1,0 +1,13 @@
+{
+  "clientId": "NWIND",
+  "clientName": "Northwind Traders",
+  "clientRateId": 900,
+  "date": "2026-03-16",
+  "empId": "BOB",
+  "employeeName": "Bob Northwind",
+  "expiryDate": "2026-12-31",
+  "found": true,
+  "notes": "Standard rate",
+  "prepaidRate": 150,
+  "rate": 175
+}

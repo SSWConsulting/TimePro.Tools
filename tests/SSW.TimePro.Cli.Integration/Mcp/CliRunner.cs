@@ -8,8 +8,19 @@ using SSW.TimePro.Cli.Infrastructure.DependencyInjection;
 using SSW.TimePro.Cli.Infrastructure.Output;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using Xunit;
 
 namespace SSW.TimePro.Cli.Integration.Mcp;
+
+/// <summary>
+/// Every class that runs <see cref="CliRunner"/>. It swaps the process-wide Console.Out, so two
+/// such classes in parallel steal each other's stdout.
+/// </summary>
+[CollectionDefinition(Name, DisableParallelization = true)]
+public class CliConsoleCollection
+{
+    public const string Name = "cli-console";
+}
 
 /// <summary>
 /// Runs the real command tree in-process against a supplied API client, capturing stdout so a

@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Globalization;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using SSW.TimePro.Cli.Infrastructure.Output;
@@ -51,14 +50,12 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
             return 1;
         }
 
-        var date = settings.Date is not null
-            ? DateOnly.ParseExact(settings.Date, "yyyy-MM-dd", CultureInfo.InvariantCulture)
-            : DateOnly.FromDateTime(DateTime.Today);
+        var date = RateLookup.ResolveDate(settings.Date);
 
         try
         {
-            var rate = await _api.GetClientRateAsync(
-                tenant.EmployeeId, settings.ClientId, date, CancellationToken.None);
+            var rate = await RateLookup.FetchAsync(
+                _api, tenant.EmployeeId, settings.ClientId, date, CancellationToken.None);
 
             // A missing rate is a valid lookup result, not a failure, so it shares the hit schema.
             if (settings.Json)

@@ -109,6 +109,15 @@ accept — accepting twice would duplicate the entry.
 (`{"success":true,"timesheetId":N,"timesheet":{...}}`). The API usually answers writes with an empty
 body, so the entry is re-read; callers no longer need a follow-up `ts get --week`.
 
+### Shared lookups
+
+`ProjectLookup.SelectableAsync` is the only project read either surface may use: the dropdown
+endpoint leads with a placeholder row carrying no project ID, and an agent that picks it writes a
+timesheet against a blank project. `RateLookup` is the same seam for rates, but the projections
+stay apart on purpose — `rate get --json` answers a miss with the full `RateLookupResult` shape
+while the MCP tool still returns the raw response and a bare `null`; aligning them is a 0.4.0
+contract change, not a patch.
+
 ### `--json` error envelope
 
 On the `--json` path, failures emit a structured envelope to **stdout** so stdout stays valid JSON: `{"error":{"code":<int|null>,"message":"...","detail":<string|null>}}` (all keys always present), with a non-zero exit code. Human-readable error/warning text goes to **stderr**.

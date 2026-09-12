@@ -3,9 +3,6 @@
   "tools": [
     {
       "description": "Accept a suggested timesheet, converting it into a real timesheet. Returns the entry as saved.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "date": {
@@ -54,9 +51,6 @@
     },
     {
       "description": "Validate a week of timesheets for gaps and issues (leave-aware). Returns per-day coverage with hours, leave, issues, plus allCovered and pendingSuggestions. week: 0=this week (default), -1=last week. The single most useful tool for confirming a week is complete before submitting.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "empId": {
@@ -87,9 +81,6 @@
     },
     {
       "description": "Create a leave request for the current user. An explicit timezone override takes priority; otherwise uses the TimePro profile timezone first, then the MCP host machine timezone as the browser-equivalent fallback.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "approvedBy": {
@@ -171,9 +162,6 @@
     },
     {
       "description": "Create a new timesheet entry. Some projects require an iteration ID \u2014 use ListIterations to check and find the correct ID.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "billableId": {
@@ -247,9 +235,6 @@
     },
     {
       "description": "Delete a timesheet entry. Suggestions cannot be deleted; accept one first.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "date": {
@@ -274,9 +259,6 @@
     },
     {
       "description": "Get the aged-debtor view for a client: outstanding invoices with days overdue.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "clientId": {
@@ -293,9 +275,6 @@
     },
     {
       "description": "Get the current employee\u0027s billing rate for a client. Includes rate expiry info.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "clientId": {
@@ -320,9 +299,6 @@
     },
     {
       "description": "List clients that have outstanding (unbilled) time, with OS balance and earliest unallocated timesheet date.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {},
         "type": "object"
@@ -331,9 +307,6 @@
     },
     {
       "description": "Get CRM bookings/appointments for a date range.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "endDate": {
@@ -355,9 +328,6 @@
     },
     {
       "description": "Get the current user (identity, tenant, display name) \u2014 handy for showing who an MCP session is authenticated as.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {},
         "type": "object"
@@ -366,9 +336,6 @@
     },
     {
       "description": "Get a single invoice header. GST convention: SubTotal is ex-GST, SalesTaxAmt is GST, SellTotal is inc-GST; SalesTaxPct is the raw API tax rate and should be normalized before calculations.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "invoiceId": {
@@ -385,9 +352,6 @@
     },
     {
       "description": "List line items (products) on an invoice. SellAmt and SellTotal are ex-GST; SalesTaxAmt is the GST component when returned.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "invoiceId": {
@@ -404,9 +368,6 @@
     },
     {
       "description": "List receipts (payments) against a specific invoice.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "invoiceId": {
@@ -423,9 +384,6 @@
     },
     {
       "description": "List timesheets billed on an invoice. SellTotal, BillableAmount, and Amount are treated as ex-GST; SalesTaxAmt/SalesTaxPct provide the tax component/rate when returned. Set type=\u0027writeoff\u0027 for written-off timesheets instead of allocated.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "invoiceId": {
@@ -447,9 +405,6 @@
     },
     {
       "description": "List all invoices for a client (full history, unpaged). Invoice amount convention: SubTotal ex-GST, SalesTaxAmt GST, SellTotal inc-GST.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "clientId": {
@@ -466,9 +421,6 @@
     },
     {
       "description": "Get leave stats for an employee: days since last leave and total leave hours taken in the last 12 months. Defaults to the current user\u0027s empId. (TimePro does not expose entitlement/remaining per leave type.)",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "empId": {
@@ -498,9 +450,6 @@
         "readOnlyHint": true
       },
       "description": "Report when TimePro\u0027s leave balances were last imported from Xero, how many employees have a stored balance, and whether the data is stale. Read-only. Check this before importing so you can tell the user whether a re-import is actually needed.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {},
         "type": "object"
@@ -509,9 +458,6 @@
     },
     {
       "description": "List EasyLeave entries. Use empId for one person; employeeId is accepted as an alias. Omit both to return all visible leave.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "empId": {
@@ -564,9 +510,6 @@
     },
     {
       "description": "Get structured prepaid drawdown totals for an invoice: original, drawnDown, credited, and remaining amounts split into exGst/gst/incGst. remaining.exGst is sourced from the existing client invoice table endpoint\u0027s ledger-backed RemainingPrepaidCredit.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "invoiceId": {
@@ -583,9 +526,6 @@
     },
     {
       "description": "Download the prepaid drawdown status report PDF for an invoice. Returns base64-encoded bytes inside a JSON envelope \u2014 decode on the client side to save as .pdf. Prefer GetPrepaidStatus for structured totals.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "invoiceId": {
@@ -607,9 +547,6 @@
     },
     {
       "description": "Get a single product by ID.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "productId": {
@@ -626,9 +563,6 @@
     },
     {
       "description": "Show product discounts configured for a client.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "clientId": {
@@ -645,9 +579,6 @@
     },
     {
       "description": "Get projects for a client. Returns project IDs and names.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "clientId": {
@@ -664,9 +595,6 @@
     },
     {
       "description": "Project-hours summary for one empId over a period (billable vs non-billable across projects). Defaults to the current user; employeeId is accepted as an alias.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "empId": {
@@ -704,9 +632,6 @@
     },
     {
       "description": "Get a receipt with its invoice allocations (how the payment is split across invoices).",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "receiptId": {
@@ -723,9 +648,6 @@
     },
     {
       "description": "Get a recurring invoice template (includes product lines).",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "recurringId": {
@@ -742,9 +664,6 @@
     },
     {
       "description": "Get suggested timesheets for a date. Refreshes suggestions first.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "date": {
@@ -761,9 +680,6 @@
     },
     {
       "description": "Get timesheets for a date or date range. Use empId to read another employee\u0027s timesheets; employeeId is accepted as an alias.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "date": {
@@ -804,9 +720,6 @@
     },
     {
       "description": "List unbilled (unallocated) timesheets for a client - revenue still in the pipeline. SellTotal, BillableAmount, and Amount are treated as ex-GST.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "clientId": {
@@ -855,9 +768,6 @@
     },
     {
       "description": "List unpaid invoices for a client. Invoice amount convention: SubTotal ex-GST, SalesTaxAmt GST, SellTotal inc-GST.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "clientId": {
@@ -879,9 +789,6 @@
         "readOnlyHint": false
       },
       "description": "Import leave balances for EVERY employee from a Xero \u0027Leave Balances\u0027 CSV export, replacing what TimePro currently stores. No dry run and no undo, so confirm with the user first. Pass the path to the CSV file, not its contents. Always report the returned unmatchedEmployees (rows skipped) and warnings - the import succeeds despite them.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "csvPath": {
@@ -898,9 +805,6 @@
     },
     {
       "description": "List all SKUs. Set isPrepaid=true to list only prepaid SKUs (useful for prepaid drawdown analysis).",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "isPrepaid": {
@@ -915,9 +819,6 @@
     },
     {
       "description": "List timesheet billable-type codes (B = billable, BPP = prepaid, W = write-off, etc.).",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {},
         "type": "object"
@@ -926,9 +827,6 @@
     },
     {
       "description": "List timesheet category codes (for labelling timesheets when creating or filtering queries).",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {},
         "type": "object"
@@ -937,9 +835,6 @@
     },
     {
       "description": "List all configured client rates (all empIds by default). For just the current user\u0027s rate for a client, prefer GetClientRate. employeeId is accepted as an alias for empId.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "clientId": {
@@ -1009,9 +904,6 @@
     },
     {
       "description": "List credit notes for a client.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "clientId": {
@@ -1028,9 +920,6 @@
     },
     {
       "description": "List invoices (paged). Filter by query text, sort by DateCreated/DateInvoiced/SellTotal/ClientID. SellTotal is GST-inclusive. Set onlyRecurring=true for recurring-generated invoices.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "dir": {
@@ -1073,9 +962,6 @@
     },
     {
       "description": "List iterations/sprints for a project. Returns empty list if the project doesn\u0027t use iterations. If the list is non-empty, an iteration ID is required when creating timesheets for this project.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "projectId": {
@@ -1092,9 +978,6 @@
     },
     {
       "description": "List timesheet location codes (SSW, Home, Client, Travel, Other).",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {},
         "type": "object"
@@ -1103,9 +986,6 @@
     },
     {
       "description": "List paid receipts (paged). Sort by PaymentDate descending by default. PaidTotal is NEGATIVE for incoming payments; take abs() for reported sales.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "dir": {
@@ -1143,9 +1023,6 @@
     },
     {
       "description": "List products. With isExpand=true, each product includes its SKUs inline.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "isExpand": {
@@ -1160,9 +1037,6 @@
     },
     {
       "description": "List recurring invoice templates.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "clientId": {
@@ -1213,9 +1087,6 @@
     },
     {
       "description": "Query timesheets across empIds, clients, projects and a date range. Returns detailed rows including hours and sell price; sell prices/amounts are treated as ex-GST for invoice reconciliation. employeeIds is accepted as an alias for empIds.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "categoryIds": {
@@ -1307,9 +1178,6 @@
     },
     {
       "description": "Search for clients by name. Returns client IDs and names.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "query": {
@@ -1326,9 +1194,6 @@
     },
     {
       "description": "Update an existing leave request for the current user. Unspecified API-returned fields are preserved. List leave entries first to obtain the leave ID.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "approvedBy": {
@@ -1440,9 +1305,6 @@
     },
     {
       "description": "Update an existing timesheet. Only specify fields you want to change; everything else is preserved. Returns the entry as saved.",
-      "execution": {
-        "taskSupport": "optional"
-      },
       "inputSchema": {
         "properties": {
           "billableId": {

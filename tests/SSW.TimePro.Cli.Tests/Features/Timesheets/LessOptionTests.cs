@@ -58,7 +58,7 @@ public class LessOptionTests
     {
         var api = Substitute.For<ITimeProApiClient>();
         string[] args = command == "create"
-            ? ["create", "--client", "NWIND", "--project", "N8000J", "--less", less, "--yes", "--json"]
+            ? ["create", "--client", "NWIND", "--project", "NW0002", "--less", less, "--yes", "--json"]
             : ["update", "42", "--less", less, "--json"];
 
         var (exitCode, stdout) = await RunAsync(api, args);

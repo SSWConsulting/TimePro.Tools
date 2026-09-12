@@ -159,6 +159,18 @@ public static class McpToolCatalog
             HasApiErrorCase = true
         },
 
+        // No PrimaryRoute: the generated empty/apiError variants would collide with the dryRun
+        // case's goldens, which already cover a failing create.
+        new("CreateLeave", "created", (h, ct) => h.Leave.CreateLeave(
+            start: "2026-04-01",
+            end: "2026-04-01",
+            type: "Annual Leave",
+            note: "Family day",
+            approvedBy: NorthwindApi.EmpEmail,
+            cc: NorthwindApi.EmpEmail,
+            timeZoneId: TimeZone,
+            ct: ct)),
+
         new("UpdateLeave", "dryRun", (h, ct) => h.Leave.UpdateLeave(
             id: NorthwindApi.LeaveId,
             note: "Family day (updated)",

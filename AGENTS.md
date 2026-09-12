@@ -213,6 +213,21 @@ CLI and MCP leave create/update surfaces support dry-run. Dry-run performs the s
 validation and payload preparation, returns the proposed request, and must not call
 `CreateLeaveAsync` or `UpdateLeaveAsync`.
 
+Create answers with an empty body, so `LeaveCreateService.ApplyAsync` re-reads the entry through
+`LeaveLookup.FindCreatedAsync` (UPCOMING then PAST, matched on leave type, note, all-day flag and
+dates — plus the slot to the minute for a partial day, since two partial-day requests on one day
+differ only by their times) and both surfaces return
+`{"success":true,"leaveId":"<guid>","leave":{...}}`. A missing or ambiguous match still reports
+success, with `leave: null` and a `warning` whose recovery is `tp leave list --filter ALL` — never a
+second create, which would duplicate the request. The read-back swallows every failure except the
+caller's own cancellation: a completed write is reported as a success, because surfacing it as an
+error is what invites a duplicate submission.
+
+Date comparison is deliberately asymmetric. All-day entries are compared on the calendar date only
+(the server normalises their times and may echo the day in its own offset); partial-day entries
+prefer the offset-free `startDateWithoutOffset`/`endDateWithoutOffset` values and otherwise compare
+instants shifted into the offset the request was built in.
+
 The cancel endpoint (`PUT /api/leave/{id}/cancel`) requires `LeaveId` (Guid) and `CancellationReason` in the request body.
 It returns as soon as the server accepts the request: the entry reads `PendingCancellation`
 and only becomes `Cancelled` minutes later, so `tp leave cancel` never claims the request is

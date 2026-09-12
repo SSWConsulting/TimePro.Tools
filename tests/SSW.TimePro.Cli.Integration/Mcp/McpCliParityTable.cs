@@ -265,6 +265,34 @@ public static class McpCliParityTable
             Note = "Separate projections over one API call; the CLI derives the same range from --date."
         },
 
+        // Appended rather than filed with the other leave rows: the Parity goldens are named by
+        // row index, so inserting above renames every snapshot below.
+        new("CreateLeave", "leave create")
+        {
+            CliArgs = ["leave", "create", "--start", "2026-04-01", "--end", "2026-04-01",
+                       "--type", "Annual Leave", "--note", "Family day",
+                       "--approved-by", NorthwindApi.EmpEmail, "--cc", NorthwindApi.EmpEmail,
+                       "--timezone", McpToolCatalog.TimeZone, "--yes", "--json"],
+            InvokeTool = (h, ct) => h.Leave.CreateLeave(
+                start: "2026-04-01", end: "2026-04-01", type: "Annual Leave", note: "Family day",
+                approvedBy: NorthwindApi.EmpEmail, cc: NorthwindApi.EmpEmail,
+                timeZoneId: McpToolCatalog.TimeZone, ct: ct),
+            ExpectParity = false,
+            PermittedDifferences =
+            [
+                "$.warning",
+                "$.leave.cancellationReason", "$.leave.endDateWithoutOffset",
+                "$.leave.startDateWithoutOffset", "$.leave.timeLessOverride"
+            ],
+            Note = "LeaveCreateService now owns the read-back; the CLI omits the nulls MCP writes.",
+            ExpectedRequests =
+            [
+                new("POST", "/api/leave/") { BodyContains = ["\"Note\":\"Family day\""] },
+                new("GET", "/api/leave/")
+            ],
+            ForbiddenRequests = [new("PUT", "/api/leave/")]
+        },
+
         // ───────── Not unified yet: declared so a later slice flips the flag ─────────
 
         new("GetTimesheets", "ts get") { Note = "MCP reshapes the row; CLI returns the API shape." },

@@ -117,12 +117,19 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
                 return 0;
             }
 
-            await _createService.ApplyAsync(plan, cancellationToken);
+            var result = await _createService.ApplyAsync(plan, cancellationToken);
 
             if (settings.Json)
-                OutputHelper.WriteJson(new { success = true });
+            {
+                OutputHelper.WriteJson(result);
+            }
             else
-                OutputHelper.WriteSuccess("Leave request created");
+            {
+                OutputHelper.WriteSuccess(
+                    $"Leave request created{(result.LeaveId is not null ? $" (ID: {result.LeaveId})" : "")}");
+                if (result.Warning is not null)
+                    OutputHelper.WriteWarning(result.Warning);
+            }
 
             return 0;
         }

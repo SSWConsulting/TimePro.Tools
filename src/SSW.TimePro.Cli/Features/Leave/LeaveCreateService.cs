@@ -17,6 +17,19 @@ public sealed record LeaveCreateOptions(
 
 public sealed record LeaveCreatePlan(CreateLeaveRequest Request, string TypeLabel);
 
+/// <summary>
+/// Outcome of a leave create, shared by the CLI <c>--json</c> path and the MCP tool.
+/// <see cref="Leave"/> is the entry re-read after the write, because POST /api/leave/ answers
+/// with an empty body.
+/// </summary>
+public sealed record LeaveCreateResult
+{
+    public bool Success { get; init; } = true;
+    public string? LeaveId { get; init; }
+    public LeaveEntry? Leave { get; init; }
+    public string? Warning { get; init; }
+}
+
 public sealed class LeaveCreateValidationException(string message) : Exception(message);
 
 /// <summary>
@@ -25,8 +38,13 @@ public sealed class LeaveCreateValidationException(string message) : Exception(m
 public sealed class LeaveCreateService
 {
     private readonly ITimeProApiClient _api;
+    private readonly LeaveLookup _lookup;
 
-    public LeaveCreateService(ITimeProApiClient api) => _api = api;
+    public LeaveCreateService(ITimeProApiClient api, LeaveLookup lookup)
+    {
+        _api = api;
+        _lookup = lookup;
+    }
 
     public async Task<LeaveCreatePlan> PrepareAsync(
         string employeeId,
@@ -128,8 +146,23 @@ public sealed class LeaveCreateService
         return new LeaveCreatePlan(request, options.Type);
     }
 
-    public Task ApplyAsync(LeaveCreatePlan plan, CancellationToken ct = default) =>
-        _api.CreateLeaveAsync(plan.Request, ct);
+    public async Task<LeaveCreateResult> ApplyAsync(LeaveCreatePlan plan, CancellationToken ct = default)
+    {
+        await _api.CreateLeaveAsync(plan.Request, ct);
+
+        var matches = await _lookup.FindCreatedAsync(plan.Request, ct);
+        if (matches.Count == 1)
+            return new LeaveCreateResult { LeaveId = matches[0].Id, Leave = matches[0] };
+
+        // The request was submitted, so the recovery is always to look it up — creating again
+        // would duplicate it.
+        var count = matches.Count == 0 ? "no entry matches" : $"{matches.Count} entries match";
+        return new LeaveCreateResult
+        {
+            Warning = $"Leave request created, but the new entry could not be identified ({count}). "
+                + "Find it with: tp leave list --filter ALL. Do not create it again."
+        };
+    }
 
     private async Task<int?> ResolveLeaveTypeAsync(string typeInput, CancellationToken ct)
     {

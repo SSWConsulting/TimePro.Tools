@@ -335,7 +335,7 @@ public class LeaveMcpToolsTests
     private static LeaveMcpTools CreateTools(ITimeProApiClient api, IConfigService config) =>
         new(api,
             config,
-            new LeaveCreateService(api),
+            new LeaveCreateService(api, new LeaveLookup(api)),
             new LeaveUpdateService(api, new LeaveLookup(api)),
             new LeaveListService(api));
 

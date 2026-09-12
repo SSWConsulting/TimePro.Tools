@@ -1,0 +1,22 @@
+{
+  "changes": [
+    "Note -\u003E Family day (updated)"
+  ],
+  "dryRun": true,
+  "leaveId": "0f2b7e7a-1111-4444-8888-aaaaaaaaaaaa",
+  "request": {
+    "allDay": true,
+    "approvedBy": "bob@northwind.example",
+    "endDate": "2026-04-01T23:59:00.0000000\u002B10:00",
+    "id": "0f2b7e7a-1111-4444-8888-aaaaaaaaaaaa",
+    "leaveTypeId": 1,
+    "note": "Family day (updated)",
+    "optionalEmp": [
+      "bob@northwind.example"
+    ],
+    "requestedEmpId": "BOB",
+    "startDate": "2026-04-01T00:00:00.0000000\u002B10:00",
+    "userEndTime": "18:00:00",
+    "userStartTime": "09:00:00"
+  }
+}

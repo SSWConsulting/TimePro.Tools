@@ -1,0 +1,11 @@
+[
+  {
+    "clientId": "NWIND",
+    "dateEnd": "2026-12-31T00:00:00",
+    "dateStart": "2026-01-01T00:00:00",
+    "discountPct": 5,
+    "note": "Volume discount",
+    "productId": "PREPAID",
+    "skuId": "PREPAID-10"
+  }
+]

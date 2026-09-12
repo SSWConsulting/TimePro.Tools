@@ -52,6 +52,11 @@ the command. `--verbose` is stripped from argv like `--tenant` and prints to std
 - Per-tenant: `~/.config/timepro-cli/tenants/{id}.json`
 - Repo mappings: `~/.config/timepro-cli/repo-mappings.json`
 - Feature packs: `config.json` stores `features.<name>.enabled` and `features.<name>.version` so skills and MCP can share one persistent setting.
+- `TIMEPRO_CLI_CONFIG_DIR` relocates the whole config root (`~`, relative and absolute paths all
+  work). It is read once by `ConfigPaths`, so it also moves the tenants directory, repo mappings and
+  the local command log. It exists so the MCP regression harness can launch a real `tp mcp` child
+  process against an isolated config instead of the developer's own tenants and feature flags; use
+  it for any test or script that must not read or write the real config.
 
 ### Project Files
 - `Directory.Build.props` centralizes shared .NET defaults (`net10.0`, implicit usings, nullable)
@@ -250,6 +255,29 @@ separate DTOs:
 property no DTO property binds. Use it on new endpoint tests — it is what catches shape drift
 before it shows up as a zeroed field.
 
+## MCP Regression Harness
+
+`tests/SSW.TimePro.Cli.Integration/Mcp/` holds the contract tripwire for the CLI/MCP unification
+work, with its snapshots under `Goldens/Mcp/`. Adding a tool means adding to the tables — several
+tests fail until you do.
+
+- `NorthwindApi` is the single fake TimePro instance. Response bodies are serialised from the real
+  DTOs, never hand-written, so a fixture that stops binding fails instead of producing a golden
+  full of nulls. Per-case overrides go in at `OverridePriority`.
+- `McpToolCatalog` declares one populated case per tool plus the generated `empty` and `apiError`
+  variants; `Goldens/Mcp/Tools/*.json` is the raw text each tool returned. An API failure escaping
+  a tool as a protocol error rather than an `isError` payload is part of what is snapshotted.
+- `McpStdioClient` launches the real `tp mcp` with `TIMEPRO_CLI_CONFIG_DIR` pointing at a throwaway
+  config. `Goldens/Mcp/Discovery/` holds the `tools/list` snapshots with accounting off (18 tools)
+  and on (47); `Goldens/Mcp/Calls/` holds `tools/call` envelopes.
+- `McpCliParityTable` pairs every tool with its CLI command. Differences are declared per case as
+  JSON paths — there is no generic normalisation — and `ExpectParity` flips to true as each slice
+  lands. `ToolsWithoutCliMirror` may only shrink.
+- Goldens are read from and written to the source tree. Regenerate deliberately with
+  `UPDATE_MCP_GOLDENS=1 dotnet test tests/SSW.TimePro.Cli.Integration/` and review the diff.
+- The one declared normalisation is `WeekTokens`: `WeekCoverageService` derives its window from the
+  machine clock and has no clock seam, so the current week's five dates become tokens.
+
 ## Testing
 
 ```bash
@@ -261,6 +289,12 @@ dotnet test tests/SSW.TimePro.Cli.Integration/
 
 # E2E (requires staging credentials)
 ./scripts/e2e/run-all.sh
+
+# Staging MCP stdio gate only (run the candidate artifact, never production).
+# TIMEPRO_MCP_SMOKE_PROJECT has no committed default; see scripts/e2e/README.md.
+TIMEPRO_MCP_SMOKE_PROJECT=1I776Q \
+TIMEPRO_MCP_SMOKE_TP="dotnet src/SSW.TimePro.Cli/bin/Release/net10.0/SSW.TimePro.Cli.dll" \
+  scripts/e2e/test-mcp-smoke.sh
 
 # NuGet package safety audit (also used by the optional Git pre-push hook)
 scripts/security/nuget-audit.sh

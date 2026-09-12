@@ -1,0 +1,60 @@
+[
+  {
+    "allDay": true,
+    "approvedBy": "bob@northwind.example",
+    "cancellationReason": null,
+    "createdAt": "2026-03-01T09:00:00\u002B10:00",
+    "daysAway": 1,
+    "endDate": "2026-04-01T23:59:00\u002B10:00",
+    "endDateWithoutOffset": null,
+    "id": "0f2b7e7a-1111-4444-8888-aaaaaaaaaaaa",
+    "leaveType": {
+      "id": 1,
+      "isActive": true,
+      "name": "Annual Leave"
+    },
+    "length": 1,
+    "note": "Family day",
+    "optionalEmp": [
+      "bob@northwind.example"
+    ],
+    "requestedEmpId": "BOB",
+    "startDate": "2026-04-01T00:00:00\u002B10:00",
+    "startDateWithoutOffset": null,
+    "status": 1,
+    "statusName": "Pending",
+    "timeLessOverride": null,
+    "updatedAt": "2026-03-02T09:00:00\u002B10:00",
+    "userEndTime": "18:00",
+    "userStartTime": "09:00"
+  },
+  {
+    "allDay": true,
+    "approvedBy": "bob@northwind.example",
+    "cancellationReason": null,
+    "createdAt": "2026-03-01T09:00:00\u002B10:00",
+    "daysAway": 1,
+    "endDate": "2026-02-02T23:59:00\u002B10:00",
+    "endDateWithoutOffset": null,
+    "id": "1a3c8f8b-2222-4444-8888-bbbbbbbbbbbb",
+    "leaveType": {
+      "id": 1,
+      "isActive": true,
+      "name": "Annual Leave"
+    },
+    "length": 1,
+    "note": "Public holiday",
+    "optionalEmp": [
+      "bob@northwind.example"
+    ],
+    "requestedEmpId": "BOB",
+    "startDate": "2026-02-02T00:00:00\u002B10:00",
+    "startDateWithoutOffset": null,
+    "status": 1,
+    "statusName": "Pending",
+    "timeLessOverride": null,
+    "updatedAt": "2026-03-02T09:00:00\u002B10:00",
+    "userEndTime": "18:00",
+    "userStartTime": "09:00"
+  }
+]

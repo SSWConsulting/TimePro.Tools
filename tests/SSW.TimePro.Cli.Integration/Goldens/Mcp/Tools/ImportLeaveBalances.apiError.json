@@ -1,0 +1,4 @@
+{
+  "error": "The import request was sent and may have been applied, but TimePro did not return a complete result. Run \u0027tp leave balances status\u0027 before retrying.",
+  "mayHaveBeenApplied": true
+}

@@ -1,0 +1,18 @@
+{
+  "dryRun": true,
+  "request": {
+    "allDay": true,
+    "approvedBy": "bob@northwind.example",
+    "endDate": "2026-04-01T23:59:00.0000000\u002B10:00",
+    "leaveTypeId": 1,
+    "note": "Family day",
+    "optionalEmp": [
+      "bob@northwind.example"
+    ],
+    "requestedEmpId": "BOB",
+    "startDate": "2026-04-01T00:00:00.0000000\u002B10:00",
+    "timeLessOverride": null,
+    "userEndTime": "18:00:00",
+    "userStartTime": "09:00:00"
+  }
+}

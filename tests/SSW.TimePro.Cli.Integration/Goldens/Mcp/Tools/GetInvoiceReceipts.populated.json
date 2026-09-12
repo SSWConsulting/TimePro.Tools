@@ -1,0 +1,13 @@
+[
+  {
+    "coName": "Northwind Traders",
+    "dateCreated": "2026-04-01T00:00:00",
+    "empUpdated": "BOB",
+    "invoiceId": 108,
+    "note": "EFT",
+    "paid": 1100,
+    "paymentDate": "2026-04-01T00:00:00",
+    "saleReceiptId": 142,
+    "saleReceiptStatus": "Allocated"
+  }
+]

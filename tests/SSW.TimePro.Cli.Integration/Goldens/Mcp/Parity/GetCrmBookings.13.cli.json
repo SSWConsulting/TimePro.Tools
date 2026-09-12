@@ -1,0 +1,14 @@
+[
+  {
+    "allDay": false,
+    "clientId": "NWIND",
+    "editable": true,
+    "end": "2026-03-16T10:00:00",
+    "id": "appt-1",
+    "iterationId": 3402,
+    "projectId": "1I776Q",
+    "start": "2026-03-16T09:00:00",
+    "timeZoneOffsetInMinutes": 600,
+    "title": "Northwind Traders - Checkout API review"
+  }
+]

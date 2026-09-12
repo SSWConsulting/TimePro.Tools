@@ -47,13 +47,8 @@ public class ListCommand : AsyncCommand<ListCommand.Settings>
 
         try
         {
-            var projects = await _api.GetProjectsForClientAsync(
-                tenant.EmployeeId, settings.ClientId, CancellationToken.None);
-
-            // The API returns a dropdown placeholder row with no project ID; it is not a project.
-            var selectable = projects
-                .Where(p => !string.IsNullOrWhiteSpace(p.Value))
-                .ToList();
+            var selectable = await ProjectLookup.SelectableAsync(
+                _api, tenant.EmployeeId, settings.ClientId, CancellationToken.None);
 
             OutputHelper.Render(selectable, settings.Json, list =>
             {

@@ -192,16 +192,55 @@ public static class McpCliParityTable
             ExpectParity = true
         },
 
+        new("GetProjectsForClient", "project list")
+        {
+            CliArgs = ["project", "list", "--client", NorthwindApi.ClientId, "--json"],
+            InvokeTool = (h, ct) => h.Lookups.GetProjectsForClient(NorthwindApi.ClientId, ct),
+            ExpectParity = true,
+            Note = "ProjectLookup is shared, including the dropdown placeholder filter."
+        },
+
+        new("GetClientRate", "rate get")
+        {
+            CliArgs = ["rate", "get", "--client", NorthwindApi.ClientId, "--date", Date, "--json"],
+            InvokeTool = (h, ct) => h.Lookups.GetClientRate(NorthwindApi.ClientId, Date, ct),
+            ExpectParity = false,
+            PermittedDifferences = ["$.found", "$.date"],
+            Note = "RateLookup is shared; MCP still returns the raw rate and a bare null on a miss. "
+                 + "Giving it the CLI's RateLookupResult shape is a 0.4.0 contract change."
+        },
+
+        // ───────── Parity of output only: the two implementations are still separate ─────────
+
+        new("ListIterations", "iteration list")
+        {
+            CliArgs = ["iteration", "list", "--project", NorthwindApi.ProjectId, "--json"],
+            InvokeTool = (h, ct) => h.Timesheets.ListIterations(NorthwindApi.ProjectId, ct),
+            ExpectParity = true,
+            Note = "Separate projections over one API call; equal today, nothing enforces it but this row."
+        },
+
+        new("SearchClients", "client search")
+        {
+            CliArgs = ["client", "search", "Northwind", "--json"],
+            InvokeTool = (h, ct) => h.Lookups.SearchClients("Northwind", ct),
+            ExpectParity = true,
+            Note = "Separate projections; the CLI --limit has no MCP argument, so sharing it is a schema change."
+        },
+
+        new("GetCrmBookings", "booking list")
+        {
+            CliArgs = ["booking", "list", "--date", Date, "--json"],
+            InvokeTool = (h, ct) => h.Lookups.GetCrmBookings(Date, Date, ct),
+            ExpectParity = true,
+            Note = "Separate projections over one API call; the CLI derives the same range from --date."
+        },
+
         // ───────── Not unified yet: declared so a later slice flips the flag ─────────
 
         new("GetTimesheets", "ts get") { Note = "MCP reshapes the row; CLI returns the API shape." },
         new("CreateTimesheet", "ts create") { Note = "No shared create orchestration; MCP sends no sell price." },
-        new("ListIterations", "iteration list") { Note = "Separate projections." },
         new("GetSuggestedTimesheets", "ts suggest") { Note = "Separate projections." },
-        new("SearchClients", "client search") { Note = "Separate projections." },
-        new("GetProjectsForClient", "project list") { Note = "MCP keeps the dropdown sentinel row the CLI drops." },
-        new("GetClientRate", "rate get") { Note = "MCP returns the raw rate, CLI a lookup result." },
-        new("GetCrmBookings", "booking list") { Note = "Separate projections." },
         new("GetLocationAndMapping", "location info") { Note = "MCP merges location defaults and repo mapping." },
         new("GetLeaveEntries", "leave list") { Note = "MCP returns the items array, CLI the envelope." },
         new("GetLeaveBalance", "leave balance") { Note = "Separate projections." },

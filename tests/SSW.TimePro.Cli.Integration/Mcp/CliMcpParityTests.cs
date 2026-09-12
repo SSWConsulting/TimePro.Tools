@@ -7,10 +7,8 @@ namespace SSW.TimePro.Cli.Integration.Mcp;
 /// <summary>
 /// Runs a CLI command and its MCP tool against identical, freshly reset Northwind state and
 /// compares the complete parsed documents plus the HTTP traffic each produced.
-///
-/// Serialised: <see cref="CliRunner"/> swaps the process-wide console to capture stdout.
 /// </summary>
-[Collection(CliParityCollection.Name)]
+[Collection(CliConsoleCollection.Name)]
 public class CliMcpParityTests : TestBase
 {
     public static TheoryData<int> ExecutableRows()
@@ -163,10 +161,4 @@ public class CliMcpParityTests : TestBase
 
     private static string Normalize(ParityRow row, string json) =>
         row.TokenizeCurrentWeek ? WeekTokens.Apply(json) : json;
-}
-
-[CollectionDefinition(Name, DisableParallelization = true)]
-public class CliParityCollection
-{
-    public const string Name = "cli-mcp-parity";
 }

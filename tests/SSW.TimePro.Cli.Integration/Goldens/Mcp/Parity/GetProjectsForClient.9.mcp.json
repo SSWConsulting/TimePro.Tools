@@ -1,0 +1,16 @@
+[
+  {
+    "displayText": "Northwind Traders",
+    "isGeneral": false,
+    "isLeave": false,
+    "useIteration": true,
+    "value": "1I776Q"
+  },
+  {
+    "displayText": "Northwind Storefront",
+    "isGeneral": false,
+    "isLeave": false,
+    "useIteration": false,
+    "value": "NW0002"
+  }
+]

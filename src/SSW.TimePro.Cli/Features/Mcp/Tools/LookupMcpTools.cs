@@ -2,6 +2,8 @@ using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
+using SSW.TimePro.Cli.Features.Projects;
+using SSW.TimePro.Cli.Features.Rates;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using SSW.TimePro.Cli.Infrastructure.Paths;
@@ -51,7 +53,7 @@ public class LookupMcpTools
         if (tenant?.EmployeeId is null)
             return """{"error": "Not logged in"}""";
 
-        var results = await _api.GetProjectsForClientAsync(tenant.EmployeeId, clientId, ct);
+        var results = await ProjectLookup.SelectableAsync(_api, tenant.EmployeeId, clientId, ct);
         return JsonSerializer.Serialize(results, JsonOpts);
     }
 
@@ -66,11 +68,8 @@ public class LookupMcpTools
         if (tenant?.EmployeeId is null)
             return """{"error": "Not logged in"}""";
 
-        var dateOnly = date is not null
-            ? DateOnly.ParseExact(date, "yyyy-MM-dd")
-            : DateOnly.FromDateTime(DateTime.Today);
-
-        var rate = await _api.GetClientRateAsync(tenant.EmployeeId, clientId, dateOnly, ct);
+        var rate = await RateLookup.FetchAsync(
+            _api, tenant.EmployeeId, clientId, RateLookup.ResolveDate(date), ct);
         return JsonSerializer.Serialize(rate, JsonOpts);
     }
 

@@ -18,6 +18,7 @@ public class CommandLineErrorHandlerTests
     [InlineData(true, "ts", "get", "--json")]
     [InlineData(true, "--json", "ts", "get")]
     [InlineData(true, "ts", "get", "--json=true")]
+    [InlineData(false, "ts", "get", "--json=false")]
     [InlineData(false, "ts", "get")]
     [InlineData(false, "ts", "get", "--jsonish")]
     [InlineData(false)]
@@ -47,6 +48,15 @@ public class CommandLineErrorHandlerTests
         exitCode.Should().Be(1, stdout);
         using var doc = JsonDocument.Parse(stdout);
         doc.RootElement.GetProperty("error").GetProperty("message").GetString().Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task Run_WhenJsonIsExplicitlyDisabled_LeavesStdoutEmpty()
+    {
+        var (exitCode, stdout) = await RunAsync(["ts", "list", "--json=false"]);
+
+        exitCode.Should().Be(1);
+        stdout.Should().BeEmpty();
     }
 
     [Fact]

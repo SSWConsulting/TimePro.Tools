@@ -16,7 +16,19 @@ public static class CommandLineErrorHandler
     /// settings binding, so the flag can only be read off argv.
     /// </summary>
     public static bool IsJsonRequested(IEnumerable<string> args) =>
-        args.Any(arg => arg is "--json" || arg.StartsWith("--json=", StringComparison.Ordinal));
+        args.Any(IsJsonFlag);
+
+    private static bool IsJsonFlag(string arg)
+    {
+        if (arg is "--json")
+            return true;
+
+        if (!arg.StartsWith("--json=", StringComparison.Ordinal))
+            return false;
+
+        var value = arg["--json=".Length..];
+        return !bool.TryParse(value, out var enabled) || enabled;
+    }
 
     public static int Handle(Exception exception, bool jsonRequested)
     {

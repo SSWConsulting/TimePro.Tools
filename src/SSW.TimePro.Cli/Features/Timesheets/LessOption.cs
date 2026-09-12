@@ -13,7 +13,8 @@ public static class LessOption
         minutes = null;
         error = null;
 
-        if (string.IsNullOrWhiteSpace(raw))
+        // Only an absent option is "omitted"; an explicit blank value is a mistake, not a no-op.
+        if (raw is null)
             return true;
 
         var trimmed = raw.Trim();

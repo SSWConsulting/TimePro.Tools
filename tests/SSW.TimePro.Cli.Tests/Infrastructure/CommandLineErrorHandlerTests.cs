@@ -84,6 +84,55 @@ public class CommandLineErrorHandlerTests
             Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task Run_WhenCommandIsUnknownAndJsonRequested_StillReportsTheParseError()
+    {
+        var (exitCode, stdout) = await RunAsync(["nosuchcommand", "--json"]);
+
+        exitCode.Should().Be(1);
+        using var doc = JsonDocument.Parse(stdout);
+        var error = doc.RootElement.GetProperty("error");
+        error.GetProperty("message").GetString().Should().Contain("Unknown command");
+        error.TryGetProperty("tenant", out _).Should().BeFalse();
+        error.TryGetProperty("apiUrl", out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Run_WhenTheApiIsUnreachableAndJsonRequested_NamesTheTenantInTheEnvelope()
+    {
+        var (exitCode, stdout) = await RunAsync(["ts", "get", "--json"], UnreachableApi());
+
+        exitCode.Should().Be(1);
+        using var doc = JsonDocument.Parse(stdout);
+        var error = doc.RootElement.GetProperty("error");
+        error.GetProperty("message").GetString().Should().Be("Connection refused (localhost:1)");
+        error.GetProperty("tenant").GetString().Should().Be("northwind-local");
+        error.GetProperty("apiUrl").GetString().Should().Be("https://localhost:1/");
+        error.GetProperty("detail").GetString().Should().Contain("tp tenant set");
+    }
+
+    [Fact]
+    public async Task Run_WhenTheApiIsUnreachableWithoutJson_LeavesStdoutEmpty()
+    {
+        var (exitCode, stdout) = await RunAsync(["ts", "get"], UnreachableApi());
+
+        exitCode.Should().Be(1);
+        stdout.Should().BeEmpty();
+    }
+
+    private static ITimeProApiClient UnreachableApi()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        api.GetTimesheetsAsync(Arg.Any<string>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
+            .Returns<List<SSW.TimePro.Cli.Shared.Models.TimesheetItem>>(_ => throw new TimeProConnectionException(
+                "Connection refused (localhost:1)",
+                tenantFile: "northwind-local",
+                tenantId: "northwind",
+                apiUrl: "https://localhost:1/"));
+
+        return api;
+    }
+
     private static async Task<(int ExitCode, string Stdout)> RunAsync(
         string[] args,
         ITimeProApiClient? api = null)
@@ -107,7 +156,11 @@ public class CommandLineErrorHandlerTests
         app.Configure(configurator =>
         {
             configurator.SetExceptionHandler((ex, _) => CommandLineErrorHandler.Handle(ex, jsonRequested));
-            configurator.AddBranch("ts", ts => ts.AddCommand<UpdateCommand>("update"));
+            configurator.AddBranch("ts", ts =>
+            {
+                ts.AddCommand<UpdateCommand>("update");
+                ts.AddCommand<GetCommand>("get");
+            });
         });
 
         var original = Console.Out;

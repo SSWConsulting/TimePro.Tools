@@ -3,6 +3,7 @@ using System.Globalization;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using SSW.TimePro.Cli.Infrastructure.Output;
+using SSW.TimePro.Cli.Shared.Models;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -59,54 +60,22 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
             var rate = await _api.GetClientRateAsync(
                 tenant.EmployeeId, settings.ClientId, date, CancellationToken.None);
 
-            if (rate is null)
+            // A missing rate is a valid lookup result, not a failure, so it shares the hit schema.
+            if (settings.Json)
             {
-                // No rate is a valid lookup result, not a failure.
-                if (settings.Json)
-                    OutputHelper.WriteJson(new { found = false, clientId = settings.ClientId, date = date.ToString("yyyy-MM-dd") });
-                else
-                    OutputHelper.WriteWarning($"No rate found for client '{settings.ClientId}' on {date:yyyy-MM-dd}");
+                OutputHelper.WriteJson(RateLookupResult.From(settings.ClientId, date, rate));
+                WarnAboutExpiry(rate);
                 return 0;
             }
 
-            OutputHelper.Render(rate, settings.Json, r =>
+            if (rate is null)
             {
-                var table = new Table().NoBorder().HideHeaders().AddColumn("Key").AddColumn("Value");
-                table.AddRow("[bold]Client[/]", Markup.Escape($"{r.ClientName} ({r.ClientId})"));
-                table.AddRow("[bold]Employee[/]", Markup.Escape($"{r.EmployeeName} ({r.EmpId})"));
-                table.AddRow("[bold]Rate[/]", $"${r.Rate:F2}");
-                if (r.PrepaidRate.HasValue && r.PrepaidRate > 0)
-                    table.AddRow("[bold]Prepaid Rate[/]", $"${r.PrepaidRate:F2}");
-
-                if (!string.IsNullOrEmpty(r.ExpiryDate))
-                {
-                    var expiry = DateTime.Parse(r.ExpiryDate);
-                    var daysUntilExpiry = (expiry - DateTime.Today).Days;
-
-                    if (daysUntilExpiry < 0)
-                        table.AddRow("[bold]Expiry[/]", $"[red]{r.ExpiryDate} (EXPIRED {Math.Abs(daysUntilExpiry)} days ago)[/]");
-                    else if (daysUntilExpiry <= 7)
-                        table.AddRow("[bold]Expiry[/]", $"[yellow]{r.ExpiryDate} (expires in {daysUntilExpiry} days)[/]");
-                    else
-                        table.AddRow("[bold]Expiry[/]", Markup.Escape(r.ExpiryDate));
-                }
-
-                if (!string.IsNullOrEmpty(r.Notes))
-                    table.AddRow("[bold]Notes[/]", Markup.Escape(r.Notes));
-
-                AnsiConsole.Write(table);
-            });
-
-            // Check expiry and warn
-            if (!string.IsNullOrEmpty(rate.ExpiryDate))
-            {
-                var expiry = DateTime.Parse(rate.ExpiryDate);
-                if (expiry < DateTime.Today)
-                    OutputHelper.WriteWarning("This rate has expired. Contact your admin to renew it.");
-                else if ((expiry - DateTime.Today).Days <= 7)
-                    OutputHelper.WriteWarning("This rate expires soon. Consider renewing it.");
+                OutputHelper.WriteWarning($"No rate found for client '{settings.ClientId}' on {date:yyyy-MM-dd}");
+                return 0;
             }
 
+            RenderRateTable(rate);
+            WarnAboutExpiry(rate);
             return 0;
         }
         catch (ApiException ex)
@@ -117,5 +86,45 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
                 OutputHelper.WriteError($"API error ({ex.StatusCode}): {ex.Message}");
             return 1;
         }
+    }
+
+    private static void RenderRateTable(ClientRateResponse r)
+    {
+        var table = new Table().NoBorder().HideHeaders().AddColumn("Key").AddColumn("Value");
+        table.AddRow("[bold]Client[/]", Markup.Escape($"{r.ClientName} ({r.ClientId})"));
+        table.AddRow("[bold]Employee[/]", Markup.Escape($"{r.EmployeeName} ({r.EmpId})"));
+        table.AddRow("[bold]Rate[/]", $"${r.Rate:F2}");
+        if (r.PrepaidRate.HasValue && r.PrepaidRate > 0)
+            table.AddRow("[bold]Prepaid Rate[/]", $"${r.PrepaidRate:F2}");
+
+        if (!string.IsNullOrEmpty(r.ExpiryDate))
+        {
+            var expiry = DateTime.Parse(r.ExpiryDate);
+            var daysUntilExpiry = (expiry - DateTime.Today).Days;
+
+            if (daysUntilExpiry < 0)
+                table.AddRow("[bold]Expiry[/]", $"[red]{r.ExpiryDate} (EXPIRED {Math.Abs(daysUntilExpiry)} days ago)[/]");
+            else if (daysUntilExpiry <= 7)
+                table.AddRow("[bold]Expiry[/]", $"[yellow]{r.ExpiryDate} (expires in {daysUntilExpiry} days)[/]");
+            else
+                table.AddRow("[bold]Expiry[/]", Markup.Escape(r.ExpiryDate));
+        }
+
+        if (!string.IsNullOrEmpty(r.Notes))
+            table.AddRow("[bold]Notes[/]", Markup.Escape(r.Notes));
+
+        AnsiConsole.Write(table);
+    }
+
+    private static void WarnAboutExpiry(ClientRateResponse? rate)
+    {
+        if (string.IsNullOrEmpty(rate?.ExpiryDate))
+            return;
+
+        var expiry = DateTime.Parse(rate.ExpiryDate);
+        if (expiry < DateTime.Today)
+            OutputHelper.WriteWarning("This rate has expired. Contact your admin to renew it.");
+        else if ((expiry - DateTime.Today).Days <= 7)
+            OutputHelper.WriteWarning("This rate expires soon. Consider renewing it.");
     }
 }

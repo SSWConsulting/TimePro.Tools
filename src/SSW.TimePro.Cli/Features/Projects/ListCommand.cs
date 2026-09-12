@@ -50,7 +50,12 @@ public class ListCommand : AsyncCommand<ListCommand.Settings>
             var projects = await _api.GetProjectsForClientAsync(
                 tenant.EmployeeId, settings.ClientId, CancellationToken.None);
 
-            OutputHelper.Render(projects, settings.Json, list =>
+            // The API returns a dropdown placeholder row with no project ID; it is not a project.
+            var selectable = projects
+                .Where(p => !string.IsNullOrWhiteSpace(p.Value))
+                .ToList();
+
+            OutputHelper.Render(selectable, settings.Json, list =>
             {
                 if (list.Count == 0)
                 {

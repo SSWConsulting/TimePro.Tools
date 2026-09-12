@@ -226,7 +226,7 @@ To change a timesheet's working window or deducted time without replacing it:
 tp ts update 42 --date 2026-03-16 --end 19:00 --less 120 --yes
 ```
 
-`--less` takes minutes. Pass `--less 0` to clear the deduction.
+`--less` takes whole minutes (`--less 90`, not `--less 1.5`). Pass `--less 0` to clear the deduction.
 
 ### Leave Management
 

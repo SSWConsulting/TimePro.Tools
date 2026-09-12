@@ -88,7 +88,7 @@ public class ListCommand : AsyncCommand<ListCommand.Settings>
                     table.AddRow(
                         r.Id?.ToString() ?? "-",
                         Markup.Escape($"{r.ClientId} · {r.ClientName ?? "?"}"),
-                        Markup.Escape(r.Unit ?? "-"),
+                        r.Unit.ToString(),
                         $"${r.SellTotal:N2}",
                         r.CountOfInv.ToString(),
                         r.LastInvEndDate?.ToString("yyyy-MM-dd") ?? "-",

@@ -130,7 +130,7 @@ tp invoice receipts $INV --json    > /tmp/inv_receipts.json
 
 Reconciliation: sum of line `sellTotal` should equal invoice header `subTotal`
 (ex-GST); `subTotal + salesTaxAmt` should equal header `sellTotal` (inc-GST);
-sum of `abs(paidTotal)` on receipts should equal header `paidAmt`; header
+sum of `abs(paid)` on receipts should equal header `paidAmt`; header
 `osAmt` should equal total minus paid.
 
 ### 2. Monthly invoiced sales
@@ -146,7 +146,7 @@ tp invoice list --limit 500 --field DateCreated --dir desc --json \
 ```bash
 tp receipt list --limit 500 --field PaymentDate --dir desc --json \
   | jq '[.data[] | select(.paymentDate | startswith("2026-03"))]
-        | {count: length, total: (map(.paidTotal // .paid) | add | fabs)}'
+        | {count: length, total: (map(.paidTotal) | add | fabs)}'
 ```
 
 ### 4. Aged debtors for one client
@@ -227,8 +227,8 @@ report needs loops, joins, paging, or nested records.
 tp receipt list --limit 500 --field PaymentDate --dir desc --json \
   | jq -r '
       .data
-      | (["receiptId","invoiceId","paymentDate","clientName","paidTotal"],
-         (.[] | [.saleReceiptId,.invoiceId,.paymentDate,.coName,(.paidTotal // .paid)]))
+      | (["receiptId","invoiceIds","paymentDate","clientName","paidTotal"],
+         (.[] | [.saleReceiptId,(.invoiceIds | join(";")),.paymentDate,.coName,.paidTotal]))
       | @csv' \
   > /tmp/timepro-paid-receipts.csv
 ```
@@ -321,10 +321,11 @@ name collision even if you drop the generated file into `~/.claude/skills/`.
 
 ## Data gotchas
 
-- **Receipt sign convention**: `paidTotal` is **negative** for incoming
+- **Receipt sign convention**: the amount is **negative** for incoming
   payments (the receipt type's `typeSign` encodes direction). Default table
   output shows absolute values; JSON preserves the raw sign. Report sales as
-  `abs(sum)`.
+  `abs(sum)`. The field is `paidTotal` on `tp receipt list` (receipt-level) and
+  `paid` on `tp invoice receipts` (per-invoice).
 - **Date field choice matters**:
   - Receipts: `paymentDate` (money in) vs `dateCreated` (entered).
   - Invoices: `dateCreated` (raised) vs `dateStart` / `dateEnd` (period).

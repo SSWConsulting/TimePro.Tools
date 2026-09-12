@@ -9,6 +9,7 @@ namespace SSW.TimePro.Cli.Integration.Features;
 /// WireMock-backed integration tests for the read-only accounting endpoints added
 /// in the <c>feat/accountant-readonly</c> branch. One happy-path test per API method;
 /// field names use the server's PascalCase shape (case-insensitive deserialize).
+/// Receipt and recurring-invoice endpoints live in <see cref="ReceiptRecurringApiTests"/>.
 /// </summary>
 public class AccountingApiTests : TestBase
 {
@@ -123,48 +124,7 @@ public class AccountingApiTests : TestBase
         requestMessage!.AbsolutePath.Should().EndWith("/WriteOff");
     }
 
-    [Fact]
-    public async Task GetInvoiceReceipts_ReturnsReceiptsWithSignConvention()
-    {
-        WireMock.Given(
-            Request.Create().WithPath("/api/v2/ClientInvoice/142/receipts").UsingGet()
-        ).RespondWith(
-            Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json")
-                .WithBody("""
-                [{"SaleReceiptID":501,"InvoiceID":142,"PaymentDate":"2026-03-20T00:00:00","Paid":-1100,"PaidTotal":-1100,"SaleReceiptStatus":"Paid","IsCreditingPrepaid":false,
-                  "SaleReceiptType":{"Id":"CASH","TypeName":"Cash","TypeSign":"-"}}]
-                """)
-        );
-
-        var rows = await ApiClient.GetInvoiceReceiptsAsync(142, CancellationToken.None);
-
-        rows.Should().HaveCount(1);
-        rows[0].PaidTotal.Should().Be(-1100);
-        rows[0].SaleReceiptType!.TypeName.Should().Be("Cash");
-    }
-
     // ────── Receipts ──────
-
-    [Fact]
-    public async Task ListPaidReceipts_ReturnsPagedResponse()
-    {
-        WireMock.Given(
-            Request.Create().WithPath("/api/receipting/PaidReceiptsPaged").UsingGet()
-        ).RespondWith(
-            Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json")
-                .WithBody("""
-                {"total": 1, "data": [
-                  {"SaleReceiptID": 501, "InvoiceID": 142, "Paid": -1100, "PaidTotal": -1100, "CoName": "Northwind", "PaymentDate": "2026-03-20T00:00:00"}
-                ]}
-                """)
-        );
-
-        var page = await ApiClient.ListPaidReceiptsAsync(null, 0, 100, "PaymentDate", "desc", CancellationToken.None);
-
-        page.Should().NotBeNull();
-        page!.Data.Should().HaveCount(1);
-        page.Data[0].PaidTotal.Should().Be(-1100);
-    }
 
     [Fact]
     public async Task GetClientOutstanding_ReturnsAgedDebtorView()
@@ -303,25 +263,6 @@ public class AccountingApiTests : TestBase
         url.Should().NotContain("skip=");
         url.Should().NotContain("sortField=");
         url.Should().NotContain("direction=");
-    }
-
-    // ────── Recurring ──────
-
-    [Fact]
-    public async Task ListRecurringInvoices_ReturnsPage()
-    {
-        WireMock.Given(
-            Request.Create().WithPath("/api/recurring/invoices/").UsingGet()
-        ).RespondWith(
-            Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json")
-                .WithBody("""{"total":1,"data":[{"id":7,"clientId":"NWIND","clientName":"Northwind","sellTotal":500,"countOfInv":12,"unit":"Month","isActive":true,"createdOn":"2025-01-01T00:00:00"}]}""")
-        );
-
-        var page = await ApiClient.ListRecurringInvoicesAsync(null, null, false, 0, 50, "LastInvEndDate", "desc", CancellationToken.None);
-
-        page.Should().NotBeNull();
-        page!.Data[0].Id.Should().Be(7);
-        page.Data[0].IsActive.Should().BeTrue();
     }
 
     // ────── Prepaid PDF ──────

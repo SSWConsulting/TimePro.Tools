@@ -52,17 +52,22 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
             OutputHelper.Render(r, settings.Json, d =>
             {
                 var table = new Table().NoBorder().HideHeaders().AddColumn("Key").AddColumn("Value");
-                table.AddRow("[bold]ID[/]", d.Id.ToString());
-                table.AddRow("[bold]Client[/]", Markup.Escape($"{d.ClientId} · {d.ClientName ?? "?"}"));
-                table.AddRow("[bold]Unit[/]", Markup.Escape(d.Unit ?? "-"));
-                if (d.Interval.HasValue) table.AddRow("[bold]Interval[/]", d.Interval.Value.ToString());
-                if (d.DayOfMonth.HasValue) table.AddRow("[bold]Day of month[/]", d.DayOfMonth.Value.ToString());
-                if (d.NextInvoiceDate.HasValue) table.AddRow("[bold]Next invoice[/]", d.NextInvoiceDate.Value.ToString("yyyy-MM-dd"));
-                if (d.StartDate.HasValue) table.AddRow("[bold]Start[/]", d.StartDate.Value.ToString("yyyy-MM-dd"));
-                if (d.EndDate.HasValue) table.AddRow("[bold]End[/]", d.EndDate.Value.ToString("yyyy-MM-dd"));
+                table.AddRow("[bold]ID[/]", d.Id?.ToString() ?? "-");
+                table.AddRow("[bold]Client[/]", Markup.Escape(d.ClientId ?? "-"));
+                table.AddRow("[bold]Unit[/]", d.Unit.ToString());
+                table.AddRow("[bold]Periods[/]", $"first {d.FirstInvPeriod} · subsequent {d.SubsequentInvPeriod} · last {d.LastInvPeriod}");
+                table.AddRow("[bold]Invoices generated[/]", d.CountOfInv.ToString());
+                if (d.DateStart.HasValue) table.AddRow("[bold]Start[/]", d.DateStart.Value.ToString("yyyy-MM-dd"));
+                table.AddRow("[bold]End[/]", d.DateEnd?.ToString("yyyy-MM-dd") ?? "open-ended");
+                if (d.LastInvEndDate.HasValue) table.AddRow("[bold]Last invoiced to[/]", d.LastInvEndDate.Value.ToString("yyyy-MM-dd"));
+                if (d.NextInvoicePeriodStart.HasValue || d.NextInvoicePeriodEnd.HasValue)
+                    table.AddRow("[bold]Next period[/]",
+                        $"{d.NextInvoicePeriodStart?.ToString("yyyy-MM-dd") ?? "?"} → {d.NextInvoicePeriodEnd?.ToString("yyyy-MM-dd") ?? "?"}");
+                table.AddRow("[bold]Can generate now[/]",
+                    d.CanGenerateNow ? "[green]yes[/]" : $"[dim]no{(string.IsNullOrWhiteSpace(d.CannotGenerateReason) ? "" : $" · {Markup.Escape(d.CannotGenerateReason)}")}[/]");
+                if (d.SellAmt.HasValue) table.AddRow("[bold]Sell (ex tax)[/]", $"${d.SellAmt.Value:N2}");
+                if (d.SellTaxAmt.HasValue) table.AddRow("[bold]Tax[/]", $"${d.SellTaxAmt.Value:N2}");
                 if (d.SellTotal.HasValue) table.AddRow("[bold]Sell total[/]", $"${d.SellTotal.Value:N2}");
-                if (d.TaxRate.HasValue) table.AddRow("[bold]Tax rate[/]", $"{d.TaxRate.Value:N2}%");
-                table.AddRow("[bold]Active[/]", d.IsActive ? "yes" : "no");
                 if (!string.IsNullOrWhiteSpace(d.Note)) table.AddRow("[bold]Note[/]", Markup.Escape(d.Note));
                 if (!string.IsNullOrWhiteSpace(d.NoteInternal)) table.AddRow("[bold]Internal note[/]", Markup.Escape(d.NoteInternal));
                 AnsiConsole.Write(table);
@@ -72,19 +77,21 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
                     AnsiConsole.WriteLine();
                     AnsiConsole.MarkupLine("[bold]Products[/]");
                     var pt = new Table();
-                    pt.AddColumn("SKU");
+                    pt.AddColumn("Product");
                     pt.AddColumn("Name");
                     pt.AddColumn(new TableColumn("Qty").RightAligned());
                     pt.AddColumn(new TableColumn("Sell").RightAligned());
                     pt.AddColumn(new TableColumn("Total").RightAligned());
+                    pt.AddColumn("Note");
                     foreach (var p in d.Products)
                     {
                         pt.AddRow(
-                            Markup.Escape(p.SkuId ?? "-"),
-                            Markup.Escape(p.ProductName ?? p.SkuName ?? "-"),
+                            Markup.Escape(p.ProdId ?? "-"),
+                            Markup.Escape(p.ProdName ?? p.ProdCategoryName ?? "-"),
                             $"{p.Qty:N2}",
                             $"${p.SellAmt:N2}",
-                            $"${p.SellTotal:N2}");
+                            $"${p.SellTotal:N2}",
+                            Markup.Escape(p.Note ?? "-"));
                     }
                     AnsiConsole.Write(pt);
                 }

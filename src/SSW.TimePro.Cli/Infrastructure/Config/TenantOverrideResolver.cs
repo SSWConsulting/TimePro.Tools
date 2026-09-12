@@ -116,12 +116,80 @@ public static class TenantOverrideResolver
 
         var resolvedTenantName = ResolveEnvironmentTenantName(baseTenantName, environmentName);
         var tenant = config.LoadTenantConfig(resolvedTenantName);
-        if (tenant is not null)
-            return tenant;
+        if (tenant is null)
+        {
+            var productionFallback = IsProductionEnvironmentName((Normalize(environmentName) ?? environmentName).ToLowerInvariant())
+                ? FindProductionTenant(config, resolvedTenantName)
+                : null;
 
-        error = $"Tenant config '{resolvedTenantName}' not found for --env '{environmentName}'. Add it with 'tp login --tenant {resolvedTenantName}' or pick one from 'tp tenant list'.";
-        return null;
+            if (productionFallback is not null)
+                return productionFallback;
+
+            error = $"Tenant config '{resolvedTenantName}' not found for --env '{environmentName}'. Add it with 'tp login --tenant {resolvedTenantName}' or pick one from 'tp tenant list'.";
+            return null;
+        }
+
+        return VerifyEnvironmentMatch(config, tenant, resolvedTenantName, environmentName, out error);
     }
+
+    /// <summary>
+    /// Guards against <c>--env prod</c> reaching a non-production config (and the reverse),
+    /// since the resolved file name says nothing about the API URL it points at.
+    /// </summary>
+    private static TenantConfig? VerifyEnvironmentMatch(
+        IConfigService config,
+        TenantConfig tenant,
+        string resolvedTenantName,
+        string environmentName,
+        out string? error)
+    {
+        error = null;
+        var env = (Normalize(environmentName) ?? environmentName).ToLowerInvariant();
+
+        if (IsProductionEnvironmentName(env))
+        {
+            if (tenant.IsProduction)
+                return tenant;
+
+            var productionTenant = FindProductionTenant(config, resolvedTenantName);
+            if (productionTenant is not null)
+                return productionTenant;
+
+            error = $"Tenant config '{resolvedTenantName}' ({resolvedTenantName}.json) is not marked as production "
+                + $"(apiUrl: {tenant.ApiUrl}). No production config was found for --env '{environmentName}'. "
+                + "Use 'tp tenant list' to find the production config, then pass it with --tenant <name>.";
+            return null;
+        }
+
+        if (IsNonProductionEnvironmentName(env) && tenant.IsProduction)
+        {
+            error = $"Tenant config '{resolvedTenantName}' ({resolvedTenantName}.json) points at production "
+                + $"(apiUrl: {tenant.ApiUrl}), but --env '{environmentName}' was requested. "
+                + "Use 'tp tenant list' to find the right config, then pass it with --tenant <name>.";
+            return null;
+        }
+
+        return tenant;
+    }
+
+    private static TenantConfig? FindProductionTenant(IConfigService config, string resolvedTenantName)
+    {
+        var baseName = StripKnownEnvironmentSuffixes(resolvedTenantName).ToLowerInvariant();
+
+        var candidates = config.ListTenants()
+            .Where(t => t.ConfigName is not null
+                && t.IsProduction
+                && StripKnownEnvironmentSuffixes(t.ConfigName).Equals(baseName, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        return candidates.Count == 1 ? candidates[0] : null;
+    }
+
+    private static bool IsProductionEnvironmentName(string env) =>
+        env is "production" or "prod";
+
+    private static bool IsNonProductionEnvironmentName(string env) =>
+        env is "staging" or "stage" or "development" or "dev" or "local" or "test";
 
     public static string ResolveEnvironmentTenantName(string tenantName, string environmentName)
     {

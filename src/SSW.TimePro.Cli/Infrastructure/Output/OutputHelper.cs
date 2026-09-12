@@ -83,6 +83,14 @@ public static class OutputHelper
     }
 
     /// <summary>
+    /// Writes an unprefixed follow-up line to stderr, for context under an error.
+    /// </summary>
+    public static void WriteErrorDetail(string message)
+    {
+        ErrorConsole.MarkupLine($"[grey]{Markup.Escape(message)}[/]");
+    }
+
+    /// <summary>
     /// Writes a warning message to stderr (so it never corrupts JSON on stdout).
     /// </summary>
     public static void WriteWarning(string message)
@@ -95,9 +103,15 @@ public static class OutputHelper
     /// <c>--json</c> path: <c>{"error":{"code":&lt;code|null&gt;,"message":...,"detail":&lt;detail|null&gt;}}</c>.
     /// This keeps stdout valid JSON for an agent even when an API call fails.
     /// </summary>
-    public static void WriteJsonError(string message, int? code = null, string? detail = null, object? recovery = null)
+    public static void WriteJsonError(
+        string message,
+        int? code = null,
+        string? detail = null,
+        object? recovery = null,
+        string? tenant = null,
+        string? apiUrl = null)
     {
-        var envelope = new ErrorEnvelope(new ErrorPayload(code, message, detail, recovery));
+        var envelope = new ErrorEnvelope(new ErrorPayload(code, message, detail, recovery, tenant, apiUrl));
         Console.Out.WriteLine(JsonSerializer.Serialize(envelope, ErrorEnvelopeOptions));
     }
 
@@ -110,7 +124,12 @@ public static class OutputHelper
         [property: JsonPropertyName("detail")] string? Detail,
         // Optional, omitted when absent: a machine-actionable recovery recipe an agent can follow.
         [property: JsonPropertyName("recovery")]
-        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] object? Recovery = null);
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] object? Recovery = null,
+        // Optional, present on connection failures: which tenant config produced the URL that failed.
+        [property: JsonPropertyName("tenant")]
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Tenant = null,
+        [property: JsonPropertyName("apiUrl")]
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ApiUrl = null);
 
     /// <summary>
     /// Writes a success message.

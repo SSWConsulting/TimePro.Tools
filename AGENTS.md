@@ -69,6 +69,8 @@ On the `--json` path, failures emit a structured envelope to **stdout** so stdou
 
 This covers Spectre parse/binding failures too (unknown command, unbindable argument), not just errors a command raises itself: `Program.cs` installs `CommandLineErrorHandler` as the Spectre exception handler, which checks argv for `--json` because these failures happen before settings binding. Command-line errors exit 1; an unexpected exception keeps Spectre's -1.
 
+The same handler renders connection failures (refused, timeout, DNS): `tenant` and `apiUrl` are added under `error`, and the stderr text names the active tenant config file, its `apiUrl`, and `tp tenant set`.
+
 ### MCP tools + tenant resolution
 
 Default MCP tools cover timesheets, lookups, and leave. Accounting MCP tools are feature-gated behind `tp feature accounting enable`. Before enabling or changing MCP features, ask the user what the MCP use-case is (timesheets, accounting reconciliation, Excel/CSV comparison, Xero/other MCP composition, diagnostics, etc.) so the tool surface can be adjusted deliberately.
@@ -80,6 +82,15 @@ The MCP host resolves the tenant in this order: `--tenant NAME` → global activ
 ## Tenants
 
 The `activeTenant` in `config.json` is the **filename** (without `.json`) of the tenant config file, not the `tenantId` property inside it. This allows multiple configs for the same tenant (e.g., `ssw` for prod, `ssw-staging` for staging) where both have `"tenantId": "ssw"` but different `apiUrl` and `apiKey`.
+
+`tp tenant list` keys everything off that filename: it shows `file`, `apiUrl` and the prod/non-prod
+environment, and marks the active row by filename (`isActive` in `--json`). `tp info --json` reports
+the effective tenant's `apiUrl` and `isProduction`.
+
+`--env` is checked against the resolved config's `apiUrl`, not just its name. `--env prod` resolves
+to a config with `isProduction == true` (preferring a production config that shares the base tenant
+name) and otherwise fails naming the config file, its `apiUrl`, and the fix; the known non-production
+environments refuse a config that points at production.
 
 ## Leave API
 

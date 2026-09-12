@@ -82,6 +82,7 @@ if (tenantOverride.Error is not null)
     return 1;
 }
 
+var jsonRequested = CommandLineErrorHandler.IsJsonRequested(tenantOverride.Args);
 var isHelpOrVersionRequest = tenantOverride.Args.Any(arg => arg is "--help" or "-h" or "--version");
 if (!isHelpOrVersionRequest)
     VersionStateService.RecordInstalledVersion(configService, BuildInfo.Version, DateTimeOffset.UtcNow);
@@ -101,6 +102,9 @@ if (!isHelpOrVersionRequest)
 
 if (tenantOverrideError is not null)
 {
+    if (jsonRequested)
+        OutputHelper.WriteJsonError(tenantOverrideError);
+
     OutputHelper.WriteError(tenantOverrideError);
     return 1;
 }
@@ -121,8 +125,6 @@ var registrar = new TypeRegistrar(services);
 
 // Build command tree
 var app = new CommandApp(registrar);
-
-var jsonRequested = CommandLineErrorHandler.IsJsonRequested(tenantOverride.Args);
 
 app.Configure(config =>
 {

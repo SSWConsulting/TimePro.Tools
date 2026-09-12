@@ -53,6 +53,34 @@ public class OutputHelperTests
         error.GetProperty("message").GetString().Should().Be("Not logged in.");
     }
 
+    [Fact]
+    public void WriteJsonError_AddsTenantAndApiUrl_WithoutDroppingCoreKeys()
+    {
+        var output = CaptureStdout(() => OutputHelper.WriteJsonError(
+            "Connection refused (localhost:1)",
+            tenant: "northwind-staging",
+            apiUrl: "https://localhost:1/"));
+
+        using var doc = JsonDocument.Parse(output);
+        var error = doc.RootElement.GetProperty("error");
+        error.GetProperty("code").ValueKind.Should().Be(JsonValueKind.Null);
+        error.GetProperty("detail").ValueKind.Should().Be(JsonValueKind.Null);
+        error.GetProperty("message").GetString().Should().Be("Connection refused (localhost:1)");
+        error.GetProperty("tenant").GetString().Should().Be("northwind-staging");
+        error.GetProperty("apiUrl").GetString().Should().Be("https://localhost:1/");
+    }
+
+    [Fact]
+    public void WriteJsonError_OmitsTenantKeys_WhenNotAConnectionFailure()
+    {
+        var output = CaptureStdout(() => OutputHelper.WriteJsonError("API error: boom", 500));
+
+        using var doc = JsonDocument.Parse(output);
+        var error = doc.RootElement.GetProperty("error");
+        error.TryGetProperty("tenant", out _).Should().BeFalse();
+        error.TryGetProperty("apiUrl", out _).Should().BeFalse();
+    }
+
     private static string CaptureStdout(Action action)
     {
         var original = Console.Out;

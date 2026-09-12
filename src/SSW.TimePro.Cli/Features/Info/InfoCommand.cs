@@ -65,7 +65,7 @@ public class InfoCommand : AsyncCommand<InfoCommand.Settings>
                 LastUpdateCheckedAt: global.Version.LastUpdateCheckedAt,
                 LastUpdateCheckedVersion: global.Version.LastUpdateCheckedVersion),
             Config: new ConfigSummary(
-                ActiveTenant: global.ActiveTenant,
+                ActiveTenant: activeTenant?.ConfigName ?? global.ActiveTenant,
                 TenantCount: tenants.Count,
                 RepoMappingCount: repoMappings.Count,
                 DefaultLocation: global.DefaultLocation,
@@ -273,6 +273,8 @@ public sealed record CliInfoSummary(
 public sealed record CliInfoBriefSummary(
     string Version,
     string? ActiveTenant,
+    string? ApiUrl,
+    bool? IsProduction,
     string? EmployeeId,
     string? EmployeeName,
     UpdateSummary Update,
@@ -282,6 +284,8 @@ public sealed record CliInfoBriefSummary(
         new(
             Version: summary.Version,
             ActiveTenant: summary.Config.ActiveTenant,
+            ApiUrl: summary.Tenant?.ApiUrl,
+            IsProduction: summary.Tenant?.IsProduction,
             EmployeeId: summary.Tenant?.EmployeeId,
             EmployeeName: summary.Tenant?.EmployeeName,
             Update: summary.Update,

@@ -37,6 +37,7 @@ public class TenantInfoCommand : Command<TenantInfoCommand.Settings>
         OutputHelper.Render(summary, settings.Json, t =>
         {
             var table = new Table().NoBorder().HideHeaders().AddColumn("Key").AddColumn("Value");
+            table.AddRow("[bold]Config file[/]", Markup.Escape(t.File ?? "unknown"));
             table.AddRow("[bold]Tenant[/]", Markup.Escape(t.TenantId));
             table.AddRow("[bold]Employee[/]", Markup.Escape(t.EmployeeId ?? "unknown"));
             table.AddRow("[bold]Name[/]", Markup.Escape(t.EmployeeName ?? "unknown"));

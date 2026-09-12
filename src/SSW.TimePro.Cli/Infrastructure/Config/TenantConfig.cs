@@ -26,6 +26,13 @@ public class TenantConfig
     public string AppName { get; set; } = "SSW-TimePro-CLI";
 
     /// <summary>
+    /// Config file name without extension. This, not <see cref="TenantId"/>, is what
+    /// <c>activeTenant</c> and <c>tp tenant set</c> refer to.
+    /// </summary>
+    [JsonIgnore]
+    public string? ConfigName { get; set; }
+
+    /// <summary>
     /// Returns the URL where the user can find their API token.
     /// </summary>
     public string GetTokenPageUrl()
@@ -49,6 +56,7 @@ public class TenantConfig
     {
         return new TenantConfigSummary
         {
+            File = ConfigName,
             TenantId = TenantId,
             ApiUrl = ApiUrl,
             EmployeeId = EmployeeId,
@@ -61,6 +69,7 @@ public class TenantConfig
 
 public class TenantConfigSummary
 {
+    public string? File { get; set; }
     public string TenantId { get; set; } = string.Empty;
     public string ApiUrl { get; set; } = string.Empty;
     public string? EmployeeId { get; set; }

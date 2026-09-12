@@ -122,7 +122,7 @@ tp invoice list --limit 500 --field DateCreated --dir desc --json \
 ### Monthly receipts
 ```bash
 tp receipt list --limit 500 --field PaymentDate --dir desc --json \
-  | jq '[.data[] | select(.paymentDate | startswith("2026-03"))] | {count: length, total: (map(.paidTotal // .paid) | add | fabs)}'
+  | jq '[.data[] | select(.paymentDate | startswith("2026-03"))] | {count: length, total: (map(.paidTotal) | add | fabs)}'
 ```
 
 ### Common report patterns
@@ -185,8 +185,8 @@ Use `jq @csv` for simple flat records and Python `csv.DictWriter` when the repor
 tp receipt list --limit 500 --field PaymentDate --dir desc --json \
   | jq -r '
       .data
-      | (["receiptId","invoiceId","paymentDate","clientName","paidTotal"],
-         (.[] | [.saleReceiptId,.invoiceId,.paymentDate,.coName,(.paidTotal // .paid)]))
+      | (["receiptId","invoiceIds","paymentDate","clientName","paidTotal"],
+         (.[] | [.saleReceiptId,(.invoiceIds | join(";")),.paymentDate,.coName,.paidTotal]))
       | @csv' \
   > /tmp/timepro-paid-receipts.csv
 ```

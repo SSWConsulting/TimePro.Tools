@@ -146,7 +146,7 @@ tp invoice list --limit 500 --field DateCreated --dir desc --json \
 ```bash
 tp receipt list --limit 500 --field PaymentDate --dir desc --json \
   | jq '[.data[] | select(.paymentDate | startswith("2026-03"))]
-        | {count: length, total: (map(.paidTotal // .paid) | add | fabs)}'
+        | {count: length, total: (map(.paidTotal) | add | fabs)}'
 ```
 
 ### 4. Aged debtors for one client
@@ -227,8 +227,8 @@ report needs loops, joins, paging, or nested records.
 tp receipt list --limit 500 --field PaymentDate --dir desc --json \
   | jq -r '
       .data
-      | (["receiptId","invoiceId","paymentDate","clientName","paidTotal"],
-         (.[] | [.saleReceiptId,.invoiceId,.paymentDate,.coName,(.paidTotal // .paid)]))
+      | (["receiptId","invoiceIds","paymentDate","clientName","paidTotal"],
+         (.[] | [.saleReceiptId,(.invoiceIds | join(";")),.paymentDate,.coName,.paidTotal]))
       | @csv' \
   > /tmp/timepro-paid-receipts.csv
 ```

@@ -2,6 +2,7 @@ using System.ComponentModel;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using SSW.TimePro.Cli.Infrastructure.Output;
+using SSW.TimePro.Cli.Shared.Models;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -40,7 +41,7 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
         try
         {
             var r = await _api.GetReceiptDetailAsync(settings.ReceiptId, CancellationToken.None);
-            if (r is null)
+            if (r?.Receipt is null)
             {
                 // Held receipt ID that doesn't resolve is a failed lookup — emit found:false for parsers, then fail.
                 if (settings.Json)
@@ -50,39 +51,45 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
                 return 1;
             }
 
-            OutputHelper.Render(r, settings.Json, d =>
+            OutputHelper.Render(r, settings.Json, v =>
             {
+                var d = v.Receipt!;
                 var head = new Table().NoBorder().HideHeaders().AddColumn("Key").AddColumn("Value");
                 head.AddRow("[bold]Receipt #[/]", d.SaleReceiptId.ToString());
                 head.AddRow("[bold]Client[/]", Markup.Escape($"{d.ClientId} · {d.CoName ?? "?"}"));
                 head.AddRow("[bold]Payment date[/]", d.PaymentDate?.ToString("yyyy-MM-dd") ?? "-");
-                head.AddRow("[bold]Type[/]", Markup.Escape(d.SaleReceiptType?.TypeName ?? "?"));
-                head.AddRow("[bold]Status[/]", Markup.Escape(d.SaleReceiptStatus ?? "?"));
-                head.AddRow("[bold]Total[/]", $"${Math.Abs(d.PaidTotal ?? d.Total ?? 0):N2}");
-                if (!string.IsNullOrWhiteSpace(d.ReferenceCode))
-                    head.AddRow("[bold]Reference[/]", Markup.Escape(d.ReferenceCode));
+                head.AddRow("[bold]Type[/]", Markup.Escape(TypeName(v, d.ReceiptType)));
+                head.AddRow("[bold]Total[/]", $"${Math.Abs(d.ReceiptTotal):N2}");
+                if (!string.IsNullOrWhiteSpace(d.BatchNo))
+                    head.AddRow("[bold]Batch[/]", Markup.Escape(d.BatchNo));
+                if (!string.IsNullOrWhiteSpace(v.ContactPerson))
+                    head.AddRow("[bold]Contact[/]", Markup.Escape(v.ContactPerson));
+                if (!string.IsNullOrWhiteSpace(d.ExternalSyncType))
+                    head.AddRow("[bold]Synced to[/]", Markup.Escape(d.ExternalSyncType));
                 if (!string.IsNullOrWhiteSpace(d.Note))
                     head.AddRow("[bold]Note[/]", Markup.Escape(d.Note));
                 AnsiConsole.Write(head);
 
-                if (d.Allocations is { Count: > 0 })
+                if (d.SaleReceiptPaids.Count > 0)
                 {
                     AnsiConsole.WriteLine();
                     AnsiConsole.MarkupLine("[bold]Allocations[/]");
                     var alloc = new Table();
                     alloc.AddColumn("Invoice");
                     alloc.AddColumn("Date invoiced");
+                    alloc.AddColumn("Status");
                     alloc.AddColumn(new TableColumn("Paid").RightAligned());
                     alloc.AddColumn(new TableColumn("Invoice total").RightAligned());
-                    alloc.AddColumn(new TableColumn("Outstanding").RightAligned());
-                    foreach (var a in d.Allocations)
+                    alloc.AddColumn(new TableColumn("Balance").RightAligned());
+                    foreach (var a in d.SaleReceiptPaids)
                     {
                         alloc.AddRow(
                             a.InvoiceId.ToString(),
-                            a.DateInvoiced?.ToString("yyyy-MM-dd") ?? "-",
-                            $"${a.Paid:N2}",
-                            $"${a.InvoiceTotal:N2}",
-                            $"${a.Outstanding:N2}");
+                            a.InvoiceDate?.ToString("yyyy-MM-dd") ?? "-",
+                            Markup.Escape(a.SaleReceiptStatus ?? "-"),
+                            $"${Math.Abs(a.PaidAmt):N2}",
+                            $"${a.Total:N2}",
+                            $"${a.Balance:N2}");
                     }
                     AnsiConsole.Write(alloc);
                 }
@@ -99,4 +106,7 @@ public class GetCommand : AsyncCommand<GetCommand.Settings>
             return 1;
         }
     }
+
+    private static string TypeName(ReceiptDetailResponse v, string? typeId) =>
+        v.PaymentMethods.FirstOrDefault(m => m.Id == typeId)?.Name ?? typeId ?? "?";
 }

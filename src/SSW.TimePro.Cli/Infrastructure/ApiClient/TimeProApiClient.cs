@@ -69,8 +69,8 @@ public interface ITimeProApiClient
     Task<ClientInvoiceTable?> GetClientInvoiceTableByClientAsync(string clientId, CancellationToken ct = default);
     Task<List<InvoiceHeader>> GetUnpaidInvoicesByClientAsync(string clientId, CancellationToken ct = default);
 
-    Task<PagedResponse<ReceiptRow>?> ListPaidReceiptsAsync(string? searchText, int skip, int limit, string field, string dir, CancellationToken ct = default);
-    Task<ReceiptDetail?> GetReceiptDetailAsync(int receiptId, CancellationToken ct = default);
+    Task<PagedResponse<PaidReceiptRow>?> ListPaidReceiptsAsync(string? searchText, int skip, int limit, string field, string dir, CancellationToken ct = default);
+    Task<ReceiptDetailResponse?> GetReceiptDetailAsync(int receiptId, CancellationToken ct = default);
     Task<ClientOutstandingSummary?> GetClientOutstandingAsync(string clientId, CancellationToken ct = default);
 
     Task<List<CreditNoteRow>> GetCreditNotesByClientAsync(string clientId, CancellationToken ct = default);
@@ -514,16 +514,16 @@ public class TimeProApiClient : ITimeProApiClient
 
     // ───────────────────────── Accounting: Receipts ─────────────────────────
 
-    public async Task<PagedResponse<ReceiptRow>?> ListPaidReceiptsAsync(
+    public async Task<PagedResponse<PaidReceiptRow>?> ListPaidReceiptsAsync(
         string? searchText, int skip, int limit, string field, string dir, CancellationToken ct = default)
     {
         var url = $"/api/receipting/PaidReceiptsPaged?searchText={Uri.EscapeDataString(searchText ?? string.Empty)}&skip={skip}&limit={limit}&field={Uri.EscapeDataString(field)}&dir={Uri.EscapeDataString(dir)}";
-        return await GetAsync<PagedResponse<ReceiptRow>>(url, ct);
+        return await GetAsync<PagedResponse<PaidReceiptRow>>(url, ct);
     }
 
-    public async Task<ReceiptDetail?> GetReceiptDetailAsync(int receiptId, CancellationToken ct = default)
+    public async Task<ReceiptDetailResponse?> GetReceiptDetailAsync(int receiptId, CancellationToken ct = default)
     {
-        return await GetAsync<ReceiptDetail>($"/api/Receipting/details/{receiptId}", ct);
+        return await GetAsync<ReceiptDetailResponse>($"/api/Receipting/details/{receiptId}", ct);
     }
 
     public async Task<ClientOutstandingSummary?> GetClientOutstandingAsync(string clientId, CancellationToken ct = default)

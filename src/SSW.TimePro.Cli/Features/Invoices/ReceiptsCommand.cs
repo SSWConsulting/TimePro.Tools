@@ -52,7 +52,6 @@ public class ReceiptsCommand : AsyncCommand<ReceiptsCommand.Settings>
                 var table = new Table().Expand();
                 table.AddColumn("Receipt #");
                 table.AddColumn("Payment date");
-                table.AddColumn("Type");
                 table.AddColumn("Status");
                 table.AddColumn(new TableColumn("Paid").RightAligned());
                 table.AddColumn("Prepaid?");
@@ -60,18 +59,16 @@ public class ReceiptsCommand : AsyncCommand<ReceiptsCommand.Settings>
                 decimal total = 0;
                 foreach (var r in items)
                 {
-                    var paid = r.PaidTotal ?? r.Paid;
-                    total += paid;
+                    total += r.Paid;
                     table.AddRow(
                         r.SaleReceiptId.ToString(),
                         r.PaymentDate?.ToString("yyyy-MM-dd") ?? "-",
-                        Markup.Escape(r.SaleReceiptType?.TypeName ?? "?"),
                         Markup.Escape(r.SaleReceiptStatus ?? "?"),
-                        $"${Math.Abs(paid):N2}",
+                        $"${Math.Abs(r.Paid):N2}",
                         r.IsCreditingPrepaid == true ? "[yellow]yes[/]" : "-");
                 }
                 AnsiConsole.Write(table);
-                AnsiConsole.MarkupLine($"[dim]Total (absolute): [/][bold]${Math.Abs(total):N2}[/] [dim](PaidTotal is negative for incoming payments)[/]");
+                AnsiConsole.MarkupLine($"[dim]Total (absolute): [/][bold]${Math.Abs(total):N2}[/] [dim](Paid is negative for incoming payments)[/]");
             });
 
             return 0;

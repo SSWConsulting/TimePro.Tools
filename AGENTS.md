@@ -129,6 +129,25 @@ in `warnings`. The import succeeds regardless, so both lists must be surfaced to
 
 The list endpoint (`GET /api/leave/`) returns per-entry `daysAway`, `updatedAt`, `optionalEmp`, `timeLessOverride`, `cancellationReason` (all bound on `LeaveEntry`) plus a top-level `cancelledCount` on the list envelope. These surface in `tp leave list --json`.
 
+## Accounting API Shapes
+
+Three endpoints back the receipt commands and each returns a different shape, so they need
+separate DTOs:
+
+- `GET /api/v2/ClientInvoice/{id}/receipts` → payment rows (`ReceiptRow`): one row per invoice
+  a receipt pays, with `paid`.
+- `GET /api/receipting/PaidReceiptsPaged` → receipt rows (`PaidReceiptRow`): receipt-level, with
+  `paidTotal` and an `invoiceIds` array instead of a single invoice.
+- `GET /api/Receipting/details/{id}` → an envelope (`ReceiptDetailResponse`) wrapping the receipt
+  under `receipt`, alongside payment-method lookups; its `saleReceiptID` is serialised as a string.
+
+`unit` on the recurring invoice endpoints is the backend `RecurrenceUnit` ordinal
+(`0` Year, `1` Month, `2` Day), not a string.
+
+`JsonShape.AssertFullyMapped<T>` in the integration tests fails when a captured payload carries a
+property no DTO property binds. Use it on new endpoint tests — it is what catches shape drift
+before it shows up as a zeroed field.
+
 ## Testing
 
 ```bash

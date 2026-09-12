@@ -69,23 +69,22 @@ public class ListCommand : AsyncCommand<ListCommand.Settings>
                 var table = new Table().Expand();
                 table.AddColumn("Receipt");
                 table.AddColumn("Payment date");
-                table.AddColumn("Invoice");
+                table.AddColumn("Invoices");
                 table.AddColumn("Client");
                 table.AddColumn("Type");
                 table.AddColumn(new TableColumn("Paid").RightAligned());
-                table.AddColumn("Prepaid?");
+                table.AddColumn("Credit note");
 
                 foreach (var r in p.Data)
                 {
-                    var paid = r.PaidTotal ?? r.Paid;
                     table.AddRow(
                         r.SaleReceiptId.ToString(),
                         r.PaymentDate?.ToString("yyyy-MM-dd") ?? "-",
-                        r.InvoiceId == 0 ? "-" : r.InvoiceId.ToString(),
+                        r.InvoiceIds.Count == 0 ? "-" : string.Join(", ", r.InvoiceIds),
                         Markup.Escape(r.CoName ?? r.ClientId ?? "?"),
                         Markup.Escape(r.SaleReceiptType?.TypeName ?? "?"),
-                        $"${Math.Abs(paid):N2}",
-                        r.IsCreditingPrepaid == true ? "[yellow]yes[/]" : "-");
+                        $"${Math.Abs(r.PaidTotal):N2}",
+                        r.CreditNoteId is null ? "-" : $"[yellow]{r.CreditNoteId}[/]");
                 }
                 AnsiConsole.Write(table);
                 AnsiConsole.MarkupLine($"[dim]Showing {p.Data.Count} of {p.Total} receipts · PaidTotal is negative for incoming payments (shown as abs).[/]");

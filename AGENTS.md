@@ -183,6 +183,17 @@ MCP tools must not be the only implementation of TimePro behavior. Any business 
 
 The MCP host resolves the tenant in this order: `--tenant NAME` → global active tenant → the sole tenant config if exactly one exists (single-tenant installs work without `tp tenant set`). `--tenant` does NOT change the global active tenant.
 
+The server runs on `ModelContextProtocol` 2.2.0 (MCP 2026-07-28). No API our surface uses was
+renamed by the 2.x upgrade: `[McpServerToolType]`, `[McpServerTool]`, `AddMcpServer()`,
+`WithStdioServerTransport()`, `WithTools<T>()` and `WithRequestFilters(... AddCallToolFilter ...)`
+are all unchanged. 2.x dropped the experimental Tasks implementation from Core, so tools no longer
+advertise `execution.taskSupport` in `tools/list`; the extension package is not referenced.
+Legacy clients still negotiate `2024-11-05` through `2025-11-25` via `initialize`, 2026-07-28
+clients use `server/discover` plus a per-request `_meta` envelope, and the 2026-07-28-only result
+fields (`resultType`, `ttlMs`, `cacheScope`, `_meta.serverInfo`) are gated on the negotiated
+version, so down-level payloads are byte-identical to 1.4.0. Structured output, tool annotations
+and elicitation are deliberate follow-ups, each in its own PR.
+
 ## Tenants
 
 The `activeTenant` in `config.json` is the **filename** (without `.json`) of the tenant config file, not the `tenantId` property inside it. This allows multiple configs for the same tenant (e.g., `ssw` for prod, `ssw-staging` for staging) where both have `"tenantId": "ssw"` but different `apiUrl` and `apiKey`.

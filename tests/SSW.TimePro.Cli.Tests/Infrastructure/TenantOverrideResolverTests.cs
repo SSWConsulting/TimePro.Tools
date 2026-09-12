@@ -133,18 +133,21 @@ public sealed class TenantOverrideResolverTests : IDisposable
         error.Should().Contain("tp tenant list");
     }
 
-    [Fact]
-    public void ResolveTenantOverride_NonProductionEnvironmentFailsWhenConfigPointsAtProduction()
+    [Theory]
+    [InlineData("staging")]
+    [InlineData("local")]
+    [InlineData("uat")]
+    public void ResolveTenantOverride_NonProductionEnvironmentFailsWhenConfigPointsAtProduction(string environment)
     {
-        SaveTenant("northwind-staging", production: true);
+        SaveTenant($"northwind-{environment}", production: true);
 
         var tenant = TenantOverrideResolver.ResolveTenantOverride(
             _config,
-            new TenantOverrideOptions("northwind", "staging"),
+            new TenantOverrideOptions("northwind", environment),
             out var error);
 
         tenant.Should().BeNull();
-        error.Should().Contain("northwind-staging.json");
+        error.Should().Contain($"northwind-{environment}.json");
         error.Should().Contain("production");
     }
 

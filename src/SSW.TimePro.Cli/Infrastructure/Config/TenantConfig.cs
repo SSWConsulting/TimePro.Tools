@@ -40,14 +40,16 @@ public class TenantConfig
         return $"https://{TenantId}.sswtimepro.com/b/admin/api-key";
     }
 
+    private static readonly string[] ProductionHosts = ["api.sswtimepro.com"];
+
     /// <summary>
-    /// Whether this is pointing at a production API.
+    /// Whether this is pointing at a production API. Matched on the URL's host, so a staging or
+    /// local server cannot pass by carrying a production hostname in its path or query.
     /// </summary>
     [JsonIgnore]
     public bool IsProduction =>
-        ApiUrl.Contains("api.sswtimepro.com", StringComparison.OrdinalIgnoreCase)
-        && !ApiUrl.Contains("staging", StringComparison.OrdinalIgnoreCase)
-        && !ApiUrl.Contains("local", StringComparison.OrdinalIgnoreCase);
+        Uri.TryCreate(ApiUrl, UriKind.Absolute, out var uri)
+        && ProductionHosts.Contains(uri.Host, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Safe-to-display view that omits secrets such as the API key.

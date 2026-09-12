@@ -133,8 +133,9 @@ public static class TenantOverrideResolver
     }
 
     /// <summary>
-    /// Guards against <c>--env prod</c> reaching a non-production config (and the reverse),
-    /// since the resolved file name says nothing about the API URL it points at.
+    /// Guards against <c>--env prod</c> reaching a non-production config, and against any other
+    /// environment reaching a production one, since the resolved file name says nothing about
+    /// the API URL it points at.
     /// </summary>
     private static TenantConfig? VerifyEnvironmentMatch(
         IConfigService config,
@@ -161,7 +162,7 @@ public static class TenantOverrideResolver
             return null;
         }
 
-        if (IsNonProductionEnvironmentName(env) && tenant.IsProduction)
+        if (tenant.IsProduction)
         {
             error = $"Tenant config '{resolvedTenantName}' ({resolvedTenantName}.json) points at production "
                 + $"(apiUrl: {tenant.ApiUrl}), but --env '{environmentName}' was requested. "
@@ -187,9 +188,6 @@ public static class TenantOverrideResolver
 
     private static bool IsProductionEnvironmentName(string env) =>
         env is "production" or "prod";
-
-    private static bool IsNonProductionEnvironmentName(string env) =>
-        env is "staging" or "stage" or "development" or "dev" or "local" or "test";
 
     public static string ResolveEnvironmentTenantName(string tenantName, string environmentName)
     {

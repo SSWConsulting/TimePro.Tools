@@ -89,8 +89,11 @@ the effective tenant's `apiUrl` and `isProduction`.
 
 `--env` is checked against the resolved config's `apiUrl`, not just its name. `--env prod` resolves
 to a config with `isProduction == true` (preferring a production config that shares the base tenant
-name) and otherwise fails naming the config file, its `apiUrl`, and the fix; the known non-production
-environments refuse a config that points at production.
+name) and otherwise fails naming the config file, its `apiUrl`, and the fix. Every other environment
+name, known or not, refuses a config that points at production.
+
+`isProduction` is derived from the `apiUrl` **host**, not a substring of the URL, so a local or
+staging server cannot look production by carrying a production hostname in its path or query.
 
 ## Leave API
 

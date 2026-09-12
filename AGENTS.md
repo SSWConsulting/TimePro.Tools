@@ -290,7 +290,9 @@ dotnet test tests/SSW.TimePro.Cli.Integration/
 # E2E (requires staging credentials)
 ./scripts/e2e/run-all.sh
 
-# Staging MCP stdio gate only (run the candidate artifact, never production)
+# Staging MCP stdio gate only (run the candidate artifact, never production).
+# TIMEPRO_MCP_SMOKE_PROJECT has no committed default; see scripts/e2e/README.md.
+TIMEPRO_MCP_SMOKE_PROJECT=1I776Q \
 TIMEPRO_MCP_SMOKE_TP="dotnet src/SSW.TimePro.Cli/bin/Release/net10.0/SSW.TimePro.Cli.dll" \
   scripts/e2e/test-mcp-smoke.sh
 

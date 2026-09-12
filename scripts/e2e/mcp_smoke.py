@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """Staging MCP stdio smoke test: discovery, Northwind reads, one write, and cleanup.
 
-Standard library only. Driven by scripts/e2e/test-mcp-smoke.sh; see that script for the
-environment variables it accepts.
+Standard library only. Driven by scripts/e2e/test-mcp-smoke.sh; see scripts/e2e/README.md for the
+environment variables it requires.
 """
 
 import datetime
 import json
 import os
 import pathlib
+import queue
 import subprocess
 import sys
 import threading
@@ -18,7 +19,6 @@ PROTOCOL_VERSION = "2024-11-05"
 READ_TIMEOUT_SECONDS = 90
 
 CLIENT_ID = "NWIND"
-PROJECT_ID = os.environ.get("TIMEPRO_MCP_SMOKE_PROJECT", "8W52M2")
 TENANT = os.environ.get("TIMEPRO_MCP_SMOKE_TENANT", "ssw-staging")
 CATEGORY_ID = os.environ.get("TIMEPRO_MCP_SMOKE_CATEGORY", "WEBDEV")
 
@@ -38,8 +38,25 @@ class SmokeFailure(Exception):
     pass
 
 
+def required_env(name, purpose):
+    value = os.environ.get(name, "").strip()
+    if not value:
+        raise SmokeFailure(
+            f"{name} is not set. {purpose} "
+            "It has no default on purpose: this is a public repository and the ids of real "
+            "projects and iterations do not belong in it. See scripts/e2e/README.md."
+        )
+    return value
+
+
 class McpProcess:
-    """Newline-delimited JSON-RPC over the child's stdio, with stderr drained separately."""
+    """Newline-delimited JSON-RPC over the child's stdio.
+
+    stdout is drained by its own thread into a queue so a wedged server times out instead of
+    blocking the driver forever on a read that cannot be interrupted.
+    """
+
+    _EOF = object()
 
     def __init__(self, command):
         self._process = subprocess.Popen(
@@ -51,9 +68,15 @@ class McpProcess:
             bufsize=1,
         )
         self._next_id = 1
+        self._stdout = queue.Queue()
         self._stderr = []
-        self._stderr_thread = threading.Thread(target=self._drain_stderr, daemon=True)
-        self._stderr_thread.start()
+        threading.Thread(target=self._drain_stdout, daemon=True).start()
+        threading.Thread(target=self._drain_stderr, daemon=True).start()
+
+    def _drain_stdout(self):
+        for line in self._process.stdout:
+            self._stdout.put(line)
+        self._stdout.put(self._EOF)
 
     def _drain_stderr(self):
         for line in self._process.stderr:
@@ -62,6 +85,10 @@ class McpProcess:
     @property
     def stderr(self):
         return "\n".join(self._stderr)
+
+    @property
+    def alive(self):
+        return self._process.poll() is None
 
     def request(self, method, params=None):
         request_id = self._next_id
@@ -79,49 +106,70 @@ class McpProcess:
         self._write(frame)
 
     def _write(self, frame):
-        self._process.stdin.write(json.dumps(frame) + "\n")
-        self._process.stdin.flush()
+        try:
+            self._process.stdin.write(json.dumps(frame) + "\n")
+            self._process.stdin.flush()
+        except (BrokenPipeError, ValueError):
+            raise SmokeFailure(
+                f"MCP host is not accepting input (exit code {self._process.poll()})\n"
+                f"stderr:\n{self.stderr}"
+            )
 
     def _read_response(self, request_id):
-        deadline = threading.Event()
-        timer = threading.Timer(READ_TIMEOUT_SECONDS, deadline.set)
-        timer.start()
+        deadline = datetime.datetime.now() + datetime.timedelta(seconds=READ_TIMEOUT_SECONDS)
+
+        while True:
+            remaining = (deadline - datetime.datetime.now()).total_seconds()
+            if remaining <= 0:
+                self.kill()
+                raise SmokeFailure(
+                    f"timed out after {READ_TIMEOUT_SECONDS}s waiting for response {request_id}; "
+                    f"terminated the MCP host\nstderr:\n{self.stderr}"
+                )
+
+            try:
+                line = self._stdout.get(timeout=remaining)
+            except queue.Empty:
+                self.kill()
+                raise SmokeFailure(
+                    f"timed out after {READ_TIMEOUT_SECONDS}s waiting for response {request_id}; "
+                    f"terminated the MCP host\nstderr:\n{self.stderr}"
+                )
+
+            if line is self._EOF:
+                raise SmokeFailure(
+                    f"MCP host exited before answering {request_id}\nstderr:\n{self.stderr}"
+                )
+
+            line = line.strip()
+            if not line:
+                continue
+
+            try:
+                frame = json.loads(line)
+            except json.JSONDecodeError:
+                raise SmokeFailure(f"non-protocol output on stdout: {line}")
+
+            if frame.get("id") != request_id:
+                continue  # notification or out-of-order response
+
+            if "error" in frame:
+                raise SmokeFailure(f"{request_id} failed: {json.dumps(frame['error'])}")
+
+            return frame["result"]
+
+    def kill(self):
         try:
-            while True:
-                if deadline.is_set():
-                    raise SmokeFailure(f"timed out waiting for response {request_id}")
-
-                line = self._process.stdout.readline()
-                if line == "":
-                    raise SmokeFailure(
-                        f"MCP host exited before answering {request_id}\nstderr:\n{self.stderr}"
-                    )
-
-                line = line.strip()
-                if not line:
-                    continue
-
-                try:
-                    frame = json.loads(line)
-                except json.JSONDecodeError:
-                    raise SmokeFailure(f"non-protocol output on stdout: {line}")
-
-                if frame.get("id") != request_id:
-                    continue  # notification or out-of-order response
-
-                if "error" in frame:
-                    raise SmokeFailure(f"{request_id} failed: {json.dumps(frame['error'])}")
-
-                return frame["result"]
-        finally:
-            timer.cancel()
+            self._process.kill()
+        except Exception:
+            pass
 
     def close(self):
         try:
             self._process.stdin.close()
             self._process.wait(timeout=10)
         except Exception:
-            self._process.kill()
+            self.kill()
 
 
 def initialize(process):
@@ -174,17 +222,6 @@ def call_tool(process, name, arguments):
     return payload
 
 
-def create_tool(process, name, arguments):
-    try:
-        return call_tool(process, name, arguments)
-    except SmokeFailure as failure:
-        raise SmokeFailure(
-            f"{failure}\n"
-            "    The MCP write path is not yet the CLI's: create_timesheet omits the sell price "
-            "the CLI resolves from the client rate, so TimePro rejects it."
-        ) from failure
-
-
 def assert_non_production(tp_command):
     info = subprocess.run(
         tp_command + ["tenant", "info", "--tenant", TENANT, "--json"],
@@ -219,103 +256,178 @@ def most_recent_weekday():
     return day.isoformat()
 
 
-def main():
-    tp_command = json.loads(os.environ["TIMEPRO_MCP_SMOKE_TP"])
-    api_url = assert_non_production(tp_command)
+def find_marked(process, date, note, project_id):
+    """Rows on <date> carrying the run's unique marker. Never matches another run's data."""
+    entries = call_tool(process, "get_timesheets", {"date": date})
+    return [
+        entry
+        for entry in entries
+        if entry.get("notes") == note and entry.get("projectId") == project_id
+    ]
 
-    token = uuid.uuid4().hex[:8]
-    note = f"MCP smoke {token}, safe to delete"
-    date = most_recent_weekday()
-    created_id = None
 
-    process = McpProcess(tp_command + ["mcp", "--tenant", TENANT])
-    try:
-        session = initialize(process)
-        print(f"  initialize negotiated protocol {session['protocolVersion']}")
+def run_smoke(process, state):
+    date, note, project_id = state["date"], state["note"], state["projectId"]
 
-        check_discovery(list_tools(process))
+    session = initialize(process)
+    print(f"  initialize negotiated protocol {session['protocolVersion']}")
 
-        projects = call_tool(process, "get_projects_for_client", {"clientId": CLIENT_ID})
-        project = next((p for p in projects if p.get("value") == PROJECT_ID), None)
-        if project is None:
-            raise SmokeFailure(f"project {PROJECT_ID} not found for client {CLIENT_ID}")
-        print(f"  project {PROJECT_ID} found: {project.get('displayText')}")
+    check_discovery(list_tools(process))
 
-        iterations = call_tool(process, "list_iterations", {"projectId": PROJECT_ID})
-        if not iterations:
-            raise SmokeFailure(f"project {PROJECT_ID} returned no iterations")
-        iteration_id = iterations[0]["iterationId"]
-        print(f"  using iteration {iteration_id} ({iterations[0].get('iterationName')})")
+    projects = call_tool(process, "get_projects_for_client", {"clientId": CLIENT_ID})
+    if not any(p.get("value") == project_id for p in projects):
+        raise SmokeFailure(
+            f"TIMEPRO_MCP_SMOKE_PROJECT is not a project of client {CLIENT_ID} on {TENANT}"
+        )
+    print(f"  the configured {CLIENT_ID} project is present")
 
-        rate = call_tool(process, "get_client_rate", {"clientId": CLIENT_ID, "date": date})
-        if rate is None:
-            raise SmokeFailure(f"no client rate for {CLIENT_ID} on {date}")
-        print(f"  client rate present for {CLIENT_ID}")
-
-        before = call_tool(process, "get_timesheets", {"date": date})
-        print(f"  {len(before)} existing entries on {date}")
-
-        # The write goes through MCP on purpose. create_timesheet does not send a sell price, so
-        # a server that cannot derive one answers 400 and this gate stays red until the shared
-        # create orchestration lands.
-        create_tool(
-            process,
-            "create_timesheet",
-            {
-                "clientId": CLIENT_ID,
-                "projectId": PROJECT_ID,
-                "date": date,
-                "startTime": "04:00",
-                "endTime": "04:15",
-                "description": note,
-                "categoryId": CATEGORY_ID,
-                "iterationId": iteration_id,
-            },
+    iterations = call_tool(process, "list_iterations", {"projectId": project_id})
+    if not iterations:
+        raise SmokeFailure(
+            "the configured project returned no iterations; the smoke needs one that uses them"
         )
 
-        after = call_tool(process, "get_timesheets", {"date": date})
-        matches = [entry for entry in after if entry.get("notes") == note]
-        if len(matches) != 1:
+    iteration_id = state["iterationId"]
+    if iteration_id is None:
+        iteration_id = iterations[0]["iterationId"]
+    elif not any(str(i["iterationId"]) == str(iteration_id) for i in iterations):
+        raise SmokeFailure(
+            "TIMEPRO_MCP_SMOKE_ITERATION is not an iteration of the configured project"
+        )
+    print(f"  selected 1 of {len(iterations)} iterations on the project")
+
+    rate = call_tool(process, "get_client_rate", {"clientId": CLIENT_ID, "date": date})
+    if rate is None:
+        raise SmokeFailure(f"no client rate for {CLIENT_ID} on {date}")
+    print(f"  client rate present for {CLIENT_ID}")
+
+    before = find_marked(process, date, note, project_id)
+    if before:
+        raise SmokeFailure(
+            f"the marker note is already on {date}; refusing to write an ambiguous row"
+        )
+    print(f"  marker '{note}' is unused on {date}")
+
+    # The write goes through MCP on purpose, so a create tool the server rejects keeps this gate
+    # red instead of being routed around.
+    state["createAttempted"] = True
+    call_tool(
+        process,
+        "create_timesheet",
+        {
+            "clientId": CLIENT_ID,
+            "projectId": project_id,
+            "date": date,
+            "startTime": "04:00",
+            "endTime": "04:15",
+            "description": note,
+            "categoryId": CATEGORY_ID,
+            "iterationId": iteration_id,
+        },
+    )
+
+    matches = find_marked(process, date, note, project_id)
+    if len(matches) != 1:
+        raise SmokeFailure(
+            f"expected exactly one entry noted '{note}' on {date}, found {len(matches)}"
+        )
+
+    created = matches[0]
+    created_id = created["timeId"]
+    for field, expected in (("clientId", CLIENT_ID), ("projectId", project_id), ("date", date)):
+        if created.get(field) != expected:
             raise SmokeFailure(
-                f"expected exactly one entry noted '{note}' on {date}, found {len(matches)}"
+                f"created entry {created_id} has {field}={created.get(field)!r}, "
+                f"expected {expected!r}"
+            )
+    print(f"  created and read back entry {created_id}")
+
+
+def cleanup(tp_command, process, state):
+    """Delete the run's own row and prove it is gone. Returns True when nothing is left behind."""
+    if not state["createAttempted"]:
+        return True
+
+    date, note, project_id = state["date"], state["note"], state["projectId"]
+
+    # A wedged or crashed host still has to be cleaned up after, so recover over a fresh session.
+    own_process = None
+    if not process.alive:
+        print("  MCP host is gone; starting a fresh session to clean up", file=sys.stderr)
+        own_process = McpProcess(tp_command + ["mcp", "--tenant", TENANT])
+        initialize(own_process)
+        process = own_process
+
+    try:
+        matches = find_marked(process, date, note, project_id)
+        if not matches:
+            print("  nothing to clean up: the marker note is not on the day")
+            return True
+
+        if len(matches) > 1:
+            ids = sorted(entry["timeId"] for entry in matches)
+            raise SmokeFailure(
+                f"{len(matches)} rows carry the marker note; refusing to guess which to delete: {ids}"
             )
 
-        created = matches[0]
-        created_id = created["timeId"]
-        for field, expected in (
-            ("clientId", CLIENT_ID),
-            ("projectId", PROJECT_ID),
-            ("date", date),
-        ):
-            if created.get(field) != expected:
-                raise SmokeFailure(
-                    f"created entry {created_id} has {field}={created.get(field)!r}, expected {expected!r}"
-                )
-        print(f"  created and read back entry {created_id} on project {PROJECT_ID}")
-
+        created_id = matches[0]["timeId"]
         call_tool(process, "delete_timesheet", {"timesheetId": created_id, "date": date})
 
-        remaining = call_tool(process, "get_timesheets", {"date": date})
-        if any(entry.get("timeId") == created_id for entry in remaining):
-            raise SmokeFailure(f"entry {created_id} still present after delete")
-        created_id = None
-        print("  deleted the smoke entry and verified its absence")
+        if find_marked(process, date, note, project_id):
+            raise SmokeFailure(f"entry {created_id} is still present after delete")
 
-        print(f"MCP smoke passed against {api_url}")
-        return 0
+        print(f"  cleaned up entry {created_id} and verified its absence")
+        return True
+    except SmokeFailure as failure:
+        print(f"CLEANUP UNRESOLVED: {failure}", file=sys.stderr)
+        print(
+            f"LEFTOVER TEST DATA: look for timesheets on {date} noted '{note}' "
+            f"and delete them with 'tp ts delete <id> --date {date} --tenant {TENANT}'",
+            file=sys.stderr,
+        )
+        return False
+    finally:
+        if own_process is not None:
+            own_process.close()
+
+
+def main():
+    try:
+        tp_command = json.loads(os.environ["TIMEPRO_MCP_SMOKE_TP"])
+        iteration = os.environ.get("TIMEPRO_MCP_SMOKE_ITERATION", "").strip()
+        state = {
+            "date": most_recent_weekday(),
+            "note": f"MCP smoke {uuid.uuid4().hex[:8]}, safe to delete",
+            "projectId": required_env(
+                "TIMEPRO_MCP_SMOKE_PROJECT",
+                f"Set it to a {CLIENT_ID} project on {TENANT} that uses iterations.",
+            ),
+            "iterationId": iteration or None,
+            "createAttempted": False,
+        }
+        api_url = assert_non_production(tp_command)
     except SmokeFailure as failure:
         print(f"MCP smoke FAILED: {failure}", file=sys.stderr)
-        if created_id is not None:
-            print(
-                f"LEFTOVER TEST DATA: timesheet {created_id} on {date} "
-                f"(note '{note}') was not deleted",
-                file=sys.stderr,
-            )
+        return 1
+
+    process = McpProcess(tp_command + ["mcp", "--tenant", TENANT])
+    failed = False
+    try:
+        run_smoke(process, state)
+    except SmokeFailure as failure:
+        failed = True
+        print(f"MCP smoke FAILED: {failure}", file=sys.stderr)
         if process.stderr:
             print(f"server stderr:\n{process.stderr}", file=sys.stderr)
-        return 1
     finally:
+        resolved = cleanup(tp_command, process, state)
         process.close()
+
+    if failed or not resolved:
+        return 1
+
+    print(f"MCP smoke passed against {api_url}")
+    return 0
 
 
 if __name__ == "__main__":

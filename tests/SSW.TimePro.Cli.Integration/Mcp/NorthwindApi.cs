@@ -115,7 +115,7 @@ public static class NorthwindApi
         Json(server, "/api/Projects/GetSelectListUsageDataProject", "GET", new List<ProjectForSelect>
         {
             new() { Value = ProjectId, DisplayText = ClientName, UseIteration = true },
-            new() { Value = "N8000J", DisplayText = "Upgrade - Northwind", UseIteration = false }
+            new() { Value = "NW0002", DisplayText = "Northwind Storefront", UseIteration = false }
         });
 
         Json(server, "/api/Timesheets/GetClientRate", "GET", new ClientRateResponse

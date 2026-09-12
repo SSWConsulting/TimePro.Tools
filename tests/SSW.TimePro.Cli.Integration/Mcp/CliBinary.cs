@@ -1,8 +1,12 @@
 namespace SSW.TimePro.Cli.Integration.Mcp;
 
 /// <summary>
-/// Locates the built CLI assembly so stdio tests can launch the real
-/// <c>tp mcp</c> entry point as a child process.
+/// Locates the built CLI assembly so stdio tests can launch the real <c>tp mcp</c> entry point as a
+/// child process.
+///
+/// The path is derived exactly from the running test assembly's own configuration and target
+/// framework, never searched for: picking the newest match under <c>bin</c> would happily run a
+/// Release build, or a stale <c>publish</c> output, while the tests under inspection are Debug.
 /// </summary>
 public static class CliBinary
 {
@@ -14,23 +18,27 @@ public static class CliBinary
 
     private static string Locate()
     {
-        var repoRoot = FindRepoRoot();
-        var projectBin = System.IO.Path.Combine(repoRoot, "src", "SSW.TimePro.Cli", "bin");
+        // .../tests/SSW.TimePro.Cli.Integration/bin/<Configuration>/<TargetFramework>/
+        var testOutput = new DirectoryInfo(AppContext.BaseDirectory.TrimEnd(
+            System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar));
+        var targetFramework = testOutput.Name;
+        var configuration = testOutput.Parent?.Name
+            ?? throw new InvalidOperationException(
+                $"Cannot derive the build configuration from {AppContext.BaseDirectory}.");
 
-        // The test project has a ProjectReference to the CLI, so building the tests always
-        // produces this assembly alongside its runtimeconfig.json.
-        var candidates = Directory.Exists(projectBin)
-            ? Directory.GetFiles(projectBin, AssemblyName, SearchOption.AllDirectories)
-                .Where(p => File.Exists(System.IO.Path.ChangeExtension(p, ".runtimeconfig.json")))
-                .OrderByDescending(File.GetLastWriteTimeUtc)
-                .ToList()
-            : [];
+        var expected = System.IO.Path.Combine(
+            FindRepoRoot(), "src", "SSW.TimePro.Cli", "bin", configuration, targetFramework, AssemblyName);
 
-        if (candidates.Count == 0)
+        if (!File.Exists(expected))
             throw new InvalidOperationException(
-                $"Could not find a runnable {AssemblyName} under {projectBin}. Run 'dotnet build' first.");
+                $"Expected the CLI at {expected}. Run 'dotnet build -c {configuration}' first.");
 
-        return candidates[0];
+        // Without this the assembly cannot be launched with `dotnet <dll>`.
+        var runtimeConfig = System.IO.Path.ChangeExtension(expected, ".runtimeconfig.json");
+        if (!File.Exists(runtimeConfig))
+            throw new InvalidOperationException($"Expected a runtime config beside {expected}.");
+
+        return expected;
     }
 
     private static string FindRepoRoot()

@@ -171,7 +171,8 @@ public static class McpCliParityTable
                 timeZoneId: McpToolCatalog.TimeZone, dryRun: true, ct: ct),
             ExpectParity = false,
             PermittedDifferences = ["$.request.timeLessOverride"],
-            Note = "LeaveUpdateService is shared; the CLI omits the null TimeLessOverride."
+            Note = "LeaveUpdateService is shared; the CLI omits the null TimeLessOverride.",
+            ForbiddenRequests = [new("PUT", "/api/leave/")]
         },
 
         new("ImportLeaveBalances", "leave balances import")
@@ -194,12 +195,12 @@ public static class McpCliParityTable
         // ───────── Not unified yet: declared so a later slice flips the flag ─────────
 
         new("GetTimesheets", "ts get") { Note = "MCP reshapes the row; CLI returns the API shape." },
-        new("CreateTimesheet", "ts create") { Note = "No shared create orchestration yet (#57)." },
+        new("CreateTimesheet", "ts create") { Note = "No shared create orchestration; MCP sends no sell price." },
         new("ListIterations", "iteration list") { Note = "Separate projections." },
         new("GetSuggestedTimesheets", "ts suggest") { Note = "Separate projections." },
         new("SearchClients", "client search") { Note = "Separate projections." },
-        new("GetProjectsForClient", "project list") { Note = "Sentinel row and rate shape (#46)." },
-        new("GetClientRate", "rate get") { Note = "MCP returns the raw rate, CLI a lookup result (#46)." },
+        new("GetProjectsForClient", "project list") { Note = "MCP keeps the dropdown sentinel row the CLI drops." },
+        new("GetClientRate", "rate get") { Note = "MCP returns the raw rate, CLI a lookup result." },
         new("GetCrmBookings", "booking list") { Note = "Separate projections." },
         new("GetLocationAndMapping", "location info") { Note = "MCP merges location defaults and repo mapping." },
         new("GetLeaveEntries", "leave list") { Note = "MCP returns the items array, CLI the envelope." },
@@ -230,11 +231,11 @@ public static class McpCliParityTable
 
         // TODO #38: give these a CLI command and drop them from the allowlist
 
-        new("GetInvoicesByClient", null) { Note = "No CLI command; allowlisted." },
-        new("GetUnpaidInvoicesByClient", null) { Note = "No CLI command; allowlisted." },
-        new("ListCategories", null) { Note = "No CLI command; allowlisted." },
-        new("ListBillableTypes", null) { Note = "No CLI command; allowlisted." },
-        new("ListAllSkus", null) { Note = "No CLI command; allowlisted." },
+        new("GetInvoicesByClient", null) { Note = "No CLI command lists a client's full invoice history." },
+        new("GetUnpaidInvoicesByClient", null) { Note = "No CLI command lists a client's unpaid invoices." },
+        new("ListCategories", null) { Note = "No CLI command lists timesheet category codes." },
+        new("ListBillableTypes", null) { Note = "No CLI command lists billable-type codes." },
+        new("ListAllSkus", null) { Note = "No CLI command lists SKUs independently of products." },
     ];
 
     public static IEnumerable<ParityRow> Executable => Rows.Where(r => r.IsExecutable);

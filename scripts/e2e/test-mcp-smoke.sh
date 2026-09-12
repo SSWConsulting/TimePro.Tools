@@ -1,11 +1,7 @@
 #!/bin/bash
 # Staging MCP stdio smoke: discovery against the checked-in golden, Northwind reads, one marked
 # write on a project that uses iterations, and cleanup. Cleanup failure fails the run and names
-# the leftover row.
-#
-#   TIMEPRO_MCP_SMOKE_TP      how to invoke the candidate CLI (default: tp)
-#   TIMEPRO_MCP_SMOKE_TENANT  tenant config to bind (default: ssw-staging)
-#   TIMEPRO_MCP_SMOKE_PROJECT Northwind project that uses iterations (default: 8W52M2)
+# the leftover row. See README.md for the environment variables.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -17,10 +13,14 @@ if ! command -v python3 &> /dev/null; then
     exit 0
 fi
 
-TP_COMMAND=${TIMEPRO_MCP_SMOKE_TP:-tp}
+if [ -z "${TIMEPRO_MCP_SMOKE_PROJECT:-}" ]; then
+    echo "    SKIPPED: TIMEPRO_MCP_SMOKE_PROJECT not set (see scripts/e2e/README.md)"
+    exit 0
+fi
 
-# Serialise the command as JSON so "dotnet run --project ... --" works as well as a bare "tp".
-TIMEPRO_MCP_SMOKE_TP=$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1].split()))' "$TP_COMMAND")
+# Serialise the command so "dotnet path/to.dll" works as well as a bare "tp", with shell quoting.
+TIMEPRO_MCP_SMOKE_TP=$(python3 -c 'import json,shlex,sys; print(json.dumps(shlex.split(sys.argv[1])))' \
+    "${TIMEPRO_MCP_SMOKE_TP:-tp}")
 export TIMEPRO_MCP_SMOKE_TP
 
 python3 "$SCRIPT_DIR/mcp_smoke.py"

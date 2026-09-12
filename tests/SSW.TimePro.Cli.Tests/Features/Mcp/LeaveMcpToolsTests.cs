@@ -27,6 +27,32 @@ public class LeaveMcpToolsTests
     }
 
     [Fact]
+    public async Task GetLeaveEntries_WhenFilterIsUnknown_ReturnsTheValidValuesWithoutCallingTheApi()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        var config = Substitute.For<IConfigService>();
+        config.LoadActiveTenantConfig().Returns(new TenantConfig
+        {
+            TenantId = "test",
+            ApiUrl = "https://timepro.example",
+            ApiKey = "test-api-key",
+            EmployeeId = "TST"
+        });
+        var tools = CreateTools(api, config);
+
+        var json = await tools.GetLeaveEntries(filter: "NOPE", ct: TestContext.Current.CancellationToken);
+
+        using var doc = JsonDocument.Parse(json);
+        doc.RootElement.GetProperty("error").GetString().Should().Contain("UPCOMING, PAST, ALL");
+        await api.DidNotReceive().GetLeaveAsync(
+            Arg.Any<string>(),
+            Arg.Any<int>(),
+            Arg.Any<int>(),
+            Arg.Any<string?>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task CreateLeave_WhenProfileTimezoneAvailable_SendsDateOffsetsFromProfileTimezone()
     {
         var api = Substitute.For<ITimeProApiClient>();
@@ -307,7 +333,11 @@ public class LeaveMcpToolsTests
     }
 
     private static LeaveMcpTools CreateTools(ITimeProApiClient api, IConfigService config) =>
-        new(api, config, new LeaveCreateService(api), new LeaveUpdateService(api));
+        new(api,
+            config,
+            new LeaveCreateService(api),
+            new LeaveUpdateService(api, new LeaveLookup(api)),
+            new LeaveListService(api));
 
     private static (string id, TimeZoneInfo timeZone) FindTimeZone(params string[] ids)
     {

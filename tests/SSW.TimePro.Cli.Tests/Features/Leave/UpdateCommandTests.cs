@@ -375,7 +375,51 @@ public class UpdateCommandTests
         api.ShouldNotHaveReceived(nameof(ITimeProApiClient.UpdateLeaveAsync));
     }
 
-    private static void ConfigureExistingLeave(ITimeProApiClient api, bool allDay = true)
+    [Theory]
+    [InlineData(LeaveStatusRules.Declined)]
+    [InlineData(LeaveStatusRules.Cancelled)]
+    [InlineData(LeaveStatusRules.PendingCancellation)]
+    public async Task Update_WhenLeaveIsInATerminalStatus_DoesNotCallUpdateApi(int status)
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureExistingLeave(api, status: status);
+        var app = CreateApp(api);
+
+        var exitCode = await app.RunAsync([
+            "update",
+            LeaveId,
+            "--note", "Updated plans",
+            "--json"
+        ], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(1);
+        api.ShouldNotHaveReceived(nameof(ITimeProApiClient.UpdateLeaveAsync));
+    }
+
+    [Theory]
+    [InlineData(LeaveStatusRules.Declined)]
+    [InlineData(LeaveStatusRules.Cancelled)]
+    [InlineData(LeaveStatusRules.PendingCancellation)]
+    public async Task Update_WhenDryRunOnATerminalStatus_FailsBeforePreparingAPayload(int status)
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureExistingLeave(api, status: status);
+        var app = CreateApp(api);
+
+        var exitCode = await app.RunAsync([
+            "update",
+            LeaveId,
+            "--note", "Updated plans",
+            "--dry-run",
+            "--json"
+        ], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(1);
+        api.ShouldNotHaveReceived(nameof(ITimeProApiClient.UpdateLeaveAsync));
+        api.ShouldNotHaveReceived(nameof(ITimeProApiClient.GetEmployeeSettingsAsync));
+    }
+
+    private static void ConfigureExistingLeave(ITimeProApiClient api, bool allDay = true, int status = 2)
     {
         api.GetLeaveAsync(
                 "UPCOMING",
@@ -406,7 +450,8 @@ public class UpdateCommandTests
                             OptionalEmp = ["notify@northwind.example"],
                             LeaveType = new LeaveTypeInfo { Id = 1, Name = "Annual Leave", IsActive = true },
                             AllDay = allDay,
-                            TimeLessOverride = 1.5m
+                            TimeLessOverride = 1.5m,
+                            LeaveStatus = status
                         }
                     ]
                 }
@@ -434,6 +479,7 @@ public class UpdateCommandTests
         var services = new ServiceCollection();
         services.AddSingleton(api);
         services.AddSingleton(config);
+        services.AddSingleton<LeaveLookup>();
         services.AddSingleton<LeaveUpdateService>();
 
         var app = new CommandApp(new TypeRegistrar(services));

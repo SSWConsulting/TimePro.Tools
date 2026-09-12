@@ -70,8 +70,13 @@ tp leave create --start 2026-03-30 --end 2026-03-30 --type 1 \
 tp leave create --start 2026-03-30 --end 2026-03-30 --type 1 --note "Reason" --dry-run --json
 tp leave update <ID> --start 2026-04-01 --end 2026-04-01 --note "Updated reason" --yes
 tp leave update <ID> --note "Updated reason" --dry-run --json
-tp leave cancel <ID> --reason "Plans changed" --yes
+tp leave cancel <ID> --reason "Plans changed" --yes --wait
 ```
+
+Leave cancellation is asynchronous: without `--wait` the entry still reads
+`PendingCancellation` for a few minutes, so do not report it as cancelled from the
+command exiting 0. `--wait` polls until it reads `Cancelled` and exits 2 on timeout.
+`leave list --filter` takes `UPCOMING`, `PAST` or `ALL`.
 
 ### Check EasyLeave balance freshness
 Use `tp leave balances status --json` for read-only questions about when company-wide

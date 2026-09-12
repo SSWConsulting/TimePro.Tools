@@ -188,6 +188,19 @@ validation and payload preparation, returns the proposed request, and must not c
 `CreateLeaveAsync` or `UpdateLeaveAsync`.
 
 The cancel endpoint (`PUT /api/leave/{id}/cancel`) requires `LeaveId` (Guid) and `CancellationReason` in the request body.
+It returns as soon as the server accepts the request: the entry reads `PendingCancellation`
+and only becomes `Cancelled` minutes later, so `tp leave cancel` never claims the request is
+cancelled without `--wait` (poll via `LeaveCancelWaiter`, exit 2 on timeout).
+
+`LeaveStatusRules.IsTerminal` holds the statuses that no longer accept writes (`Declined`,
+`Cancelled`, `PendingCancellation`). Both `LeaveUpdateService.PrepareAsync` and `leave cancel`
+gate on it — same rule, per-verb message — so update and cancel cannot drift apart.
+
+The list endpoint's filter enum only has `UPCOMING` and `PAST`. `LeaveListService` validates the
+filter locally - an unknown value fails with the valid list instead of returning an empty array -
+and implements `ALL` by running both filters and deduping by id. `ListCommand` and the
+`GetLeaveEntries` MCP tool both go through it. `LeaveLookup` is the shared find-by-id (there is no
+get-by-id endpoint).
 
 ## Leave Balances (Xero CSV Sync)
 

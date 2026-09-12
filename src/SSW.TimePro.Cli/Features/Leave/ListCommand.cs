@@ -9,13 +9,13 @@ namespace SSW.TimePro.Cli.Features.Leave;
 [Description("List leave entries")]
 public class ListCommand : AsyncCommand<ListCommand.Settings>
 {
-    private readonly ITimeProApiClient _api;
+    private readonly LeaveListService _listService;
 
     public class Settings : CommandSettings
     {
         [CommandOption("--filter <FILTER>")]
-        [Description("Filter: UPCOMING (default) or PAST")]
-        public string Filter { get; set; } = "UPCOMING";
+        [Description("Filter: UPCOMING (default), PAST or ALL")]
+        public string Filter { get; set; } = LeaveListService.Upcoming;
 
         [CommandOption("--limit <N>")]
         [Description("Number of results (default: 10)")]
@@ -30,16 +30,16 @@ public class ListCommand : AsyncCommand<ListCommand.Settings>
         public bool Json { get; set; }
     }
 
-    public ListCommand(ITimeProApiClient api) => _api = api;
+    public ListCommand(LeaveListService listService) => _listService = listService;
 
     protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         try
         {
-            var response = await _api.GetLeaveAsync(
-                settings.Filter.ToUpperInvariant(), 1, settings.Limit, settings.EmpId, CancellationToken.None);
+            var response = await _listService.ListAsync(
+                settings.Filter, settings.Limit, settings.EmpId, cancellationToken);
 
-            var items = response?.Leaves?.Items ?? [];
+            var items = response.Leaves?.Items ?? [];
 
             OutputHelper.Render(items, settings.Json, list =>
             {
@@ -87,6 +87,13 @@ public class ListCommand : AsyncCommand<ListCommand.Settings>
             });
 
             return 0;
+        }
+        catch (LeaveFilterValidationException ex)
+        {
+            if (settings.Json)
+                OutputHelper.WriteJsonError(ex.Message);
+            OutputHelper.WriteError(ex.Message);
+            return 1;
         }
         catch (ApiException ex)
         {

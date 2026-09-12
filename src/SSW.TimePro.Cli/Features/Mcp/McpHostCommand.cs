@@ -38,6 +38,8 @@ public class McpHostCommand : AsyncCommand<McpHostCommand.Settings>
         builder.Services.AddSingleton<IConfigService, ConfigService>();
         builder.Services.AddSingleton<ITenantProvider, DefaultTenantProvider>();
         builder.Services.AddHttpClient<ITimeProApiClient, TimeProApiClient>();
+        builder.Services.AddSingleton<LeaveLookup>();
+        builder.Services.AddSingleton<LeaveListService>();
         builder.Services.AddSingleton<LeaveCreateService>();
         builder.Services.AddSingleton<LeaveUpdateService>();
         builder.Services.AddSingleton<LeaveBalanceImportService>();

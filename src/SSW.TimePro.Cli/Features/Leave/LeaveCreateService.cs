@@ -59,10 +59,37 @@ public sealed class LeaveCreateService
                 timeZoneError ?? "Invalid leave request timezone");
         }
 
+        var allDay = !options.HalfDay;
+
+        if (!LeaveRequestParser.TryParseWorkdayTime(
+                options.StartTime,
+                LeaveRequestParser.DefaultStartTime,
+                "start",
+                out var userStartTime,
+                out var startTimeError))
+        {
+            throw new LeaveCreateValidationException(startTimeError!);
+        }
+
+        if (!LeaveRequestParser.TryParseWorkdayTime(
+                options.EndTime,
+                LeaveRequestParser.DefaultEndTime,
+                "end",
+                out var userEndTime,
+                out var endTimeError))
+        {
+            throw new LeaveCreateValidationException(endTimeError!);
+        }
+
+        if (!allDay && !LeaveRequestParser.TryValidatePartialDayTimes(userStartTime, userEndTime, out var timeError))
+            throw new LeaveCreateValidationException(timeError!);
+
         if (!LeaveRequestParser.TryParseDateRange(
                 options.Start,
                 options.End,
                 requestTimeZone,
+                allDay ? null : userStartTime,
+                allDay ? null : userEndTime,
                 out var startDate,
                 out var endDate,
                 out var dateError))
@@ -90,13 +117,9 @@ public sealed class LeaveCreateService
             EndDate = endDate.ToString("o"),
             LeaveTypeId = leaveTypeId.Value,
             Note = options.Note.Trim(),
-            UserStartTime = LeaveRequestParser.NormalizeTime(
-                options.StartTime,
-                LeaveRequestParser.DefaultStartTime),
-            UserEndTime = LeaveRequestParser.NormalizeTime(
-                options.EndTime,
-                LeaveRequestParser.DefaultEndTime),
-            AllDay = !options.HalfDay,
+            UserStartTime = userStartTime.ToString("HH:mm:ss"),
+            UserEndTime = userEndTime.ToString("HH:mm:ss"),
+            AllDay = allDay,
             OptionalEmp = LeaveRequestParser.ParseOptionalEmployees(options.Cc),
             ApprovedBy = options.ApprovedBy?.Trim(),
             TimeLessOverride = null

@@ -94,6 +94,11 @@ Older leave-list responses omit `UserStartTime` and `UserEndTime`. Updates prese
 those values when returned; otherwise they use the current employee profile values and
 then the 09:00-18:00 defaults. Callers can pass explicit workday times when required.
 
+Partial-day (`AllDay = false`) requests derive `StartDate`/`EndDate` from the date plus
+`UserStartTime`/`UserEndTime`; only all-day requests get the 00:00-23:59 normalisation.
+The server rejects partial-day times that are not on the hour or half-hour, so
+`LeaveRequestParser` applies that rule locally and dry-run fails with the same message.
+
 CLI and MCP leave create/update surfaces support dry-run. Dry-run performs the same
 validation and payload preparation, returns the proposed request, and must not call
 `CreateLeaveAsync` or `UpdateLeaveAsync`.

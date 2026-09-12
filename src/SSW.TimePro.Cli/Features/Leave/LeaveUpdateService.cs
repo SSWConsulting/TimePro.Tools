@@ -90,10 +90,37 @@ public sealed class LeaveUpdateService
         if (string.IsNullOrWhiteSpace(startInput) || string.IsNullOrWhiteSpace(endInput))
             throw new LeaveUpdateValidationException("The existing leave does not contain a complete date range");
 
+        var allDay = options.AllDay ?? existing.AllDay;
+
+        if (!LeaveRequestParser.TryParseWorkdayTime(
+                options.StartTime ?? existing.UserStartTime ?? employeeSettings?.StartTime,
+                LeaveRequestParser.DefaultStartTime,
+                "start",
+                out var userStartTime,
+                out var startTimeError))
+        {
+            throw new LeaveUpdateValidationException(startTimeError!);
+        }
+
+        if (!LeaveRequestParser.TryParseWorkdayTime(
+                options.EndTime ?? existing.UserEndTime ?? employeeSettings?.EndTime,
+                LeaveRequestParser.DefaultEndTime,
+                "end",
+                out var userEndTime,
+                out var endTimeError))
+        {
+            throw new LeaveUpdateValidationException(endTimeError!);
+        }
+
+        if (!allDay && !LeaveRequestParser.TryValidatePartialDayTimes(userStartTime, userEndTime, out var timeError))
+            throw new LeaveUpdateValidationException(timeError!);
+
         if (!LeaveRequestParser.TryParseDateRange(
                 startInput,
                 endInput,
                 requestTimeZone,
+                allDay ? null : userStartTime,
+                allDay ? null : userEndTime,
                 out var startDate,
                 out var endDate,
                 out var dateError))
@@ -107,7 +134,6 @@ public sealed class LeaveUpdateService
         if (IsWeekend(startDate) || IsWeekend(endDate))
             throw new LeaveUpdateValidationException("Leave start and end dates must be weekdays");
 
-        var allDay = options.AllDay ?? existing.AllDay;
         if (!allDay && startDate.Date != endDate.Date)
             throw new LeaveUpdateValidationException("Partial-day leave must start and end on the same day");
 
@@ -144,12 +170,8 @@ public sealed class LeaveUpdateService
             EndDate = endDate.ToString("o"),
             LeaveTypeId = leaveTypeId.Value,
             Note = note,
-            UserStartTime = LeaveRequestParser.NormalizeTime(
-                options.StartTime ?? existing.UserStartTime ?? employeeSettings?.StartTime,
-                LeaveRequestParser.DefaultStartTime),
-            UserEndTime = LeaveRequestParser.NormalizeTime(
-                options.EndTime ?? existing.UserEndTime ?? employeeSettings?.EndTime,
-                LeaveRequestParser.DefaultEndTime),
+            UserStartTime = userStartTime.ToString("HH:mm:ss"),
+            UserEndTime = userEndTime.ToString("HH:mm:ss"),
             AllDay = allDay,
             OptionalEmp = optionalEmployees,
             ApprovedBy = approvedBy,

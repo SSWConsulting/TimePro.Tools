@@ -133,8 +133,8 @@ public class LeaveMcpTools
             if (dryRun)
                 return JsonSerializer.Serialize(new { dryRun = true, request = plan.Request }, JsonOpts);
 
-            await _leaveCreateService.ApplyAsync(plan, ct);
-            return JsonSerializer.Serialize(new { success = true }, JsonOpts);
+            var result = await _leaveCreateService.ApplyAsync(plan, ct);
+            return JsonSerializer.Serialize(result, JsonOpts);
         }
         catch (LeaveCreateValidationException ex)
         {

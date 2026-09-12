@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -307,6 +308,96 @@ public class CreateCommandTests
         api.ShouldNotHaveReceived(nameof(ITimeProApiClient.CreateLeaveAsync));
     }
 
+    [Fact]
+    public async Task Create_WithJson_ReturnsTheCreatedEntry()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        api.GetEmployeeSettingsAsync(Arg.Any<CancellationToken>())
+            .Returns(new EmployeeSettings { TimezoneId = "UTC" });
+        api.GetLeaveAsync("UPCOMING", Arg.Any<int>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new LeaveListResponse
+            {
+                Leaves = new PaginatedList<LeaveEntry>
+                {
+                    PageNumber = 1,
+                    PageSize = 100,
+                    TotalItems = 1,
+                    TotalPages = 1,
+                    Items =
+                    [
+                        new LeaveEntry
+                        {
+                            Id = "0f2b7e7a-1111-4444-8888-aaaaaaaaaaaa",
+                            StartDate = "2026-03-30T00:00:00+00:00",
+                            EndDate = "2026-03-30T23:59:00+00:00",
+                            Note = "Annual leave",
+                            AllDay = true,
+                            LeaveStatus = 1,
+                            LeaveType = new LeaveTypeInfo { Id = 1, Name = "Annual Leave", IsActive = true }
+                        }
+                    ]
+                }
+            });
+
+        var (exitCode, stdout) = await RunAsync(api, [
+            "create",
+            "--start", "2026-03-30",
+            "--end", "2026-03-30",
+            "--type", "1",
+            "--note", "Annual leave",
+            "--json"
+        ]);
+
+        exitCode.Should().Be(0);
+        using var doc = JsonDocument.Parse(stdout);
+        doc.RootElement.GetProperty("success").GetBoolean().Should().BeTrue();
+        doc.RootElement.GetProperty("leaveId").GetString().Should().Be("0f2b7e7a-1111-4444-8888-aaaaaaaaaaaa");
+        doc.RootElement.GetProperty("leave").GetProperty("statusName").GetString().Should().Be("Pending");
+    }
+
+    [Fact]
+    public async Task Create_WithDryRun_WritesNothingAndReturnsTheProposedRequest()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        api.GetEmployeeSettingsAsync(Arg.Any<CancellationToken>())
+            .Returns(new EmployeeSettings { TimezoneId = "UTC" });
+
+        var (exitCode, stdout) = await RunAsync(api, [
+            "create",
+            "--start", "2026-03-30",
+            "--end", "2026-03-30",
+            "--type", "1",
+            "--note", "Annual leave",
+            "--dry-run",
+            "--json"
+        ]);
+
+        exitCode.Should().Be(0);
+        using var doc = JsonDocument.Parse(stdout);
+        doc.RootElement.GetProperty("dryRun").GetBoolean().Should().BeTrue();
+        doc.RootElement.GetProperty("request").GetProperty("startDate").GetString()
+            .Should().Be("2026-03-30T00:00:00.0000000+00:00");
+        api.ShouldNotHaveReceived(nameof(ITimeProApiClient.CreateLeaveAsync));
+        api.ShouldNotHaveReceived(nameof(ITimeProApiClient.GetLeaveAsync));
+    }
+
+    private static async Task<(int ExitCode, string Stdout)> RunAsync(ITimeProApiClient api, string[] args)
+    {
+        var app = CreateApp(api);
+        var original = Console.Out;
+        var writer = new StringWriter();
+        try
+        {
+            Console.SetOut(writer);
+            var exitCode = await app.RunAsync(args, TestContext.Current.CancellationToken);
+            return (exitCode, writer.ToString().Trim());
+        }
+        finally
+        {
+            Console.SetOut(original);
+        }
+    }
+
     private static CommandApp CreateApp(ITimeProApiClient api)
     {
         var tenantProvider = Substitute.For<ITenantProvider>();
@@ -321,6 +412,7 @@ public class CreateCommandTests
         var services = new ServiceCollection();
         services.AddSingleton(api);
         services.AddSingleton(tenantProvider);
+        services.AddSingleton<SSW.TimePro.Cli.Features.Leave.LeaveLookup>();
         services.AddSingleton<SSW.TimePro.Cli.Features.Leave.LeaveCreateService>();
 
         var app = new CommandApp(new TypeRegistrar(services));

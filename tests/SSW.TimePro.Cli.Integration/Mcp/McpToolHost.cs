@@ -22,7 +22,7 @@ public sealed class McpToolHost
         Leave = new LeaveMcpTools(
             api,
             config,
-            new LeaveCreateService(api),
+            new LeaveCreateService(api, new LeaveLookup(api)),
             new LeaveUpdateService(api, new LeaveLookup(api)),
             new LeaveListService(api));
         Accounting = new AccountingMcpTools(api, config, new LeaveBalanceImportService(api));

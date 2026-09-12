@@ -1,0 +1,29 @@
+{
+  "leave": {
+    "allDay": true,
+    "approvedBy": "bob@northwind.example",
+    "createdAt": "2026-03-01T09:00:00\u002B10:00",
+    "daysAway": 1,
+    "endDate": "2026-04-01T23:59:00\u002B10:00",
+    "id": "0f2b7e7a-1111-4444-8888-aaaaaaaaaaaa",
+    "leaveType": {
+      "id": 1,
+      "isActive": true,
+      "name": "Annual Leave"
+    },
+    "length": 1,
+    "note": "Family day",
+    "optionalEmp": [
+      "bob@northwind.example"
+    ],
+    "requestedEmpId": "BOB",
+    "startDate": "2026-04-01T00:00:00\u002B10:00",
+    "status": 1,
+    "statusName": "Pending",
+    "updatedAt": "2026-03-02T09:00:00\u002B10:00",
+    "userEndTime": "18:00",
+    "userStartTime": "09:00"
+  },
+  "leaveId": "0f2b7e7a-1111-4444-8888-aaaaaaaaaaaa",
+  "success": true
+}

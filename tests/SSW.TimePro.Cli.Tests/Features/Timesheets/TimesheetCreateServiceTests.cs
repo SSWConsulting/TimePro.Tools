@@ -53,6 +53,7 @@ public class TimesheetCreateServiceTests
         var api = Substitute.For<ITimeProApiClient>();
         api.GetClientRateAsync(Emp, Client, new DateOnly(2026, 3, 16), Arg.Any<CancellationToken>())
             .Returns((ClientRateResponse?)null);
+        api.GetIterationsAsync(Project, Arg.Any<CancellationToken>()).Returns(Iterations);
         var service = new TimesheetCreateService(api, Config());
 
         var prepared = await service.PrepareAsync(Emp, Options(), Ct);
@@ -304,6 +305,18 @@ public class TimesheetCreateServiceTests
 
         await act.Should().ThrowAsync<TimesheetValidationException>()
             .WithMessage("Project '1I776Q' does not use iterations.");
+    }
+
+    [Fact]
+    public async Task Prepare_ChecksTheIterationBeforeReportingAMissingRate()
+    {
+        var api = ApiWithRate(expiry: "2026-01-31");
+        var service = new TimesheetCreateService(api, Config());
+
+        var act = () => service.PrepareAsync(Emp, Options(Iteration: "Sprint 99"), Ct);
+
+        await act.Should().ThrowAsync<TimesheetValidationException>()
+            .WithMessage("Unknown iteration 'Sprint 99'*");
     }
 
     private static TimesheetCreateOptions Options(

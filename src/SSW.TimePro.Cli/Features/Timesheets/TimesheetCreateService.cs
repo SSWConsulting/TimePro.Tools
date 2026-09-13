@@ -70,12 +70,14 @@ public sealed class TimesheetCreateService
         var billableId = options.Billable ?? "B";
         var less = options.Less ?? 0;
 
+        // Before the rate check: a missing rate sends the CLI caller into a rate-creation prompt,
+        // and a rate must never be written for a create that is going to be refused anyway.
+        var iterationId = await ResolveIterationAsync(options.ProjectId, options.Iteration, ct);
+
         var sellPrice = options.SellPrice ?? await ResolveSellPriceAsync(
             employeeId, options.ClientId, billableId, date, ct);
         if (sellPrice is null)
             return new TimesheetCreatePreparation(null);
-
-        var iterationId = await ResolveIterationAsync(options.ProjectId, options.Iteration, ct);
 
         var request = new TimesheetRequest
         {

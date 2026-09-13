@@ -201,6 +201,39 @@ public class CliMcpCreatePayloadTests : TestBase
         Golden.Canonicalize(mcp).Should().Be(Golden.Canonicalize(cli.Stdout));
     }
 
+    [Fact]
+    public async Task Create_ResolvesTheIterationNameOnBothSurfaces()
+    {
+        var config = McpToolCatalog.Config(WireMock.Url!);
+
+        var cli = await CliPayloadAsync(config, CreateArgs("--iteration", "Order history"));
+        var mcp = await McpPayloadAsync(config, h => h.Timesheets.CreateTimesheet(
+            Client, Project, Date, description: "Product search", iteration: "Order history", ct: Ct));
+
+        mcp.Should().Be(cli);
+        Field(cli, "iterationID").GetInt32().Should().Be(3403);
+    }
+
+    [Fact]
+    public async Task Create_WithAnUnknownIteration_FailsOnBothSurfacesWithoutWriting()
+    {
+        var config = McpToolCatalog.Config(WireMock.Url!);
+
+        Arrange(null);
+        var cli = await CliRunner.RunAsync(CreateArgs("--iteration", "Sprint 99"), ApiClient, config, Ct);
+        var cliPaths = Paths();
+        var mcp = await RunToolAsync(config, h => h.Timesheets.CreateTimesheet(
+            Client, Project, Date, description: "Product search", iteration: "Sprint 99", ct: Ct));
+
+        const string expected = "Unknown iteration 'Sprint 99' for project '1I776Q'. Available iterations: Checkout API (3402), Order history (3403).";
+        cli.ExitCode.Should().NotBe(0);
+        JsonDocument.Parse(cli.Stdout).RootElement.GetProperty("error").GetProperty("message").GetString()
+            .Should().Be(expected);
+        JsonDocument.Parse(mcp).RootElement.GetProperty("error").GetString().Should().Be(expected);
+        cliPaths.Should().NotContain(SaveRoute);
+        Paths().Should().NotContain(SaveRoute);
+    }
+
     private static string[] CreateArgs(params string[] extra) =>
     [
         "ts", "create", "--client", Client, "--project", Project, "--date", Date,

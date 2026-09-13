@@ -38,7 +38,7 @@ tp ts create --client <ID> --project <ID> --date 2026-03-12 \
   --start 09:00 --end 18:00 --less 60 --description "Work done" --yes
 
 # Create timesheet with explicit category and iteration
-tp ts create --client NWIND --project 1I776Q --iteration 3402 \
+tp ts create --client NWIND --project 1I776Q --iteration "Checkout API" \
   --date 2026-03-12 --category WEBDEV --billable B \
   --description "Northwind checkout API" --yes
 
@@ -170,11 +170,9 @@ git log --all --oneline --after="2026-03-16T00:00:00" --before="2026-03-16T23:59
 ```
 
 ## Iterations
-Some projects require an iteration ID when creating timesheets.
-
-1. Run `tp iter list --project <PROJECT_ID>`.
-2. If the list is non-empty, pick the matching iteration.
-3. Pass `--iteration <ID>` on create.
+Some projects require an iteration when creating timesheets. `ts create`, `ts update` and
+`ts accept` all take `--iteration <name-or-id>`; a missing or unknown iteration fails before the
+API call and lists the available ones, so pick from that list rather than guessing.
 
 Known sample: `1I776Q` (Northwind Traders) uses iterations for each sample milestone.
 

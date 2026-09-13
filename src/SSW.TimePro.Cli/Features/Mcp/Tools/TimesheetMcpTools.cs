@@ -78,7 +78,7 @@ public class TimesheetMcpTools
     }
 
     [McpServerTool]
-    [Description("Create a new timesheet entry. Some projects require an iteration ID — use ListIterations to check and find the correct ID.")]
+    [Description("Create a new timesheet entry. Projects that use iterations require one, by name or ID; a missing or unknown iteration fails with the available ones listed.")]
     public async Task<string> CreateTimesheet(
         [Description("Client ID")] string clientId,
         [Description("Project ID")] string projectId,
@@ -89,7 +89,8 @@ public class TimesheetMcpTools
         [Description("Location (e.g., Office, Home)")] string? location = null,
         [Description("Billable type: B (billable), BPP (prepaid), W (write-off)")] string billableId = "B",
         [Description("Category ID (e.g., TRAIN, PresDe)")] string? categoryId = null,
-        [Description("Iteration/sprint ID. Required for projects that use iterations (e.g., 1I776Q). Use ListIterations to find the ID.")] int? iterationId = null,
+        [Description("Iteration/sprint ID. Prefer 'iteration', which also takes the name.")] int? iterationId = null,
+        [Description("Iteration/sprint, by name or ID. Required for projects that use iterations (e.g., 1I776Q).")] string? iteration = null,
         CancellationToken ct = default)
     {
         var tenant = _config.LoadActiveTenantConfig();
@@ -109,7 +110,7 @@ public class TimesheetMcpTools
                     Description: description,
                     Location: location,
                     Category: categoryId,
-                    IterationId: iterationId,
+                    Iteration: iteration ?? iterationId?.ToString(),
                     Billable: billableId),
                 ct);
 

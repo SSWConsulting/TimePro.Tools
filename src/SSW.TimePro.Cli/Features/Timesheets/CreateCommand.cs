@@ -50,9 +50,9 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
         [Description("Category ID")]
         public string? Category { get; set; }
 
-        [CommandOption("--iteration <ID>")]
-        [Description("Iteration/sprint ID")]
-        public int? Iteration { get; set; }
+        [CommandOption("--iteration <NAME_OR_ID>")]
+        [Description("Iteration/sprint, by name or ID (required for projects that use iterations)")]
+        public string? Iteration { get; set; }
 
         [CommandOption("--billable <TYPE>")]
         [Description("Billable type: B (billable), BPP (prepaid), W (write-off)")]
@@ -115,7 +115,7 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
             Description: settings.Description,
             Location: settings.Location,
             Category: settings.Category,
-            IterationId: settings.Iteration,
+            Iteration: settings.Iteration,
             Billable: settings.Billable,
             Less: lessMinutes);
 

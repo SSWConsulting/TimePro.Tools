@@ -170,7 +170,7 @@
       "name": "create_leave"
     },
     {
-      "description": "Create a new timesheet entry. Some projects require an iteration ID \u2014 use ListIterations to check and find the correct ID.",
+      "description": "Create a new timesheet entry. Projects that use iterations require one, by name or ID; a missing or unknown iteration fails with the available ones listed.",
       "execution": {
         "taskSupport": "optional"
       },
@@ -210,9 +210,17 @@
             "description": "End time (HH:mm)",
             "type": "string"
           },
+          "iteration": {
+            "default": null,
+            "description": "Iteration/sprint, by name or ID. Required for projects that use iterations (e.g., 1I776Q).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "iterationId": {
             "default": null,
-            "description": "Iteration/sprint ID. Required for projects that use iterations (e.g., 1I776Q). Use ListIterations to find the ID.",
+            "description": "Iteration/sprint ID. Prefer \u0027iteration\u0027, which also takes the name.",
             "type": [
               "integer",
               "null"

@@ -243,15 +243,79 @@ public class TimesheetCreateServiceTests
             Arg.Any<string>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>());
     }
 
+    [Theory]
+    [InlineData("Order history", 3403)]
+    [InlineData("order HISTORY", 3403)]
+    [InlineData("3402", 3402)]
+    public async Task Prepare_ResolvesTheIterationByNameOrId(string iteration, int expected)
+    {
+        var api = ApiWithRate();
+        var service = new TimesheetCreateService(api, Config());
+
+        var prepared = await service.PrepareAsync(Emp, Options(Iteration: iteration), Ct);
+
+        prepared.Plan!.Request.IterationId.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task Prepare_WhenTheIterationIsUnknown_FailsListingTheAvailableOnes()
+    {
+        var api = ApiWithRate();
+        var service = new TimesheetCreateService(api, Config());
+
+        var act = () => service.PrepareAsync(Emp, Options(Iteration: "Sprint 99"), Ct);
+
+        await act.Should().ThrowAsync<TimesheetValidationException>()
+            .WithMessage("Unknown iteration 'Sprint 99' for project '1I776Q'. Available iterations: Checkout API (3402), Order history (3403).");
+    }
+
+    [Fact]
+    public async Task Prepare_WhenTheProjectUsesIterationsAndNoneIsGiven_FailsListingTheAvailableOnes()
+    {
+        var api = ApiWithRate();
+        var service = new TimesheetCreateService(api, Config());
+
+        var act = () => service.PrepareAsync(Emp, Options(Iteration: null), Ct);
+
+        await act.Should().ThrowAsync<TimesheetValidationException>()
+            .WithMessage("Project '1I776Q' requires an iteration. Available iterations: Checkout API (3402), Order history (3403).");
+    }
+
+    [Fact]
+    public async Task Prepare_WhenTheProjectDoesNotUseIterations_LeavesTheIterationEmpty()
+    {
+        var api = ApiWithRate();
+        api.GetIterationsAsync(Project, Arg.Any<CancellationToken>()).Returns([]);
+        var service = new TimesheetCreateService(api, Config());
+
+        var prepared = await service.PrepareAsync(Emp, Options(Iteration: null), Ct);
+
+        prepared.Plan!.Request.IterationId.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Prepare_WhenTheProjectDoesNotUseIterations_RejectsARequestedOne()
+    {
+        var api = ApiWithRate();
+        api.GetIterationsAsync(Project, Arg.Any<CancellationToken>()).Returns([]);
+        var service = new TimesheetCreateService(api, Config());
+
+        var act = () => service.PrepareAsync(Emp, Options(Iteration: "Checkout API"), Ct);
+
+        await act.Should().ThrowAsync<TimesheetValidationException>()
+            .WithMessage("Project '1I776Q' does not use iterations.");
+    }
+
     private static TimesheetCreateOptions Options(
         string? Location = null,
         string? Category = null,
         string? Billable = null,
         string? Description = null,
         int? Less = null,
-        decimal? SellPrice = null) =>
+        decimal? SellPrice = null,
+        string? Iteration = "3402") =>
         new(Client, Project, Date, Description: Description, Location: Location, Category: Category,
-            IterationId: 3402, Billable: Billable, Less: Less, SellPrice: SellPrice);
+            Iteration: Iteration, Billable: Billable, Less: Less, SellPrice: SellPrice);
 
     private static ITimeProApiClient ApiWithRate(string? expiry = "2026-12-31")
     {
@@ -267,8 +331,16 @@ public class TimesheetCreateServiceTests
             });
         api.QueryTimesheetsAsync(Arg.Any<TimesheetSummaryFilter>(), Arg.Any<CancellationToken>())
             .Returns([]);
+        api.GetIterationsAsync(Project, Arg.Any<CancellationToken>())
+            .Returns(Iterations);
         return api;
     }
+
+    private static List<IterationItem> Iterations =>
+    [
+        new() { IterationId = 3402, IterationName = "Checkout API" },
+        new() { IterationId = 3403, IterationName = "Order history" }
+    ];
 
     private static IConfigService Config(string? mappedCategory = null)
     {

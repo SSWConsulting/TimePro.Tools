@@ -16,7 +16,7 @@ public static class SkillModelBuilder
     public const string DeveloperTimesheetDiagnosticsName = "timepro-dev-timesheet-diagnostics";
     public const string DeveloperFinanceDiagnosticsName = "timepro-dev-finance-diagnostics";
     public const string EnvironmentCompareName = "timepro-env-compare";
-    public const int CurrentSkillVersion = 5;
+    public const int CurrentSkillVersion = 6;
 
     private const string TimesheetsDescription =
         "Use when entering, fixing, accepting or reviewing TimePro timesheets, repo-to-project mappings, or daily scrum notes with the tp CLI.";

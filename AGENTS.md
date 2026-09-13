@@ -114,7 +114,9 @@ create needs: sell price from the client rate for the billable type, category fr
 then the last fortnight's entries, location from the WFH defaults, deducted minutes to hours, and the
 read-back that turns an empty write response into the saved row. `ts create` and the
 `CreateTimesheet` MCP tool are adapters over it; never build a `TimesheetRequest` for a create
-elsewhere either.
+elsewhere either. The iteration is taken by name or ID on every write surface and checked locally
+against the project's iterations: the API answers a missing or unknown one with a bare "Please
+select an iteration", so the service fails first and lists the available ones.
 
 The API cannot price a row for a client with no active rate, so `PrepareAsync` stops and reports it
 rather than resolving it. Creating a rate stays with the caller: `ts create` keeps its interactive

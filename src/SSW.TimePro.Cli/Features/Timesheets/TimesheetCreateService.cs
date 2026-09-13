@@ -15,7 +15,7 @@ public sealed record TimesheetCreateOptions(
     string? Description = null,
     string? Location = null,
     string? Category = null,
-    int? IterationId = null,
+    string? Iteration = null,
     string? Billable = null,
     int? Less = null,
     decimal? SellPrice = null);
@@ -37,9 +37,10 @@ public sealed record TimesheetCreatePreparation(TimesheetCreatePlan? Plan)
 
 /// <summary>
 /// Builds a complete SaveTimesheet payload for a new entry: sell price from the client rate,
-/// category from the repo mapping or recent entries, location from the WFH defaults, break time in
-/// hours. The API rejects a row it cannot price, so a missing rate stops the create — creating a
-/// rate is the caller's explicit decision, never a side effect of logging time.
+/// iteration by name or ID, category from the repo mapping or recent entries, location from the
+/// WFH defaults, break time in hours. The API rejects a row it cannot price, so a missing rate
+/// stops the create — creating a rate is the caller's explicit decision, never a side effect of
+/// logging time.
 /// </summary>
 public sealed class TimesheetCreateService
 {
@@ -74,12 +75,14 @@ public sealed class TimesheetCreateService
         if (sellPrice is null)
             return new TimesheetCreatePreparation(null);
 
+        var iterationId = await ResolveIterationAsync(options.ProjectId, options.Iteration, ct);
+
         var request = new TimesheetRequest
         {
             EmpId = employeeId,
             ClientId = options.ClientId,
             ProjectId = options.ProjectId,
-            IterationId = options.IterationId,
+            IterationId = iterationId,
             DateCreated = date.ToString("yyyy-MM-dd"),
             TimeStart = $"{date:yyyy-MM-dd}T{start}:00",
             TimeEnd = $"{date:yyyy-MM-dd}T{end}:00",
@@ -136,6 +139,28 @@ public sealed class TimesheetCreateService
         {
             throw new TimesheetValidationException($"Invalid date '{value}'. Use yyyy-MM-dd.");
         }
+    }
+
+    // The API answers a missing or unknown iteration with a bare "Please select an iteration",
+    // so the check happens here where the available ones can be listed.
+    private async Task<int?> ResolveIterationAsync(string projectId, string? requested, CancellationToken ct)
+    {
+        var available = await _api.GetIterationsAsync(projectId, ct);
+
+        if (requested is null)
+        {
+            return available.Count == 0
+                ? null
+                : throw new TimesheetValidationException(
+                    $"Project '{projectId}' requires an iteration. Available iterations: {IterationResolver.Describe(available)}.");
+        }
+
+        if (available.Count == 0)
+            throw new TimesheetValidationException($"Project '{projectId}' does not use iterations.");
+
+        return IterationResolver.ResolveByNameOrId(available, requested)
+            ?? throw new TimesheetValidationException(
+                $"Unknown iteration '{requested}' for project '{projectId}'. Available iterations: {IterationResolver.Describe(available)}.");
     }
 
     private async Task<decimal?> ResolveSellPriceAsync(

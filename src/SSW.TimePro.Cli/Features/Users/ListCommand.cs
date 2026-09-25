@@ -38,6 +38,10 @@ public class ListCommand : AsyncCommand<ListCommand.Settings>
         [Description("Include former employees")]
         public bool All { get; set; }
 
+        [CommandOption("--staff")]
+        [Description("Only active staff expected to log timesheets (excludes admin, service, work experience, contractor and retired accounts)")]
+        public bool Staff { get; set; }
+
         [CommandOption("--limit <N>")]
         [Description("Maximum rows to show; 0 means no limit (default: 50)")]
         public int Limit { get; set; } = 50;
@@ -60,9 +64,17 @@ public class ListCommand : AsyncCommand<ListCommand.Settings>
             return 1;
         }
 
+        if (settings.Staff && settings.All)
+        {
+            OutputHelper.WriteError("--staff lists active employees only and cannot be combined with --all.");
+            return 1;
+        }
+
         try
         {
-            var users = await _api.ListUsersAsync(settings.All, cancellationToken);
+            var users = settings.Staff
+                ? await StaffDirectory.ListAsync(_api, cancellationToken)
+                : await _api.ListUsersAsync(settings.All, cancellationToken);
             var filtered = ApplyFilters(users, settings).ToList();
             var visible = settings.Limit == 0
                 ? filtered

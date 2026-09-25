@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
 using SSW.TimePro.Cli.Features.Projects;
 using SSW.TimePro.Cli.Features.Rates;
+using SSW.TimePro.Cli.Features.Users;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using SSW.TimePro.Cli.Infrastructure.Paths;
@@ -89,6 +90,18 @@ public class LookupMcpTools
 
         var results = await _api.GetAppointmentsAsync(tenant.EmployeeId, start, end.AddDays(1), ct);
         return JsonSerializer.Serialize(results, JsonOpts);
+    }
+
+    [McpServerTool]
+    [Description("List active staff expected to log timesheets (empId, name, email). Excludes admin, service, work experience, contractor and retired accounts. Pair with check_week per empId to find missing timesheets.")]
+    public async Task<string> ListStaff(CancellationToken ct = default)
+    {
+        var tenant = _config.LoadActiveTenantConfig();
+        if (tenant?.EmployeeId is null)
+            return """{"error": "Not logged in"}""";
+
+        var staff = await StaffDirectory.ListAsync(_api, ct);
+        return JsonSerializer.Serialize(staff, JsonOpts);
     }
 
     [McpServerTool]

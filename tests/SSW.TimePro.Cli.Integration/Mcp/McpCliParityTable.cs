@@ -46,7 +46,7 @@ public sealed record ParityRow(string ToolMethod, string? CliCommandPath)
 }
 
 /// <summary>
-/// The CLI/MCP pairing for all 47 tools. Rows flip <c>ExpectParity</c> to true as the unification
+/// The CLI/MCP pairing for all 48 tools. Rows flip <c>ExpectParity</c> to true as the unification
 /// slices land; the five tools with no CLI command at all are the shrink-only allowlist.
 /// </summary>
 public static class McpCliParityTable
@@ -354,6 +354,16 @@ public static class McpCliParityTable
                 new("GET", "/api/Timesheets/GetTimesheetListViewModel")
             ]
         },
+
+        // Appended after the executable rows: Parity goldens are named by row index.
+        new("ListStaff", "user list")
+        {
+            CliArgs = ["user", "list", "--staff", "--limit", "0", "--json"],
+            InvokeTool = (h, ct) => h.Lookups.ListStaff(ct),
+            ExpectParity = true,
+            Note = "Both surfaces project StaffDirectory.ListAsync."
+        },
+
         new("GetLocationAndMapping", "location info") { Note = "MCP merges location defaults and repo mapping." },
         new("GetLeaveEntries", "leave list") { Note = "MCP returns the items array, CLI the envelope." },
         new("GetLeaveBalance", "leave balance") { Note = "Separate projections." },

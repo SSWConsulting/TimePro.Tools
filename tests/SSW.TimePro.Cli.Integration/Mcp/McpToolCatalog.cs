@@ -114,6 +114,12 @@ public static class McpToolCatalog
             EmptyBody = "[]"
         },
 
+        new("ListStaff", "populated", (h, ct) => h.Lookups.ListStaff(ct))
+        {
+            PrimaryRoute = "/api/Employees/DropDown",
+            EmptyBody = "[]"
+        },
+
         new("GetLocationAndMapping", "populated",
             (h, _) => Task.FromResult(h.Lookups.GetLocationAndMapping("~/code/traders-app")))
         {

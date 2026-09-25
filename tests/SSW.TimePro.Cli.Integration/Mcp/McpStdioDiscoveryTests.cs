@@ -12,8 +12,8 @@ namespace SSW.TimePro.Cli.Integration.Mcp;
 [Collection(McpStdioCollection.Name)]
 public class McpStdioDiscoveryTests
 {
-    public const int DefaultToolCount = 18;
-    public const int AccountingEnabledToolCount = 47;
+    public const int DefaultToolCount = 19;
+    public const int AccountingEnabledToolCount = 48;
 
     [Fact]
     public async Task ToolsList_WithAccountingDisabled_MatchesGolden()

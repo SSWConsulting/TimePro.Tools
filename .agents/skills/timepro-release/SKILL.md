@@ -78,7 +78,8 @@ gh run watch <run-id> --exit-status
 
 Then check that `v<version>` points at the merged `origin/main` commit
 (`git rev-parse v<version>^{commit}`) and carries the `.nupkg`. Install that asset into a scratch
-`--tool-path` and confirm `tp --version` and `tp --whats-new`.
+`--tool-path` and confirm `tp --version` and `tp --whats-new` with `TIMEPRO_CLI_CONFIG_DIR` set to a
+scratch folder; otherwise it records the new version in the real config.
 
 ## 6. Upgrade locally
 

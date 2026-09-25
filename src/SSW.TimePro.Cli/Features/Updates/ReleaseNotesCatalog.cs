@@ -57,10 +57,10 @@ public sealed class ReleaseNotesCatalog
         var hasPrevious = SemanticVersion.TryParse(previousVersion, out var previous);
         var hasCurrent = SemanticVersion.TryParse(currentVersion, out var current);
 
-        if (hasPrevious && hasCurrent)
+        if (hasPrevious && hasCurrent && previous.CompareTo(current) < 0)
             return _notes.Where(note => note.Version.CompareTo(previous) > 0 && note.Version.CompareTo(current) <= 0).ToList();
 
-        if (hasPrevious)
+        if (hasPrevious && !hasCurrent)
             return _notes.Where(note => note.Version.CompareTo(previous) > 0).ToList();
 
         if (hasCurrent)

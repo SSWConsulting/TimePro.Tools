@@ -28,6 +28,31 @@ public class ReleaseNotesCatalogTests
     }
 
     [Fact]
+    public void NotesSince_AfterDowngrade_ReturnsCurrentNote()
+    {
+        var catalog = Catalog();
+
+        var notes = catalog.NotesSince("0.2.3", "0.2.2");
+
+        notes.Should().ContainSingle();
+        notes[0].VersionText.Should().Be("0.2.2");
+    }
+
+    [Fact]
+    public void RenderWhatsNewMarkdown_AfterDowngrade_ShowsCurrentNotes()
+    {
+        var catalog = Catalog();
+
+        var markdown = catalog.RenderWhatsNewMarkdown(
+            currentVersion: "0.2.2",
+            previousVersion: "0.2.3",
+            installedAt: DateTimeOffset.Parse("2026-06-27T10:30:00Z"));
+
+        markdown.Should().Contain("# 0.2.2");
+        markdown.Should().NotContain("No local release notes");
+    }
+
+    [Fact]
     public void RenderWhatsNewMarkdown_IncludesVersionState()
     {
         var catalog = Catalog();

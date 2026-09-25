@@ -316,8 +316,8 @@ tests fail until you do.
   variants; `Goldens/Mcp/Tools/*.json` is the raw text each tool returned. An API failure escaping
   a tool as a protocol error rather than an `isError` payload is part of what is snapshotted.
 - `McpStdioClient` launches the real `tp mcp` with `TIMEPRO_CLI_CONFIG_DIR` pointing at a throwaway
-  config. `Goldens/Mcp/Discovery/` holds the `tools/list` snapshots with accounting off (18 tools)
-  and on (47); `Goldens/Mcp/Calls/` holds `tools/call` envelopes.
+  config. `Goldens/Mcp/Discovery/` holds the `tools/list` snapshots with accounting off (19 tools)
+  and on (48); `Goldens/Mcp/Calls/` holds `tools/call` envelopes.
 - `TimesheetToolsUsingApiDirectly` is the shrink-only allowlist of timesheet tools still calling
   `ITimeProApiClient` themselves; `ToolIlScanner` reads the tools' IL (constructor inspection cannot
   answer it, since the shared services take the client as an argument).

@@ -1,5 +1,5 @@
 {
-  "count": 47,
+  "count": 48,
   "tools": [
     {
       "description": "Accept a suggested timesheet, converting it into a real timesheet. Returns the entry as saved.",
@@ -1218,6 +1218,17 @@
         "type": "object"
       },
       "name": "list_recurring_invoices"
+    },
+    {
+      "description": "List active staff expected to log timesheets (empId, name, email). Excludes admin, service, work experience, contractor and retired accounts. Pair with check_week per empId to find missing timesheets.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "list_staff"
     },
     {
       "description": "Query timesheets across empIds, clients, projects and a date range. Returns detailed rows including hours and sell price; sell prices/amounts are treated as ex-GST for invoice reconciliation. employeeIds is accepted as an alias for empIds.",

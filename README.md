@@ -156,7 +156,7 @@ tp ts get 2026-03-12       # Specific date
 | `tp whats-new [--url]` | Show embedded Markdown release notes, or print the latest known release-notes URL |
 | `tp skills create TARGET [--global] [--force]` | Generate unified agent skill files using enabled feature packs |
 | `tp user me` | Show current user info |
-| `tp user list [QUERY]` | List users and match names/emails to EmpIDs (`--emp-id`, `--email`, `--all`, `--json`) |
+| `tp user list [QUERY]` | List users and match names/emails to EmpIDs (`--emp-id`, `--email`, `--all`, `--staff`, `--json`) |
 | `tp user get EMP_ID` | Show focused user details by EmpID (`--json`) |
 | `tp blog list` | Latest blog posts (`--mine`, `--limit N`, `--all`) |
 | `tp mcp` | Start MCP server (stdio); `--tenant NAME` binds the session to a specific tenant config without changing the global active tenant |
@@ -624,7 +624,7 @@ Current default tool groups include:
 | Group | Examples |
 |-------|----------|
 | Timesheets | Get, create, update, delete, suggested timesheets, accept suggestions, list iterations, `check_week` (leave-aware weekly coverage) |
-| Lookup | Search clients, list projects, get client rate, CRM bookings, location and repo mapping |
+| Lookup | Search clients, list projects, get client rate, CRM bookings, location and repo mapping, `list_staff` (active staff expected to log timesheets) |
 | Leave | List EasyLeave entries (optionally filtered by `empId`), create and safely update EasyLeave requests with dry-run previews, `get_leave_balance` (days since last leave + 12-month hours), and `get_leave_balance_status` (Xero balance sync status) |
 
 Optional accounting MCP tools are enabled with:

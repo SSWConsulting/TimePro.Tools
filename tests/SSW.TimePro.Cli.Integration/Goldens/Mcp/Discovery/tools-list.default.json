@@ -1,5 +1,5 @@
 {
-  "count": 18,
+  "count": 19,
   "tools": [
     {
       "description": "Accept a suggested timesheet, converting it into a real timesheet. Returns the entry as saved.",
@@ -528,6 +528,17 @@
         "type": "object"
       },
       "name": "list_iterations"
+    },
+    {
+      "description": "List active staff expected to log timesheets (empId, name, email). Excludes admin, service, work experience, contractor and retired accounts. Pair with check_week per empId to find missing timesheets.",
+      "execution": {
+        "taskSupport": "optional"
+      },
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "list_staff"
     },
     {
       "description": "Search for clients by name. Returns client IDs and names.",

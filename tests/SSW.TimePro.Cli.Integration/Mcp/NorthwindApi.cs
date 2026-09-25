@@ -42,10 +42,11 @@ public static class NorthwindApi
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    /// <summary>Registers every route the 47 MCP tools can reach, populated with Northwind data.</summary>
+    /// <summary>Registers every route the 48 MCP tools can reach, populated with Northwind data.</summary>
     public static void StubAll(WireMockServer server)
     {
         StubIdentity(server);
+        StubStaff(server);
         StubLookups(server);
         StubTimesheets(server);
         StubLeave(server);
@@ -103,6 +104,40 @@ public static class NorthwindApi
             LunchBreakEnd = "12:30",
             TimeLessMinutes = 30,
             TimezoneId = "Australia/Brisbane"
+        });
+    }
+
+    /// <summary>Work-experience colleague the staff roster must drop by category.</summary>
+    public const string WorkExperienceEmpId = "TIM";
+
+    /// <summary>Retired colleague the staff roster must drop by the "zz" name prefix.</summary>
+    public const string RetiredEmpId = "ZZR";
+
+    private static void StubStaff(WireMockServer server)
+    {
+        Json(server, "/api/Employees/DropDown", "GET", new List<EmployeeDropdownItem>
+        {
+            new() { Text = $"{EmpName} ({EmpId})", Value = EmpId },
+            new() { Text = $"Tim Northwind ({WorkExperienceEmpId})", Value = WorkExperienceEmpId },
+            new() { Text = $"zzRita zzNorthwind ({RetiredEmpId})", Value = RetiredEmpId }
+        });
+
+        Json(server, "/api/Employees/GetByIds", "POST", new List<EmployeeSummary>
+        {
+            new() { EmpId = EmpId, Name = EmpName, Email = EmpEmail },
+            new() { EmpId = WorkExperienceEmpId, Name = "Tim Northwind", Email = "tim@northwind.example" },
+            new() { EmpId = RetiredEmpId, Name = "zzRita zzNorthwind", Email = "rita@northwind.example" }
+        });
+
+        Json(server, $"/api/employees/{EmpId}", "GET", new EmployeeDetail
+        {
+            EmpId = EmpId, FirstName = "Bob", Surname = "Northwind", Email = EmpEmail, CategoryId = "PM-E"
+        });
+
+        Json(server, $"/api/employees/{WorkExperienceEmpId}", "GET", new EmployeeDetail
+        {
+            EmpId = WorkExperienceEmpId, FirstName = "Tim", Surname = "Northwind",
+            Email = "tim@northwind.example", CategoryId = "WE"
         });
     }
 

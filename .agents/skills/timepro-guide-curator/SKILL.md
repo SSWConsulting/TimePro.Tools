@@ -1,6 +1,6 @@
 ---
 name: timepro-guide-curator
-description: Add and curate indexed TimePro diagnostic guides under guides/accounting and guides/dev
+description: Use when adding or changing a diagnostic guide under guides/accounting or guides/dev, or when `--use-case` picks the wrong guide.
 allowed-tools: Bash(rg *), Bash(dotnet *), Bash(git diff *), Bash(git status *), Bash(tp *)
 ---
 

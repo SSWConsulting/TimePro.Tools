@@ -1,6 +1,6 @@
 ---
 name: timepro-release
-description: Use when asked to cut, publish or ship a new `tp` CLI version; syncs main, smoke tests the unreleased changes on staging, gets the user's approval of the version and notes, then releases.
+description: Use when asked to release, publish, ship or cut a new `tp` CLI version.
 allowed-tools: Bash(git *), Bash(gh *), Bash(dotnet *), Bash(scripts/security/nuget-audit.sh), Bash(scripts/e2e/*), Bash(scripts/install.sh), Bash(tp *)
 ---
 
@@ -21,24 +21,26 @@ git log --oneline <previous-release-tag>..origin/main
 Stop if the range holds only release metadata. Read each PR in the range (`gh pr view N`) for what
 changed and how it was verified.
 
-## 2. Smoke test on staging
+## 2. Smoke test
 
-Build Release and exercise every user-visible change in the range with `--tenant ssw-staging`.
-Never production, even when a PR was verified there.
+Build Release and exercise every user-visible change in the range. Anything that writes runs
+against `ssw-staging` or a local TimePro tenant, whichever is available; read-only checks may also
+run against production.
 
 ```bash
 dotnet build src/SSW.TimePro.Cli -c Release
 tp_() { dotnet src/SSW.TimePro.Cli/bin/Release/net10.0/SSW.TimePro.Cli.dll "$@"; }
 dotnet test SSW.TimePro.Timesheets.Cli.slnx
-TIMEPRO_MCP_SMOKE_PROJECT=<NWIND project on staging that uses iterations> \
+TIMEPRO_MCP_SMOKE_PROJECT=<NWIND project that uses iterations> \
 TIMEPRO_MCP_SMOKE_TP="dotnet src/SSW.TimePro.Cli/bin/Release/net10.0/SSW.TimePro.Cli.dll" \
   scripts/e2e/test-mcp-smoke.sh
 ```
 
-- Prefer reads and validation failures. Delete anything you create and confirm it is gone.
-- New or changed MCP tools: call them over `tp mcp --tenant ssw-staging` stdio and compare with the
+- Delete anything you create and confirm it is gone.
+- New or changed MCP tools: call them over `tp mcp --tenant <tenant>` stdio and compare with the
   CLI `--json` output.
-- The `1I776Q` placeholder is not a staging project; ask the user for one.
+- The smoke script targets `ssw-staging`; set `TIMEPRO_MCP_SMOKE_TENANT` for a local tenant. The
+  `1I776Q` placeholder is not a real project there; ask the user for one.
 - A defect found here goes to the user, not into a silent fix inside the release.
 
 ## 3. Draft, then ask

@@ -1,6 +1,6 @@
 ---
 name: timepro-skill-generator
-description: Add, update, and verify generated TimePro agent skills produced by tp skills create. Use when changing SkillModelBuilder, SkillBodyBuilder, SkillRenderer, SkillVersionService, packaged skill templates, feature-gated generated skills, generated skill versions, or tp info stale-skill behavior.
+description: Use when changing what `tp skills create` generates (templates, descriptions, feature-gated skills, skill versions) or the stale-skill check in `tp info`, including edits to SkillModelBuilder, SkillBodyBuilder, SkillRenderer or SkillVersionService.
 ---
 
 # TimePro Skill Generator

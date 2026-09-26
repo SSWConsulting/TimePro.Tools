@@ -60,7 +60,7 @@ public repository, so get them from `tp project list --client NWIND --tenant ssw
    table whether it used the 2026-07-28 `server/discover` path or the legacy `initialize`
    handshake (the CLI logs neither; infer it from the client's own logs, e.g. `claude --debug`,
    Codex `RUST_LOG=debug`, the Claude Desktop MCP log, or the VS Code MCP output channel).
-2. **tools/list count** — 18 tools with the accounting feature off, 47 with
+2. **tools/list count** — 19 tools with the accounting feature off, 48 with
    `tp feature accounting enable`. Anything else is a regression, not a client quirk.
 3. **One read** — ask for this week's timesheets (`get_timesheets`) and a Northwind lookup
    (`get_projects_for_client` with `NWIND`). Do **not** compare `get_timesheets` against
@@ -131,10 +131,10 @@ Protocol versions the server accepts under 2.2.0, verified over stdio:
 
 - `initialize` advertises `2024-11-05`, `2025-03-26`, `2025-06-18`, `2025-11-25`. Verified by
   execution: `2025-11-25`, `2025-06-18` and `2024-11-05` each negotiate back the requested version
-  and then serve 18 tools.
+  and then serve 19 tools.
 - `initialize` with `2026-07-28` is refused with `-32022` and a `supported` list — correct, that
   revision removed the handshake.
-- `server/discover` answers `supportedVersions: ["2026-07-28"]`, after which `tools/list` and
-  `tools/call` work with the per-request `_meta` envelope (`io.modelcontextprotocol/protocolVersion`,
-  `clientInfo`, `clientCapabilities`; the server rejects the call when `clientCapabilities` is
-  missing).
+- `server/discover`, itself carrying the `_meta` envelope below, answers
+  `supportedVersions: ["2026-07-28"]`, after which `tools/list` and `tools/call` work
+  with the per-request `_meta` envelope (`io.modelcontextprotocol/protocolVersion`, `clientInfo`,
+  `clientCapabilities`; the server rejects the call when `clientCapabilities` is missing).

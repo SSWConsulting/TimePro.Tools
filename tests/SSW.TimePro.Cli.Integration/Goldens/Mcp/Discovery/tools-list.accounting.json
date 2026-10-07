@@ -130,6 +130,14 @@
             "description": "Request partial-day leave; start and end must be the same day",
             "type": "boolean"
           },
+          "lessMinutes": {
+            "default": null,
+            "description": "Break/less time in whole minutes (0 for no break); omit to use the lunch-break default",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
           "note": {
             "description": "Leave note/reason",
             "type": "string"
@@ -1376,6 +1384,11 @@
             "description": "Remove all current CC recipients",
             "type": "boolean"
           },
+          "clearLess": {
+            "default": false,
+            "description": "Remove the break override and use the lunch-break default again",
+            "type": "boolean"
+          },
           "dryRun": {
             "default": false,
             "description": "Validate and return the proposed update without applying it",
@@ -1408,6 +1421,14 @@
           "id": {
             "description": "Leave entry ID (GUID)",
             "type": "string"
+          },
+          "lessMinutes": {
+            "default": null,
+            "description": "Break/less time in whole minutes (0 for no break); omit to preserve",
+            "type": [
+              "integer",
+              "null"
+            ]
           },
           "note": {
             "default": null,

@@ -70,6 +70,8 @@ tp leave create --start 2026-03-30 --end 2026-03-30 --type 1 \
 tp leave create --start 2026-03-30 --end 2026-03-30 --type 1 --note "Reason" --dry-run --json
 tp leave update <ID> --start 2026-04-01 --end 2026-04-01 --note "Updated reason" --yes
 tp leave update <ID> --note "Updated reason" --dry-run --json
+# Leave deducts the lunch break, so a 09:00-13:00 half day counts 3 hours. --less 0 removes it.
+tp leave update <ID> --less 0 --yes
 tp leave cancel <ID> --reason "Plans changed" --yes --wait
 ```
 

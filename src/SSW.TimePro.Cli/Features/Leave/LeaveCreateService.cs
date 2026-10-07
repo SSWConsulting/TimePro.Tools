@@ -13,7 +13,8 @@ public sealed record LeaveCreateOptions(
     bool HalfDay = false,
     string? StartTime = null,
     string? EndTime = null,
-    string? TimeZoneId = null);
+    string? TimeZoneId = null,
+    int? LessMinutes = null);
 
 public sealed record LeaveCreatePlan(CreateLeaveRequest Request, string TypeLabel);
 
@@ -57,6 +58,9 @@ public sealed class LeaveCreateService
         {
             throw new LeaveCreateValidationException("--start, --end, and --type are required");
         }
+
+        if (options.LessMinutes is < 0)
+            throw new LeaveCreateValidationException("Break/less time must be zero or greater");
 
         if (string.IsNullOrWhiteSpace(options.Note))
         {
@@ -140,7 +144,7 @@ public sealed class LeaveCreateService
             AllDay = allDay,
             OptionalEmp = LeaveRequestParser.ParseOptionalEmployees(options.Cc),
             ApprovedBy = options.ApprovedBy?.Trim(),
-            TimeLessOverride = null
+            TimeLessOverride = options.LessMinutes / 60m
         };
 
         return new LeaveCreatePlan(request, options.Type);

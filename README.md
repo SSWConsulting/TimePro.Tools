@@ -264,6 +264,9 @@ tp leave create --start 2026-03-30 --end 2026-03-30 --type "Annual Leave" \
 tp leave update <ID> --start 2026-04-01 --end 2026-04-01 \
   --note "Updated travel date" --yes
 
+# Make a 09:00-13:00 half day count as 4 hours by removing the lunch-break deduction
+tp leave update <ID> --less 0 --yes
+
 # Validate the same update and inspect the complete payload without applying it
 tp leave update <ID> --start 2026-04-01 --end 2026-04-01 \
   --note "Updated travel date" --dry-run --json
@@ -288,6 +291,7 @@ Leave create options:
 - `--half-day` for partial day requests (start and end date must be the same)
 - `--start-time` / `--end-time` override defaults (09:00/18:00)
 - `--timezone` overrides the request timezone with an IANA or Windows timezone ID
+- `--less` sets the break in whole minutes (`--less 0` for none), replacing the lunch-break deduction
 
 Leave create uses `--timezone` first when supplied, then the TimePro user profile timezone when it is set. If neither is set, the CLI/MCP host uses the machine timezone as the browser-equivalent fallback; agents can control that by choosing the environment used to launch `tp`.
 
@@ -297,7 +301,8 @@ field that was not explicitly changed. Stored workday times are preserved when T
 returns them; older list responses omit them, so update falls back to the current profile
 times and then 09:00-18:00. Use `--start-time` and `--end-time` when those values must be
 explicit. Use `--clear-approved-by` or `--clear-cc` to remove those values, and
-`--half-day` / `--full-day` to change the day mode. Both create and update support
+`--half-day` / `--full-day` to change the day mode. `--less <MINUTES>` overrides the break
+deducted from each leave day, and `--clear-less` goes back to the lunch-break default. Both create and update support
 `--dry-run`; combine it with `--json` to inspect the exact API payload without creating
 or changing leave.
 

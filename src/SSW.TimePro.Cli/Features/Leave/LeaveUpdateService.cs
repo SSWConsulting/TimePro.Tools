@@ -15,7 +15,9 @@ public sealed record LeaveUpdateOptions(
     bool? AllDay = null,
     string? StartTime = null,
     string? EndTime = null,
-    string? TimeZoneId = null);
+    string? TimeZoneId = null,
+    int? LessMinutes = null,
+    bool ClearLess = false);
 
 public sealed record LeaveUpdatePlan(
     LeaveEntry Existing,
@@ -56,6 +58,12 @@ public sealed class LeaveUpdateService
         if (options.ClearCc && options.Cc is not null)
             throw new LeaveUpdateValidationException("Use either cc or clearCc, not both");
 
+        if (options.ClearLess && options.LessMinutes is not null)
+            throw new LeaveUpdateValidationException("Use either less or clearLess, not both");
+
+        if (options.LessMinutes is < 0)
+            throw new LeaveUpdateValidationException("Break/less time must be zero or greater");
+
         var normalizedLeaveId = parsedLeaveId.ToString();
         var existing = await _lookup.FindAsync(normalizedLeaveId, employeeId, ct)
             ?? throw new LeaveUpdateValidationException(
@@ -69,7 +77,7 @@ public sealed class LeaveUpdateService
         var changes = DescribeChanges(options);
         if (changes.Count == 0)
             throw new LeaveUpdateValidationException(
-                "No changes specified. Use --start, --end, --type, --note, --approved-by, --cc, --half-day, --full-day, --start-time, or --end-time.");
+                "No changes specified. Use --start, --end, --type, --note, --approved-by, --cc, --half-day, --full-day, --start-time, --end-time, --less, or --clear-less.");
 
         var employeeSettings = await _api.GetEmployeeSettingsAsync(ct);
         if (!LeaveRequestParser.TryResolveRequestTimeZone(
@@ -101,8 +109,14 @@ public sealed class LeaveUpdateService
 
         var allDay = options.AllDay ?? existing.AllDay;
 
+        // A partial-day request's window is its stored start and end. The list response omits
+        // UserStartTime/UserEndTime, and the profile workday would silently widen the window.
+        var keepsPartialWindow = !existing.AllDay && !allDay;
+        var existingWindowStart = keepsPartialWindow ? TimePart(existing.StartDateLocal) : null;
+        var existingWindowEnd = keepsPartialWindow ? TimePart(existing.EndDateLocal) : null;
+
         if (!LeaveRequestParser.TryParseWorkdayTime(
-                options.StartTime ?? existing.UserStartTime ?? employeeSettings?.StartTime,
+                options.StartTime ?? existing.UserStartTime ?? existingWindowStart ?? employeeSettings?.StartTime,
                 LeaveRequestParser.DefaultStartTime,
                 "start",
                 out var userStartTime,
@@ -112,7 +126,7 @@ public sealed class LeaveUpdateService
         }
 
         if (!LeaveRequestParser.TryParseWorkdayTime(
-                options.EndTime ?? existing.UserEndTime ?? employeeSettings?.EndTime,
+                options.EndTime ?? existing.UserEndTime ?? existingWindowEnd ?? employeeSettings?.EndTime,
                 LeaveRequestParser.DefaultEndTime,
                 "end",
                 out var userEndTime,
@@ -184,7 +198,11 @@ public sealed class LeaveUpdateService
             AllDay = allDay,
             OptionalEmp = optionalEmployees,
             ApprovedBy = approvedBy,
-            TimeLessOverride = existing.TimeLessOverride
+            TimeLessOverride = options.ClearLess
+                ? null
+                : options.LessMinutes is { } lessMinutes
+                    ? lessMinutes / 60m
+                    : existing.TimeLessOverride
         };
 
         return new LeaveUpdatePlan(existing, request, changes);
@@ -217,10 +235,18 @@ public sealed class LeaveUpdateService
         if (options.AllDay is not null) changes.Add(options.AllDay.Value ? "Day mode -> full day" : "Day mode -> partial day");
         if (options.StartTime is not null) changes.Add($"Workday start -> {options.StartTime}");
         if (options.EndTime is not null) changes.Add($"Workday end -> {options.EndTime}");
+        if (options.ClearLess) changes.Add("Break -> lunch-break default");
+        else if (options.LessMinutes is not null) changes.Add($"Break -> {options.LessMinutes} min");
         return changes;
     }
 
     private static string? DatePart(string? value) => value?.Split('T')[0];
+
+    private static string? TimePart(string? value)
+    {
+        var parts = value?.Split('T');
+        return parts is { Length: 2 } && parts[1].Length >= 5 ? parts[1][..5] : null;
+    }
 
     private static string Truncate(string value) =>
         value.Length > 50 ? value[..50] + "..." : value;

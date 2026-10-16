@@ -106,6 +106,7 @@ public class LeaveMcpTools
         [Description("Start time override (HH:mm, default 09:00)")] string? startTime = null,
         [Description("End time override (HH:mm, default 18:00)")] string? endTime = null,
         [Description("Timezone override (IANA or Windows ID); takes priority over the TimePro user profile timezone")] string? timeZoneId = null,
+        [Description("Break/less time in whole minutes (0 for no break); omit to use the lunch-break default")] int? lessMinutes = null,
         [Description("Validate and return the proposed request without creating leave")] bool dryRun = false,
         CancellationToken ct = default)
     {
@@ -127,7 +128,8 @@ public class LeaveMcpTools
                     HalfDay: halfDay,
                     StartTime: startTime,
                     EndTime: endTime,
-                    TimeZoneId: timeZoneId),
+                    TimeZoneId: timeZoneId,
+                    LessMinutes: lessMinutes),
                 ct);
 
             if (dryRun)
@@ -158,6 +160,8 @@ public class LeaveMcpTools
         [Description("Employee workday start time (HH:mm); omit to preserve it when returned, otherwise use the profile value")] string? startTime = null,
         [Description("Employee workday end time (HH:mm); omit to preserve it when returned, otherwise use the profile value")] string? endTime = null,
         [Description("Timezone for changed dates (IANA or Windows ID)")] string? timeZoneId = null,
+        [Description("Break/less time in whole minutes (0 for no break); omit to preserve")] int? lessMinutes = null,
+        [Description("Remove the break override and use the lunch-break default again")] bool clearLess = false,
         [Description("Validate and return the proposed update without applying it")] bool dryRun = false,
         CancellationToken ct = default)
     {
@@ -182,7 +186,9 @@ public class LeaveMcpTools
                     AllDay: halfDay is null ? null : !halfDay.Value,
                     StartTime: startTime,
                     EndTime: endTime,
-                    TimeZoneId: timeZoneId),
+                    TimeZoneId: timeZoneId,
+                    LessMinutes: lessMinutes,
+                    ClearLess: clearLess),
                 ct);
 
             if (dryRun)

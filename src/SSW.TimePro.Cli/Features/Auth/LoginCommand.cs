@@ -46,7 +46,8 @@ public class LoginCommand : AsyncCommand<LoginCommand.Settings>
 
         var tenant = _config.LoadTenantConfig(settings.Tenant) ?? new TenantConfig
         {
-            TenantId = settings.Tenant.ToLowerInvariant()
+            TenantId = settings.Tenant.ToLowerInvariant(),
+            ConfigName = settings.Tenant.ToLowerInvariant()
         };
 
         if (!string.IsNullOrEmpty(settings.ApiUrl))
@@ -88,7 +89,7 @@ public class LoginCommand : AsyncCommand<LoginCommand.Settings>
 
             // Set as active tenant
             var global = _config.LoadGlobalConfig();
-            global.ActiveTenant = tenant.TenantId;
+            global.ActiveTenant = tenant.ConfigName;
             _config.SaveGlobalConfig(global);
 
             OutputHelper.WriteSuccess(

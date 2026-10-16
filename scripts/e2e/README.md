@@ -21,6 +21,10 @@ export TIMEPRO_E2E_API_URL="https://api.staging-sswtimepro.com"
 ./scripts/e2e/run-all.sh
 ```
 
+`run-all.sh` logs in to a throwaway `TIMEPRO_CLI_CONFIG_DIR` and removes it on exit, so it never
+touches `~/.config/timepro-cli`. The MCP smoke binds the same tenant unless
+`TIMEPRO_MCP_SMOKE_TENANT` is set.
+
 ## MCP stdio smoke (`test-mcp-smoke.sh`)
 
 Drives the candidate artifact's real `tp mcp` over stdio: discovery against the checked-in golden,

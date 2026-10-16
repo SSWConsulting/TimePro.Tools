@@ -25,8 +25,14 @@ fi
 TENANT="${TIMEPRO_E2E_TENANT:-ssw}"
 API_URL="${TIMEPRO_E2E_API_URL:-https://api.staging-sswtimepro.com}"
 
+TIMEPRO_CLI_CONFIG_DIR="$(mktemp -d)"
+export TIMEPRO_CLI_CONFIG_DIR
+trap 'rm -rf "$TIMEPRO_CLI_CONFIG_DIR"' EXIT
+export TIMEPRO_MCP_SMOKE_TENANT="${TIMEPRO_MCP_SMOKE_TENANT:-$TENANT}"
+
 echo "Tenant: $TENANT"
 echo "API URL: $API_URL"
+echo "Config dir: $TIMEPRO_CLI_CONFIG_DIR"
 echo ""
 
 # Login

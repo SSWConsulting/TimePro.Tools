@@ -188,6 +188,8 @@ The MCP host resolves the tenant in this order: `--tenant NAME` → global activ
 ## Tenants
 
 The `activeTenant` in `config.json` is the **filename** (without `.json`) of the tenant config file, not the `tenantId` property inside it. This allows multiple configs for the same tenant (e.g., `ssw` for prod, `ssw-staging` for staging) where both have `"tenantId": "ssw"` but different `apiUrl` and `apiKey`.
+`tp login --tenant NAME` saves back to `NAME.json` and activates `NAME`, even when the file's
+`tenantId` differs.
 
 `tp tenant list` keys everything off that filename: it shows `file`, `apiUrl` and the prod/non-prod
 environment, and marks the active row by filename (`isActive` in `--json`). `tp info --json` reports

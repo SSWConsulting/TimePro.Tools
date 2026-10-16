@@ -112,6 +112,22 @@ public class ConfigServiceTests : IDisposable
             .Should().Equal("northwind-prod", "northwind-staging");
     }
 
+    [Fact]
+    public void SaveTenantConfig_WritesBackToTheFileItWasLoadedFrom()
+    {
+        WriteTenantFile("northwind", "northwind", "https://api.sswtimepro.com");
+        WriteTenantFile("northwind-staging", "northwind", "https://api.staging-sswtimepro.com");
+        var prodPath = Path.Combine(_tempDir, "tenants", "northwind.json");
+        var prodBytes = File.ReadAllBytes(prodPath);
+
+        var staging = _service.LoadTenantConfig("northwind-staging")!;
+        staging.ApiKey = "new-staging-key";
+        _service.SaveTenantConfig(staging);
+
+        File.ReadAllBytes(prodPath).Should().Equal(prodBytes);
+        _service.LoadTenantConfig("northwind-staging")!.ApiKey.Should().Be("new-staging-key");
+    }
+
     private void WriteTenantFile(string fileName, string tenantId, string apiUrl)
     {
         Directory.CreateDirectory(Path.Combine(_tempDir, "tenants"));

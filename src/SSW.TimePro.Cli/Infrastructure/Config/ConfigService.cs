@@ -120,7 +120,7 @@ public class ConfigService : IConfigService
     {
         EnsureDirectories();
         var json = JsonSerializer.Serialize(config, JsonOptions);
-        File.WriteAllText(TenantConfigFile(config.TenantId), json);
+        File.WriteAllText(TenantConfigFile(string.IsNullOrEmpty(config.ConfigName) ? config.TenantId : config.ConfigName), json);
     }
 
     public void DeleteTenantConfig(string tenantId)

@@ -419,6 +419,106 @@ public class UpdateCommandTests
         api.ShouldNotHaveReceived(nameof(ITimeProApiClient.GetEmployeeSettingsAsync));
     }
 
+    [Theory]
+    [InlineData("0", 0)]
+    [InlineData("30", 0.5)]
+    [InlineData("60", 1)]
+    public async Task Update_WhenLessGiven_SendsBreakOverrideInHours(string less, double expectedHours)
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureExistingLeave(api, allDay: false);
+        UpdateLeaveRequest? request = null;
+        api.UpdateLeaveAsync(Arg.Do<UpdateLeaveRequest>(value => request = value), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+        var app = CreateApp(api);
+
+        var exitCode = await app.RunAsync([
+            "update",
+            LeaveId,
+            "--less", less,
+            "--json"
+        ], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(0);
+        request.Should().NotBeNull();
+        request!.TimeLessOverride.Should().Be((decimal)expectedHours);
+        request.Note.Should().Be("Original plans");
+    }
+
+    [Fact]
+    public async Task Update_WhenPartialDayHasNoStoredWorkdayTimes_KeepsItsWindow()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureExistingLeave(api, allDay: false);
+        var existing = (await api.GetLeaveAsync("UPCOMING", 1, 100, "TST", TestContext.Current.CancellationToken))!
+            .Leaves!.Items[0];
+        existing.StartDate = "2026-03-30T09:00:00+00:00";
+        existing.EndDate = "2026-03-30T13:00:00+00:00";
+        existing.StartDateLocal = "2026-03-30T09:00:00";
+        existing.EndDateLocal = "2026-03-30T13:00:00";
+        existing.UserStartTime = null;
+        existing.UserEndTime = null;
+        UpdateLeaveRequest? request = null;
+        api.UpdateLeaveAsync(Arg.Do<UpdateLeaveRequest>(value => request = value), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+        var app = CreateApp(api);
+
+        var exitCode = await app.RunAsync([
+            "update",
+            LeaveId,
+            "--less", "0",
+            "--json"
+        ], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(0);
+        request.Should().NotBeNull();
+        request!.UserStartTime.Should().Be("09:00:00");
+        request.UserEndTime.Should().Be("13:00:00");
+        request.StartDate.Should().Be("2026-03-30T09:00:00.0000000+00:00");
+        request.EndDate.Should().Be("2026-03-30T13:00:00.0000000+00:00");
+        request.TimeLessOverride.Should().Be(0m);
+    }
+
+    [Fact]
+    public async Task Update_WhenClearLess_SendsNullBreakOverride()
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureExistingLeave(api);
+        UpdateLeaveRequest? request = null;
+        api.UpdateLeaveAsync(Arg.Do<UpdateLeaveRequest>(value => request = value), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+        var app = CreateApp(api);
+
+        var exitCode = await app.RunAsync([
+            "update",
+            LeaveId,
+            "--clear-less",
+            "--json"
+        ], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(0);
+        request.Should().NotBeNull();
+        request!.TimeLessOverride.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("--less", "abc")]
+    [InlineData("--less", "-15")]
+    [InlineData("--less", "30", "--clear-less")]
+    public async Task Update_WhenLessInvalid_ReturnsErrorWithoutCallingUpdateApi(params string[] args)
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        ConfigureExistingLeave(api);
+        var app = CreateApp(api);
+
+        var exitCode = await app.RunAsync(
+            ["update", LeaveId, .. args, "--json"],
+            TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(1);
+        api.ShouldNotHaveReceived(nameof(ITimeProApiClient.UpdateLeaveAsync));
+    }
+
     private static void ConfigureExistingLeave(ITimeProApiClient api, bool allDay = true, int status = 2)
     {
         api.GetLeaveAsync(

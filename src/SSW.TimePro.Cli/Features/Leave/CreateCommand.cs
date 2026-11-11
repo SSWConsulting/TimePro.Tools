@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using SSW.TimePro.Cli.Features.Timesheets;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Output;
 using Spectre.Console;
@@ -50,6 +51,10 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
         [Description("End time override (HH:mm, default: 18:00)")]
         public string? EndTime { get; set; }
 
+        [CommandOption("--less <MINUTES>")]
+        [Description("Break/less time in whole minutes, e.g. --less 0 for no break. Overrides the lunch-break default")]
+        public string? Less { get; set; }
+
         [CommandOption("--timezone <TIMEZONE_ID>")]
         [Description("Timezone override (IANA or Windows ID); takes priority over the TimePro user profile timezone")]
         public string? TimeZoneId { get; set; }
@@ -84,6 +89,12 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
             return 1;
         }
 
+        if (!LessOption.TryParse(settings.Less, out var lessMinutes, out var lessError))
+        {
+            WriteValidationError(settings.Json, lessError!);
+            return 1;
+        }
+
         try
         {
             var plan = await _createService.PrepareAsync(
@@ -98,7 +109,8 @@ public class CreateCommand : AsyncCommand<CreateCommand.Settings>
                     HalfDay: settings.HalfDay,
                     StartTime: settings.StartTime,
                     EndTime: settings.EndTime,
-                    TimeZoneId: settings.TimeZoneId),
+                    TimeZoneId: settings.TimeZoneId,
+                    LessMinutes: lessMinutes),
                 cancellationToken);
 
             if (!settings.Json && (!settings.Yes || settings.DryRun))

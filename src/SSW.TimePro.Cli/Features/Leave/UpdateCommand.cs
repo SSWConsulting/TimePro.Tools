@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using SSW.TimePro.Cli.Features.Timesheets;
 using SSW.TimePro.Cli.Infrastructure.ApiClient;
 using SSW.TimePro.Cli.Infrastructure.Config;
 using SSW.TimePro.Cli.Infrastructure.Output;
@@ -67,6 +68,14 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
         [Description("Employee workday end time (HH:mm)")]
         public string? EndTime { get; set; }
 
+        [CommandOption("--less <MINUTES>")]
+        [Description("Break/less time in whole minutes, e.g. --less 0 for no break. Overrides the lunch-break default")]
+        public string? Less { get; set; }
+
+        [CommandOption("--clear-less")]
+        [Description("Remove the break override and use the lunch-break default again")]
+        public bool ClearLess { get; set; }
+
         [CommandOption("--timezone <TIMEZONE_ID>")]
         [Description("Timezone for changed dates (IANA or Windows ID)")]
         public string? TimeZoneId { get; set; }
@@ -108,6 +117,12 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
             return 1;
         }
 
+        if (!LessOption.TryParse(settings.Less, out var lessMinutes, out var lessError))
+        {
+            WriteValidationError(settings.Json, lessError!);
+            return 1;
+        }
+
         try
         {
             var plan = await _updateService.PrepareAsync(
@@ -125,7 +140,9 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
                     AllDay: settings.HalfDay ? false : settings.FullDay ? true : null,
                     StartTime: settings.StartTime,
                     EndTime: settings.EndTime,
-                    TimeZoneId: settings.TimeZoneId),
+                    TimeZoneId: settings.TimeZoneId,
+                    LessMinutes: lessMinutes,
+                    ClearLess: settings.ClearLess),
                 cancellationToken);
 
             if (!settings.Json)

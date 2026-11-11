@@ -209,6 +209,11 @@ The leave create endpoint (`POST /api/leave/`) requires these fields in the requ
 - **Required**: `RequestedEmpId`, `StartDate` (DateTimeOffset), `EndDate` (DateTimeOffset), `LeaveTypeId`, `UserStartTime`, `UserEndTime`, `AllDay`
 - **Optional**: `Note`, `OptionalEmp` (CC emails), `ApprovedBy` (email), `TimeLessOverride`
 
+`TimeLessOverride` is in **hours** and replaces the lunch-break deduction on every leave day
+(`0` = no break, `null` = deduct the employee's lunch break). The leave timesheets EasyLeave
+creates take their `less` from it too. `--less` and the MCP `lessMinutes` take whole minutes,
+like `ts create`, and the services convert.
+
 The leave update endpoint (`PUT /api/leave/`) uses the same full payload plus `Id`.
 It is a replacement operation, not a patch. All CLI and MCP updates must go through
 `LeaveUpdateService`, which reads the existing request and preserves omitted API-returned fields

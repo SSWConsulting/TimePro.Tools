@@ -105,6 +105,39 @@ public class CreateCommandTests
         request.Note.Should().Be("Annual leave");
     }
 
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("0", 0.0)]
+    [InlineData("30", 0.5)]
+    public async Task Create_WhenLessGiven_SendsBreakOverrideInHours(string? less, double? expectedHours)
+    {
+        var api = Substitute.For<ITimeProApiClient>();
+        CreateLeaveRequest? request = null;
+        api.CreateLeaveAsync(Arg.Do<CreateLeaveRequest>(r => request = r), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+        api.GetEmployeeSettingsAsync(Arg.Any<CancellationToken>())
+            .Returns(new EmployeeSettings { TimezoneId = "UTC" });
+        var app = CreateApp(api);
+        string[] lessArgs = less is null ? [] : ["--less", less];
+
+        var exitCode = await app.RunAsync([
+            "create",
+            "--start", "2026-03-30",
+            "--end", "2026-03-30",
+            "--type", "1",
+            "--note", "Half day",
+            "--half-day",
+            "--start-time", "09:00",
+            "--end-time", "13:00",
+            .. lessArgs,
+            "--json"
+        ], TestContext.Current.CancellationToken);
+
+        exitCode.Should().Be(0);
+        request.Should().NotBeNull();
+        request!.TimeLessOverride.Should().Be((decimal?)expectedHours);
+    }
+
     [Fact]
     public async Task Create_WhenProfileTimezoneMissing_UsesMachineTimezone()
     {

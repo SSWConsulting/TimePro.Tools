@@ -11,6 +11,8 @@
     </PackageReference>
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <!-- WireMock.Net pulls in WebUtilities 2.3.0 (GHSA-6527-9fp8-r4x6); this lifts it to the patched version. -->
+    <PackageReference Include="Microsoft.AspNetCore.WebUtilities" />
     <PackageReference Include="WireMock.Net" />
     <PackageReference Include="xunit.runner.visualstudio">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

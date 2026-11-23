@@ -4,7 +4,7 @@ This document explains how to build and run the TimePro CLI locally.
 
 ## Prerequisites
 
-- .NET 10 SDK
+- .NET 11 SDK
 - Git
 - Optional: GitHub CLI for commands that enrich timesheets with issue and PR context
 

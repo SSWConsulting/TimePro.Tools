@@ -6,7 +6,7 @@
 #   ./scripts/install.sh
 #   curl -fsSL https://raw.githubusercontent.com/SSWConsulting/TimePro.Tools/main/scripts/install.sh | bash
 #
-# Works on macOS and Linux. Requires the .NET 10 SDK and either curl or wget.
+# Works on macOS and Linux. Requires the .NET 11 SDK and either curl or wget.
 set -euo pipefail
 
 REPO="SSWConsulting/TimePro.Tools"
@@ -18,17 +18,17 @@ err()  { printf '\033[31merror:\033[0m %s\n'   "$*" >&2; }
 warn() { printf '\033[33mwarning:\033[0m %s\n' "$*" >&2; }
 info() { printf '\033[36m==>\033[0m %s\n'      "$*"; }
 
-# --- 1. Verify the .NET 10 SDK -------------------------------------------------
+# --- 1. Verify the .NET 11 SDK -------------------------------------------------
 if ! command -v dotnet >/dev/null 2>&1; then
   err "The .NET SDK was not found on your PATH."
-  err "Install the .NET 10 SDK first: https://dotnet.microsoft.com/download/dotnet/10.0"
+  err "Install the .NET 11 SDK first: https://dotnet.microsoft.com/download/dotnet/11.0"
   exit 1
 fi
 
-if ! dotnet --list-sdks | grep -qE '^10\.'; then
+if ! dotnet --list-sdks | grep -qE '^11\.'; then
   found="$(dotnet --list-sdks | awk '{print $1}' | paste -sd, - 2>/dev/null || true)"
-  err "No .NET 10 SDK detected${found:+ (found: ${found})}."
-  err "Install the .NET 10 SDK: https://dotnet.microsoft.com/download/dotnet/10.0"
+  err "No .NET 11 SDK detected${found:+ (found: ${found})}."
+  err "Install the .NET 11 SDK: https://dotnet.microsoft.com/download/dotnet/11.0"
   exit 1
 fi
 

@@ -3,7 +3,7 @@
   Install or update the SSW TimePro `tp` CLI from the latest GitHub Release.
 
 .DESCRIPTION
-  Verifies the .NET 10 SDK is present, downloads the latest released .nupkg, and
+  Verifies the .NET 11 SDK is present, downloads the latest released .nupkg, and
   installs it as a global tool (updating in place if it is already installed).
   Works on Windows PowerShell 5.1+ and PowerShell 7 (Windows, macOS, Linux).
 
@@ -27,12 +27,12 @@ $ApiUrl    = "https://api.github.com/repos/$Repo/releases/latest"
 function Write-Info($m) { Write-Host "==> $m" -ForegroundColor Cyan }
 function Write-Warn($m) { Write-Host "warning: $m" -ForegroundColor Yellow }
 
-# --- 1. Verify the .NET 10 SDK -------------------------------------------------
+# --- 1. Verify the .NET 11 SDK -------------------------------------------------
 if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
-    throw "The .NET SDK was not found on your PATH. Install the .NET 10 SDK: https://dotnet.microsoft.com/download/dotnet/10.0"
+    throw "The .NET SDK was not found on your PATH. Install the .NET 11 SDK: https://dotnet.microsoft.com/download/dotnet/11.0"
 }
-if (-not ((& dotnet --list-sdks) | Where-Object { $_ -match '^10\.' })) {
-    throw "No .NET 10 SDK detected. Install the .NET 10 SDK: https://dotnet.microsoft.com/download/dotnet/10.0"
+if (-not ((& dotnet --list-sdks) | Where-Object { $_ -match '^11\.' })) {
+    throw "No .NET 11 SDK detected. Install the .NET 11 SDK: https://dotnet.microsoft.com/download/dotnet/11.0"
 }
 
 # --- 2. Resolve the latest release's .nupkg asset ------------------------------

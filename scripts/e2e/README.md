@@ -42,7 +42,7 @@ cleanup it cannot complete fails the run and prints how to find the leftover row
 
 ```bash
 export TIMEPRO_MCP_SMOKE_PROJECT="1I776Q"
-TIMEPRO_MCP_SMOKE_TP="dotnet src/SSW.TimePro.Cli/bin/Release/net10.0/SSW.TimePro.Cli.dll" \
+TIMEPRO_MCP_SMOKE_TP="dotnet src/SSW.TimePro.Cli/bin/Release/net11.0/SSW.TimePro.Cli.dll" \
   ./scripts/e2e/test-mcp-smoke.sh
 ```
 

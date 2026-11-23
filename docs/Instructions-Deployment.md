@@ -7,7 +7,7 @@ Deployment means packaging the `tp` .NET global tool and installing it where it 
 ## Installing (end users)
 
 The supported way to install or upgrade `tp` is the install script. It verifies
-the .NET 10 SDK is present, downloads the latest GitHub Release's `.nupkg`, and
+the .NET 11 SDK is present, downloads the latest GitHub Release's `.nupkg`, and
 installs it as a global tool (updating in place if already installed). Re-run it
 any time to upgrade.
 
@@ -23,7 +23,7 @@ curl -fsSL https://raw.githubusercontent.com/SSWConsulting/TimePro.Tools/main/sc
 irm https://raw.githubusercontent.com/SSWConsulting/TimePro.Tools/main/scripts/install.ps1 | iex
 ```
 
-Both scripts are self-contained — they only need the .NET 10 SDK and a network
+Both scripts are self-contained — they only need the .NET 11 SDK and a network
 connection. To remove the tool: `dotnet tool uninstall -g SSW.TimePro.Cli`.
 
 > The script installs from a **published GitHub Release**. If no non-dry-run

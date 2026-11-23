@@ -39,7 +39,7 @@ public static class TenantOverrideResolver
         if (CommandOwnsTenantOption(args))
             return new TenantOverrideParseResult(args, new TenantOverrideOptions(null, null), null);
 
-        var filtered = new List<string>(args.Length);
+        List<string> filtered = [with(capacity: args.Length)];
         string? tenant = null;
         string? environment = null;
 

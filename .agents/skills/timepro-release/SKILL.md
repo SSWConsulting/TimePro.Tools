@@ -29,10 +29,10 @@ run against production.
 
 ```bash
 dotnet build src/SSW.TimePro.Cli -c Release
-tp_() { dotnet src/SSW.TimePro.Cli/bin/Release/net10.0/SSW.TimePro.Cli.dll "$@"; }
+tp_() { dotnet src/SSW.TimePro.Cli/bin/Release/net11.0/SSW.TimePro.Cli.dll "$@"; }
 dotnet test SSW.TimePro.Timesheets.Cli.slnx
 TIMEPRO_MCP_SMOKE_PROJECT=<NWIND project that uses iterations> \
-TIMEPRO_MCP_SMOKE_TP="dotnet src/SSW.TimePro.Cli/bin/Release/net10.0/SSW.TimePro.Cli.dll" \
+TIMEPRO_MCP_SMOKE_TP="dotnet src/SSW.TimePro.Cli/bin/Release/net11.0/SSW.TimePro.Cli.dll" \
   scripts/e2e/test-mcp-smoke.sh
 ```
 

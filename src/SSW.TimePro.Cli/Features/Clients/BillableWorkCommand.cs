@@ -160,7 +160,7 @@ public class BillableWorkCommand : AsyncCommand<BillableWorkCommand.Settings>
 
     private static Dictionary<string, ClientWork> BuildWorkByClient(List<TimesheetSummaryEntry> timesheets, DateOnly start, DateOnly end)
     {
-        var result = new Dictionary<string, ClientWork>(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, ClientWork> result = [with(StringComparer.OrdinalIgnoreCase)];
 
         foreach (var entry in timesheets)
         {

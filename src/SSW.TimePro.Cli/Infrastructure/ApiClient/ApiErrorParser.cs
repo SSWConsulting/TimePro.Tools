@@ -9,8 +9,8 @@ public static class ApiErrorParser
 {
     private const int MaxDetailLength = 500;
 
-    private static readonly HashSet<string> ReservedKeys = new(StringComparer.OrdinalIgnoreCase)
-        { "type", "title", "status", "detail", "traceId", "errors", "message", "instance" };
+    private static readonly HashSet<string> ReservedKeys =
+        [with(StringComparer.OrdinalIgnoreCase), "type", "title", "status", "detail", "traceId", "errors", "message", "instance"];
 
     /// <summary>
     /// Extracts a single-line detail from a response body: RFC 7807 problem details

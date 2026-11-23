@@ -8,8 +8,8 @@ public static class FeatureFlagCommandLineInterceptor
 {
     public static FeatureFlagParseResult ExtractCommandLineOptions(string[] args)
     {
-        var filtered = new List<string>(args.Length);
-        var enableFeatures = new Dictionary<string, FeatureDefinition>(StringComparer.OrdinalIgnoreCase);
+        List<string> filtered = [with(capacity: args.Length)];
+        Dictionary<string, FeatureDefinition> enableFeatures = [with(StringComparer.OrdinalIgnoreCase)];
 
         for (var i = 0; i < args.Length; i++)
         {

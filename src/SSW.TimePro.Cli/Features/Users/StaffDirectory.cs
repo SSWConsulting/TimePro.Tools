@@ -32,7 +32,7 @@ public static class StaffDirectory
             .Where(u => !IsRetired(u.Name))
             .ToList();
 
-        var categories = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, string?> categories = [with(StringComparer.OrdinalIgnoreCase)];
         await Parallel.ForEachAsync(
             candidates,
             new ParallelOptions { MaxDegreeOfParallelism = MaxConcurrentDetailReads, CancellationToken = ct },

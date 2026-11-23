@@ -16,7 +16,7 @@ The application is a local command-line tool. It does not host a web app or data
 
 | Area | Technology | Notes |
 |------|------------|-------|
-| Runtime | .NET 10 (`net10.0`) | Packaged as a global `dotnet` tool named `tp`. |
+| Runtime | .NET 11 (`net11.0`) | Packaged as a global `dotnet` tool named `tp`. |
 | CLI framework | Spectre.Console.Cli | Command parsing, settings, help text, and command dispatch. |
 | Terminal UI | Spectre.Console | Tables, markup, prompts, and confirmation flows. |
 | Dependency injection | Microsoft.Extensions.DependencyInjection | Shared service registration for commands and infrastructure. |

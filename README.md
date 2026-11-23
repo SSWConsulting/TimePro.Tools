@@ -22,7 +22,7 @@ SSW TimePro is a time tracking and invoicing system. This CLI makes it fast to v
 
 ## Prerequisites
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- [.NET 11 SDK](https://dotnet.microsoft.com/download/dotnet/11.0)
 - A TimePro account with API access
 - (Optional) [GitHub CLI](https://cli.github.com/) for issue/PR references in timesheets
 
@@ -31,7 +31,7 @@ SSW TimePro is a time tracking and invoicing system. This CLI makes it fast to v
 ### 1. Install as global tool
 
 The install script grabs the latest release and installs (or updates) the `tp`
-global tool. It first checks that the .NET 10 SDK is present. Re-run it any time
+global tool. It first checks that the .NET 11 SDK is present. Re-run it any time
 to upgrade to the newest release.
 
 **macOS / Linux:**
@@ -842,7 +842,7 @@ To turn it off, set `telemetry.localLog` to `false` in `~/.config/timepro-cli/co
 ## Local development (build from source)
 
 Contributors working on the CLI itself run it from the repository rather than the
-released package. This needs the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
+released package. This needs the [.NET 11 SDK](https://dotnet.microsoft.com/download/dotnet/11.0).
 
 ```bash
 git clone https://github.com/SSWConsulting/TimePro.Tools.git

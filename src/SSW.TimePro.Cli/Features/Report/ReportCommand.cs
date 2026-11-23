@@ -58,7 +58,7 @@ public class ReportCommand : AsyncCommand<ReportCommand.Settings>
             var projects = await _api.GetProjectsSummaryAsync(tenant.EmployeeId, start, end, CancellationToken.None);
 
             // Fetch day-by-day for location analysis
-            var locationCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, int> locationCounts = [with(StringComparer.OrdinalIgnoreCase)];
             int daysEntered = 0;
             int workingDays = 0;
 

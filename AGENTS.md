@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-CLI-first tool with MCP support for managing SSW TimePro timesheets. Built with .NET 10, Spectre.Console.Cli, and Vertical Slice Architecture (VSA).
+CLI-first tool with MCP support for managing SSW TimePro timesheets. Built with .NET 11, Spectre.Console.Cli, and Vertical Slice Architecture (VSA).
 
 ## Architecture
 
@@ -59,7 +59,7 @@ the command. `--verbose` is stripped from argv like `--tenant` and prints to std
   it for any test or script that must not read or write the real config.
 
 ### Project Files
-- `Directory.Build.props` centralizes shared .NET defaults (`net10.0`, implicit usings, nullable)
+- `Directory.Build.props` centralizes shared .NET defaults (`net11.0`, implicit usings, nullable)
 - `Directory.Packages.props` uses central package management for all NuGet versions
 - Project files should reference packages without inline `Version` attributes unless there is a deliberate local override
 
@@ -351,7 +351,7 @@ dotnet test tests/SSW.TimePro.Cli.Integration/
 # Staging MCP stdio gate only (run the candidate artifact, never production).
 # TIMEPRO_MCP_SMOKE_PROJECT has no committed default; see scripts/e2e/README.md.
 TIMEPRO_MCP_SMOKE_PROJECT=1I776Q \
-TIMEPRO_MCP_SMOKE_TP="dotnet src/SSW.TimePro.Cli/bin/Release/net10.0/SSW.TimePro.Cli.dll" \
+TIMEPRO_MCP_SMOKE_TP="dotnet src/SSW.TimePro.Cli/bin/Release/net11.0/SSW.TimePro.Cli.dll" \
   scripts/e2e/test-mcp-smoke.sh
 
 # NuGet package safety audit (also used by the optional Git pre-push hook)

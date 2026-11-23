@@ -4,7 +4,7 @@ set -euo pipefail
 # Anchor to the repo root so relative paths (solution, restore) work from any CWD.
 cd "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
-dotnet_channel="${DOTNET_CHANNEL:-10.0}"
+dotnet_channel="${DOTNET_CHANNEL:-11.0}"
 dotnet_install_dir="${DOTNET_INSTALL_DIR:-$HOME/.dotnet}"
 solution_path="${SOLUTION_PATH:-SSW.TimePro.Timesheets.Cli.slnx}"
 run_tests=0

@@ -67,16 +67,10 @@ public class ClipboardService
             // -inputencoding UTF-8 tells textutil not to guess; -encoding UTF-8
             // ensures the intermediate text is also UTF-8.
             var script = $"textutil -convert rtf -format html -inputencoding UTF-8 -encoding UTF-8 -stdout '{tmpHtml}' | pbcopy -Prefer rtf";
-            var psi = new ProcessStartInfo("bash", $"-c \"{script}\"")
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false
-            };
-            using var p = Process.Start(psi);
-            if (p is null) return PipeToPbcopy(plainFallback);
-            p.WaitForExit();
-            if (p.ExitCode == 0) return Result.RichTextCopied;
+            // silent discards the pipeline's output rather than redirecting it unread,
+            // which could fill a pipe and block. A timeout falls back to plain text.
+            var status = Process.Run("bash", ["-c", script], silent: true, timeout: TimeSpan.FromSeconds(15));
+            if (status.ExitCode == 0) return Result.RichTextCopied;
             return PipeToPbcopy(plainFallback);
         }
         catch

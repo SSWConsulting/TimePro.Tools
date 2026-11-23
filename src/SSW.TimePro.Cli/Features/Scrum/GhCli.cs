@@ -20,6 +20,8 @@ public interface IGhCli
 /// </summary>
 public class GhCli : IGhCli
 {
+    private static readonly TimeSpan GhTimeout = TimeSpan.FromSeconds(30);
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
@@ -89,11 +91,10 @@ public class GhCli : IGhCli
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
-            using var p = Process.Start(psi);
-            if (p is null) return string.Empty;
-            var stdout = p.StandardOutput.ReadToEnd();
-            p.WaitForExit();
-            return p.ExitCode == 0 ? stdout : string.Empty;
+            // Reads stdout and stderr together, so a chatty stderr cannot fill its pipe
+            // and block gh. The timeout kills a gh that hangs, for example on a network stall.
+            var result = Process.RunAndCaptureText(psi, GhTimeout);
+            return result.ExitStatus.ExitCode == 0 ? result.StandardOutput : string.Empty;
         }
         catch
         {

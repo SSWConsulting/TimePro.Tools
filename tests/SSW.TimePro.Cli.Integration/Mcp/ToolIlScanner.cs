@@ -28,7 +28,7 @@ public static class ToolIlScanner
     public static IReadOnlySet<string> MethodsCalling(Type toolType, Type dependency)
     {
         var toolMethods = McpToolInventory.Methods(toolType).Select(m => m.Name).ToHashSet(StringComparer.Ordinal);
-        var callers = new HashSet<string>(StringComparer.Ordinal);
+        HashSet<string> callers = [with(StringComparer.Ordinal)];
 
         foreach (var type in Types(toolType))
         {

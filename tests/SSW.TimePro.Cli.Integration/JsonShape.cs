@@ -22,7 +22,7 @@ public static class JsonShape
         var unmapped = new List<string>();
         Walk(doc.RootElement, typeof(T), "$", unmapped);
 
-        var allowed = new HashSet<string>(allowUnmapped, StringComparer.OrdinalIgnoreCase);
+        HashSet<string> allowed = [with(allowUnmapped, StringComparer.OrdinalIgnoreCase)];
         var offenders = unmapped.Distinct().Where(p => !allowed.Contains(p)).Order().ToList();
 
         if (offenders.Count > 0)

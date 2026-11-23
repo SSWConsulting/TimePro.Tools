@@ -56,7 +56,7 @@ public sealed class LeaveListService
 
     public static LeaveListResponse Merge(LeaveListResponse? upcoming, LeaveListResponse? past, int limit)
     {
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> seen = [with(StringComparer.OrdinalIgnoreCase)];
         var items = new List<LeaveEntry>();
 
         foreach (var entry in Items(upcoming).Concat(Items(past)))

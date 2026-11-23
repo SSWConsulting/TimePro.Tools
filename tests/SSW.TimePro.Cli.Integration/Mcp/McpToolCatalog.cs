@@ -391,7 +391,7 @@ public static class McpToolCatalog
 
     private static IReadOnlyList<McpToolCase> Expand(IReadOnlyList<McpToolCase> populated)
     {
-        var cases = new List<McpToolCase>(populated);
+        List<McpToolCase> cases = [.. populated];
 
         foreach (var populatedCase in populated)
         {

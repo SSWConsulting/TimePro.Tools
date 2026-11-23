@@ -10,7 +10,7 @@ public static class VerboseCommandLineInterceptor
 {
     public static VerboseParseResult ExtractCommandLineOptions(string[] args)
     {
-        var filtered = new List<string>(args.Length);
+        List<string> filtered = [with(capacity: args.Length)];
         var verbose = false;
 
         for (var i = 0; i < args.Length; i++)

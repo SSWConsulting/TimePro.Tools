@@ -11,15 +11,11 @@ public class FeatureCommand : Command<FeatureCommand.Settings>
 {
     private readonly IConfigService _config;
 
-    private static readonly HashSet<string> EnableValues = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "enable", "enabled", "true", "1", "on", "yes"
-    };
+    private static readonly HashSet<string> EnableValues =
+        [with(StringComparer.OrdinalIgnoreCase), "enable", "enabled", "true", "1", "on", "yes"];
 
-    private static readonly HashSet<string> DisableValues = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "disable", "disabled", "false", "0", "off", "no"
-    };
+    private static readonly HashSet<string> DisableValues =
+        [with(StringComparer.OrdinalIgnoreCase), "disable", "disabled", "false", "0", "off", "no"];
 
     private sealed record FeatureStatus(
         string Key,
